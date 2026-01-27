@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Worklog App
+
+A team-based worklog system where users can create teams, invite members, and track contributions. Team owners can rate member worklogs on a 1-10 scale with ratings hidden from team members.
+
+## Tech Stack
+
+- **Framework**: Next.js 16 with App Router
+- **Database**: Prisma 7 + PostgreSQL
+- **Styling**: Tailwind CSS 4
+- **Authentication**: NextAuth 5 (Google/GitHub OAuth)
 
 ## Getting Started
 
-First, run the development server:
+1. **Install dependencies**:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+   ```bash
+   npm install
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. **Set up environment variables**:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+   ```bash
+   cp .env.example .env
+   # Configure DATABASE_URL and auth secrets
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3. **Run database migrations**:
 
-## Learn More
+   ```bash
+   npx prisma migrate dev
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+4. **Start development server**:
+   ```bash
+   npm run dev
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Open [http://localhost:3000](http://localhost:3000) to view the application.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Documentation
 
-## Deploy on Vercel
+- **[ONBOARDING.md](./ONBOARDING.md)** - Repository navigation and file organization
+- **[.github/copilot-instructions.md](./.github/copilot-instructions.md)** - Technical implementation details
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Available Scripts
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
