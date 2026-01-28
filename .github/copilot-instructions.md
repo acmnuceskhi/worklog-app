@@ -17,7 +17,7 @@ This is a team-based worklog system for tracking member contributions. Key featu
 - **Framework**: Next.js 16 with App Router
 - **Database**: Prisma 7 + PostgreSQL (hosted on Prisma Cloud)
 - **Styling**: Tailwind CSS 4 with custom theme variables
-- **Auth**: NextAuth 5 with Google/GitHub OAuth (university domain restriction)
+- **Auth**: Auth.js v5 with Google/GitHub OAuth (university domain restriction)
 - **Email**: For team invitations
 - **Runtime**: Edge-compatible with PrismaPg adapter
 
@@ -109,80 +109,9 @@ enum MemberStatus {
 }
 ```
 
-## Authentication Setup (Auth.js/NextAuth)
+## Authentication Setup (Auth.js)
 
-Based on [official Prisma Auth.js guide](https://www.prisma.io/docs/guides/authjs-nextjs):
-
-### Required Dependencies
-
-```bash
-npm install @auth/prisma-adapter next-auth@beta
-```
-
-### Environment Variables
-
-Add to `.env`:
-
-```env
-AUTH_SECRET=<generated-via-npx-auth-secret>
-AUTH_GITHUB_ID=<github-oauth-app-client-id>
-AUTH_GITHUB_SECRET=<github-oauth-app-client-secret>
-AUTH_GOOGLE_ID=<google-oauth-app-client-id>
-AUTH_GOOGLE_SECRET=<google-oauth-app-client-secret>
-```
-
-### Auth Configuration (`lib/auth.ts`)
-
-```typescript
-import NextAuth from "next-auth";
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import prisma from "@/lib/prisma";
-import GitHub from "next-auth/providers/github";
-import Google from "next-auth/providers/google";
-
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(prisma),
-  providers: [
-    GitHub,
-    Google({
-      authorization: {
-        params: {
-          hd: "nu.edu.pk", // Restrict to university domain
-        },
-      },
-    }),
-  ],
-  callbacks: {
-    async signIn({ user, account, profile }) {
-      // Additional validation for university email
-      if (
-        account?.provider === "google" &&
-        !user.email?.endsWith("@nu.edu.pk")
-      ) {
-        return "/auth/error?error=UniversityEmailRequired";
-      }
-      return true;
-    },
-  },
-});
-```
-
-### Route Handler (`app/api/auth/[...nextauth]/route.ts`)
-
-```typescript
-import { handlers } from "@/lib/auth";
-export const { GET, POST } = handlers;
-```
-
-### Middleware (`middleware.ts`)
-
-```typescript
-export { auth as middleware } from "@/lib/auth";
-```
-
-### Error Handling
-
-For non-university Google emails, redirect to error page with message: "Please sign in using your NU ID (university email only)"
+Based on [official Prisma Auth.js guide](https://www.prisma.io/docs/guides/authjs-nextjs). Follow the guide for setup with Prisma adapter, Google/GitHub providers, and university domain restriction (e.g., `hd=nu.edu.pk` for Google).
 
 ## Key Project Structure
 
@@ -228,18 +157,7 @@ const isMember = await prisma.teamMember.findFirst({
 
 ### Email Invitations
 
-```typescript
-// When sending team invitation
-await prisma.teamMember.create({
-  data: {
-    teamId,
-    email: inviteeEmail,
-    status: "PENDING",
-  },
-});
-// Send email with invitation link
-// On acceptance, update status to 'ACCEPTED' and link user
-```
+Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https://resend.com/docs/send-with-nextjs) for setup. Create pending TeamMember records, send invitation emails, and update status on acceptance.
 
 ## Development Workflow
 
@@ -262,6 +180,7 @@ await prisma.teamMember.create({
 ## Current State
 
 - Project is in early bootstrap phase
+- Database schema and backend/frontend requirements are defined
 - Authentication schema exists but team models need implementation
 - No team/worklog/rating features implemented yet
 - Default Next.js starter page still active
@@ -276,3 +195,35 @@ await prisma.teamMember.create({
 - Team invitations should validate university email format
 - Always check team membership status before allowing access
 - Tailwind CSS 4 requires `@import "tailwindcss"` syntax (not v3 style)
+
+## Backend Requirements
+
+- **Database schema**: Prisma models for User, Team, TeamMember, Worklog, Rating (with relations and enums).
+- **APIs for CRUD operations on member worklogs**: Create, read, update, delete worklogs (members only access their own; includes dashboard data fetching).
+- **APIs for CRUD operations on team owner ratings**: Create, read, update, delete ratings (owners only for their teams' worklogs; hidden from members; includes dashboard data fetching).
+- **APIs for team management**: Create/read/update/delete teams, invite/accept/reject/remove members, view team details and members (owners only; includes dashboard data fetching).
+- **Authentication with OAuth**: Auth.js setup with Prisma adapter, Google/GitHub providers, and university domain restriction (e.g., `hd=nu.edu.pk` for Google). Follow the "How to use Prisma ORM and Prisma Postgres with Auth.js and Next.js" guide for integration.
+- **Email invites**: Send invitations via Resend Node.js SDK, handle pending/accepted/rejected statuses in TeamMember model.
+- **Authorization checks**: Middleware or per-route validation to ensure users can only access their teams/worklogs/ratings (e.g., `isOwner`, `isMember` queries).
+- **Input validation and error handling**: Use Zod for API request validation, standardize error responses (e.g., 400/403/404).
+- **GitHub link validation (optional)**: Utility to verify optional GitHub URLs in worklogs.
+- **Database setup and migrations**: Prisma client configuration, run migrations, handle connection pooling for production.
+
+## Frontend Libraries Suggestions
+
+#### Core UI & Component Libraries
+- **shadcn/ui**: Accessible components on Radix UI. Includes forms (React Hook Form + Zod), notifications (Sonner), and UI primitives.
+- **Lucide React**: Icon library compatible with shadcn/ui. Provides customizable icons for forms, dashboards, and navigation.
+
+#### Animation & Interaction
+- **Framer Motion**: Lightweight React animation library. Use for dashboard transitions, worklog animations, and rating sliders. Compatible with Next.js 16 and edge runtime.
+
+#### Date & Time Handling
+- **date-fns**: Modular date utilities. Handle worklog timestamps, durations, and date inputs. Tree-shakable and lightweight.
+
+#### Data Fetching & State Management
+- **TanStack Query (React Query)**: Data fetching and caching for React. Manage worklogs, ratings, and team data with efficient caching and auth integration.
+
+#### Additional Utilities
+- **clsx** or **cn** (bundled with shadcn/ui): Conditional Tailwind class merging for dynamic styling.
+- **Tailwind CSS plugins** (e.g., @tailwindcss/forms): Optional enhancements for form styling.

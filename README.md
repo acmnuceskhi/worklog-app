@@ -7,7 +7,7 @@ A team-based worklog system where users can create teams, invite members, and tr
 - **Framework**: Next.js 16 with App Router
 - **Database**: Prisma 7 + PostgreSQL
 - **Styling**: Tailwind CSS 4
-- **Authentication**: NextAuth 5 (Google/GitHub OAuth)
+- **Authentication**: Auth.js v5 (Google/GitHub OAuth)
 
 ## Getting Started
 
@@ -48,3 +48,9 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 - `npm run build` - Build for production
 - `npm run start` - Start production server
 - `npm run lint` - Run ESLint
+
+## Roadmap
+
+- **By Friday, Jan 30**: Prototype ready (landing page, owner dashboard, member dashboard with basic UI and mock data).
+- **Feedback Phase**: Review prototype and gather input.
+- **By Sunday, Feb 1**: Full application complete (auth, APIs, CRUD operations, ratings, email invites).
