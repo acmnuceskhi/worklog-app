@@ -45,8 +45,49 @@ model User {
   image         String?
   accounts      Account[]
   sessions      Session[]
+  ownedTeams    Team[]    @relation("TeamOwner")
+  memberships   TeamMember[]
 
   @@map("users")
+}
+
+model Team {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  project     String?
+  organization String?
+  ownerId     String       @map("owner_id")
+  owner       User         @relation("TeamOwner", fields: [ownerId], references: [id])
+  members     TeamMember[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("teams")
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  teamId    String   @map("team_id")
+  userId    String?  @map("user_id")
+  email     String
+  token     String?  @unique // Invitation token
+  status    MemberStatus @default(PENDING)
+  invitedAt DateTime @default(now())
+  joinedAt  DateTime?
+
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@unique([teamId, email])
+  @@map("team_members")
+}
+
+enum MemberStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
 }
 
 model VerificationToken {

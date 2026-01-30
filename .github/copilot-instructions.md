@@ -102,8 +102,9 @@ model Team {
 model TeamMember {
   id        String   @id @default(cuid())
   teamId    String   @map("team_id")
-  userId    String   @map("user_id")
-  email     String   // Email used for invitation
+  userId    String?  @map("user_id")
+  email     String
+  token     String?  @unique // Invitation token
   status    MemberStatus @default(PENDING) // PENDING, ACCEPTED, REJECTED
   invitedAt DateTime @default(now())
   joinedAt  DateTime?
@@ -113,6 +114,7 @@ model TeamMember {
 
   @@unique([teamId, userId])
   @@unique([teamId, email])
+  @@map("team_members")
 }
 
 model Worklog {
@@ -156,6 +158,12 @@ enum MemberStatus {
 
 Based on [official Prisma Auth.js guide](https://www.prisma.io/docs/guides/authjs-nextjs). Follow the guide for setup with Prisma adapter, Google/GitHub providers, and university domain restriction (e.g., `hd=nu.edu.pk` for Google).
 
+**Team Development Note**: For collaborative development, configure multiple authorized redirect URIs in your OAuth applications to allow team members to run the app on different localhost ports simultaneously:
+
+- Google OAuth: Add `http://localhost:3000/api/auth/callback/google`, `http://localhost:3001/api/auth/callback/google`, etc.
+- GitHub OAuth: Add corresponding callback URLs for each port
+- Assign different ports to team members to avoid OAuth conflicts
+
 ## Key Project Structure
 
 - `app/generated/prisma/`: Custom Prisma client output location
@@ -163,7 +171,13 @@ Based on [official Prisma Auth.js guide](https://www.prisma.io/docs/guides/authj
 - `lib/auth.ts`: Auth.js configuration with GitHub and Google OAuth providers
 - `middleware.ts`: Authentication middleware with Node.js runtime
 - `components/auth-components.tsx`: Reusable authentication components
+- `components/email-template.tsx`: Email template component for testing
+- `components/team-invitation-email.tsx`: React Email template for team invitations
 - `app/api/auth/[...nextauth]/route.ts`: Authentication API routes
+- `app/api/send/route.tsx`: Email testing endpoint
+- `app/api/teams/[teamId]/invite/route.tsx`: Team invitation API endpoint
+- `app/api/invitations/[token]/accept/route.tsx`: Invitation acceptance endpoint
+- `app/api/invitations/[token]/reject/route.tsx`: Invitation rejection endpoint
 - `prisma/schema.prisma`: Database schema with Auth.js and team-based models
 - `app/dashboard/`: Different views for team owners vs members
 - `app/teams/`: Team creation, invitation, and management
@@ -206,11 +220,20 @@ const isMember = await prisma.teamMember.findFirst({
 
 Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https://resend.com/docs/send-with-nextjs) for setup. Create pending TeamMember records, send invitation emails, and update status on acceptance.
 
+**Implementation Details:**
+
+- Secure token generation using `crypto.randomBytes(32).toString('hex')`
+- React Email templates with styled accept/reject buttons
+- Token validation with PENDING status requirement
+- Duplicate invitation prevention via database upsert
+- University email validation (commented out for testing)
+
 ## Development Workflow
 
 - **Database Setup**: Run `npx prisma migrate dev` after schema changes
 - **Client Generation**: Prisma client auto-generates to `app/generated/prisma/` on build/migrate
 - **Environment**: Requires `DATABASE_URL` in `.env` file
+- **Team Development**: Assign different localhost ports to team members (e.g., 3000, 3001, 3002) to avoid OAuth conflicts. Update `NEXTAUTH_URL` accordingly in each `.env` file
 - **Email Setup**: Configure email service for team invitations
 - **Linting and Formatting**: Use `npm run lint` for ESLint (with Next.js config) and `npx prettier --write .` for code formatting (Prettier integrated to avoid conflicts)
 
@@ -231,11 +254,11 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 ## Current State
 
 - ✅ **Authentication Backend**: Fully implemented with Auth.js v5, GitHub OAuth, Google OAuth, and Prisma integration
+- ✅ **Email Workflow**: Complete team invitation system with Resend SDK, secure tokens, and React Email templates
+- ✅ **Database Schema**: Team, TeamMember, Worklog, Rating models implemented with proper relations
+- ✅ **API Endpoints**: Team invitation, acceptance, and rejection endpoints fully functional
 - **Authentication UI**: Sign-in/sign-out components and user data display (pending frontend implementation)
-- Project is in early bootstrap phase
-- Database schema and backend/frontend requirements are defined
-- Team models (Team, TeamMember, Worklog, Rating) need implementation
-- No team/worklog/rating features implemented yet
+- **Worklog/Rating Features**: Backend APIs ready, frontend implementation pending
 
 ## Common Pitfalls
 
@@ -243,8 +266,8 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 - Ensure `dotenv/config` is imported before Prisma operations in config files
 - Use PostgreSQL connection string format for `DATABASE_URL`
 - Ratings must be hidden from team members (security requirement)
-- Google OAuth requires `hd=nu.edu.pk` parameter for university restriction (when implemented)
-- Team invitations should validate university email format
+- Google OAuth includes `hd=nu.edu.pk` parameter for university restriction (currently commented out for testing)
+- Team invitations validate university email format (currently commented out for testing)
 - Always check team membership status before allowing access
 - Tailwind CSS 4 requires `@import "tailwindcss"` syntax (not v3 style)
 - Auth.js middleware requires `runtime = 'nodejs'` for Prisma client compatibility
@@ -257,7 +280,7 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 - **APIs for CRUD operations on team owner ratings**: Create, read, update, delete ratings (owners only for their teams' worklogs; hidden from members; includes dashboard data fetching).
 - **APIs for team management**: Create/read/update/delete teams, invite/accept/reject/remove members, view team details and members (owners only; includes dashboard data fetching).
 - **Authentication with OAuth**: ✅ COMPLETED - Auth.js setup with Prisma adapter, GitHub and Google providers, Node.js runtime compatibility.
-- **Email invites**: Send invitations via Resend Node.js SDK, handle pending/accepted/rejected statuses in TeamMember model.
+- **Email invites**: ✅ COMPLETED - Send invitations via Resend Node.js SDK, handle pending/accepted/rejected statuses in TeamMember model with secure token validation.
 - **Authorization checks**: Middleware or per-route validation to ensure users can only access their teams/worklogs/ratings (e.g., `isOwner`, `isMember` queries).
 - **Input validation and error handling**: Use Zod for API request validation, standardize error responses (e.g., 400/403/404).
 - **GitHub link validation (optional)**: Utility to verify optional GitHub URLs in worklogs.
