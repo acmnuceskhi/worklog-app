@@ -17,13 +17,56 @@ This is a team-based worklog system for tracking member contributions. Key featu
 - **Framework**: Next.js 16 with App Router
 - **Database**: Prisma 7 + PostgreSQL (hosted on Prisma Cloud)
 - **Styling**: Tailwind CSS 4 with custom theme variables
-- **Auth**: Auth.js v5 with Google/GitHub OAuth (university domain restriction)
+- **Auth**: ✅ Auth.js v5 with GitHub and Google OAuth (university domain restriction implemented but commented for testing)
 - **Email**: For team invitations
-- **Runtime**: Edge-compatible with PrismaPg adapter
+- **Runtime**: Node.js-compatible with PrismaPg adapter
 
 ## Database Schema
 
-Based on the team-based implementation plan:
+Based on the team-based implementation plan with Auth.js integration:
+
+### Auth.js Models
+
+```prisma
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+```
 
 ### Core Models
 
@@ -117,7 +160,11 @@ Based on [official Prisma Auth.js guide](https://www.prisma.io/docs/guides/authj
 
 - `app/generated/prisma/`: Custom Prisma client output location
 - `lib/prisma.ts`: Singleton Prisma client with PostgreSQL adapter
-- `prisma/schema.prisma`: Database schema with team-based models
+- `lib/auth.ts`: Auth.js configuration with GitHub and Google OAuth providers
+- `middleware.ts`: Authentication middleware with Node.js runtime
+- `components/auth-components.tsx`: Reusable authentication components
+- `app/api/auth/[...nextauth]/route.ts`: Authentication API routes
+- `prisma/schema.prisma`: Database schema with Auth.js and team-based models
 - `app/dashboard/`: Different views for team owners vs members
 - `app/teams/`: Team creation, invitation, and management
 - `app/worklogs/`: Worklog CRUD operations
@@ -169,6 +216,10 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 
 ## UI/UX Best Practices
 
+- **Dashboard Routing**: Main dashboard page (`/dashboard`) with conditional logic:
+  - Completely new user with no team invites: Show "Create Team" button
+  - Team member: Redirect to `/member` page
+  - Team owner: Redirect to `/owner` page
 - **Separate Dashboards**: Team owners see team overview, member management, all worklogs, and ratings
 - **Member Dashboard**: Shows personal worklogs, team list, and submission forms
 - **Team Creation Flow**: Simple form with project name, organization, description
@@ -179,30 +230,33 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 
 ## Current State
 
+- ✅ **Authentication Backend**: Fully implemented with Auth.js v5, GitHub OAuth, Google OAuth, and Prisma integration
+- **Authentication UI**: Sign-in/sign-out components and user data display (pending frontend implementation)
 - Project is in early bootstrap phase
 - Database schema and backend/frontend requirements are defined
-- Authentication schema exists but team models need implementation
+- Team models (Team, TeamMember, Worklog, Rating) need implementation
 - No team/worklog/rating features implemented yet
-- Default Next.js starter page still active
 
 ## Common Pitfalls
 
-- Don't import Prisma client from `@prisma/client` - use the custom generated path
+- Don't import Prisma client from `@prisma/client` - use the custom generated path `../app/generated/prisma`
 - Ensure `dotenv/config` is imported before Prisma operations in config files
 - Use PostgreSQL connection string format for `DATABASE_URL`
 - Ratings must be hidden from team members (security requirement)
-- Google OAuth requires `hd=nu.edu.pk` parameter for university restriction
+- Google OAuth requires `hd=nu.edu.pk` parameter for university restriction (when implemented)
 - Team invitations should validate university email format
 - Always check team membership status before allowing access
 - Tailwind CSS 4 requires `@import "tailwindcss"` syntax (not v3 style)
+- Auth.js middleware requires `runtime = 'nodejs'` for Prisma client compatibility
+- Remove `runtime = "vercel-edge"` from Prisma generator for local development
 
 ## Backend Requirements
 
-- **Database schema**: Prisma models for User, Team, TeamMember, Worklog, Rating (with relations and enums).
+- **Database schema**: Prisma models for User, Team, TeamMember, Worklog, Rating (with relations and enums). Auth.js models (Account, Session, VerificationToken) implemented.
 - **APIs for CRUD operations on member worklogs**: Create, read, update, delete worklogs (members only access their own; includes dashboard data fetching).
 - **APIs for CRUD operations on team owner ratings**: Create, read, update, delete ratings (owners only for their teams' worklogs; hidden from members; includes dashboard data fetching).
 - **APIs for team management**: Create/read/update/delete teams, invite/accept/reject/remove members, view team details and members (owners only; includes dashboard data fetching).
-- **Authentication with OAuth**: Auth.js setup with Prisma adapter, Google/GitHub providers, and university domain restriction (e.g., `hd=nu.edu.pk` for Google). Follow the "How to use Prisma ORM and Prisma Postgres with Auth.js and Next.js" guide for integration.
+- **Authentication with OAuth**: ✅ COMPLETED - Auth.js setup with Prisma adapter, GitHub and Google providers, Node.js runtime compatibility.
 - **Email invites**: Send invitations via Resend Node.js SDK, handle pending/accepted/rejected statuses in TeamMember model.
 - **Authorization checks**: Middleware or per-route validation to ensure users can only access their teams/worklogs/ratings (e.g., `isOwner`, `isMember` queries).
 - **Input validation and error handling**: Use Zod for API request validation, standardize error responses (e.g., 400/403/404).
@@ -212,18 +266,23 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 ## Frontend Libraries Suggestions
 
 #### Core UI & Component Libraries
-- **shadcn/ui**: Accessible components on Radix UI. Includes forms (React Hook Form + Zod), notifications (Sonner), and UI primitives.
+
+- **shadcn/ui**: Accessible components on Radix UI. Includes forms (React Hook Form + Zod), notifications (Sonner), and UI primitives. Use for team creation, worklog submission, and all input forms.
 - **Lucide React**: Icon library compatible with shadcn/ui. Provides customizable icons for forms, dashboards, and navigation.
 
 #### Animation & Interaction
+
 - **Framer Motion**: Lightweight React animation library. Use for dashboard transitions, worklog animations, and rating sliders. Compatible with Next.js 16 and edge runtime.
 
 #### Date & Time Handling
+
 - **date-fns**: Modular date utilities. Handle worklog timestamps, durations, and date inputs. Tree-shakable and lightweight.
 
 #### Data Fetching & State Management
+
 - **TanStack Query (React Query)**: Data fetching and caching for React. Manage worklogs, ratings, and team data with efficient caching and auth integration.
 
 #### Additional Utilities
+
 - **clsx** or **cn** (bundled with shadcn/ui): Conditional Tailwind class merging for dynamic styling.
 - **Tailwind CSS plugins** (e.g., @tailwindcss/forms): Optional enhancements for form styling.

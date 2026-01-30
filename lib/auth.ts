@@ -1,9 +1,20 @@
-import NextAuth from 'next-auth'
-import { PrismaAdapter } from '@auth/prisma-adapter'
-import prisma from '@/lib/prisma'
-import GitHub from 'next-auth/providers/github'
+import NextAuth from "next-auth";
+import { PrismaAdapter } from "@auth/prisma-adapter";
+import prisma from "@/lib/prisma";
+import GitHub from "next-auth/providers/github";
+import Google from "next-auth/providers/google";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
-  providers: [GitHub],
-})
+  providers: [
+    GitHub,
+    Google({
+      // Temporarily commented out for testing
+      // authorization: {
+      //   params: {
+      //     hd: 'nu.edu.pk',
+      //   },
+      // },
+    }),
+  ],
+});

@@ -1,3 +1,3 @@
-export { auth as middleware } from '@/lib/auth'
+export { auth as middleware } from "@/lib/auth";
 
-export const runtime = 'nodejs'
+export const runtime = "nodejs";
