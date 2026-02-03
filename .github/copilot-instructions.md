@@ -2,15 +2,18 @@
 
 ## Project Overview
 
-This is a team-based worklog system for tracking member contributions. Key features:
+This is a hierarchical worklog tracking system for organizations, teams, and members. Key features:
 
-- Users register/login via OAuth (Google university email only, GitHub)
-- Users can create teams and invite members via email
-- Team members submit worklogs with titles, descriptions, and optional GitHub links
-- Team owners rate member contributions 1-10 (ratings hidden from members)
-- Users can join multiple teams
-- Different dashboards for team owners vs members
-- Full CRUD operations on worklogs (members) and ratings (owners)
+- **Three-Tier Hierarchy**: Organization Owner → Team Owner → Team Member
+- **OAuth Authentication**: Google university email + GitHub login (domain restriction implemented but commented for testing)
+- **Organization Management**: Users can create organizations and manage teams within them
+- **Team Management**: Team owners create teams, invite members, and set worklog deadlines
+- **Progress Tracking**: Members update worklog progress (STARTED → HALF_DONE → COMPLETED)
+- **Review System**: Team owners review completed worklogs
+- **Rating System**: Organization owners rate reviewed worklogs 1-10 (ratings hidden from lower roles)
+- **Deadline Management**: Optional deadlines per worklog with visual indicators
+- **Multi-Role Support**: Users can have different roles across organizations/teams
+- **Role-Based Dashboards**: Separate views for organization owners, team owners, and members
 
 ## Architecture Overview
 
@@ -23,7 +26,7 @@ This is a team-based worklog system for tracking member contributions. Key featu
 
 ## Database Schema
 
-Based on the team-based implementation plan with Auth.js integration:
+Based on the hierarchical worklog system with Auth.js integration:
 
 ### Auth.js Models
 
@@ -79,24 +82,37 @@ model User {
   image         String?
   accounts      Account[]
   sessions      Session[]
+  ownedOrganizations Organization[] @relation("OrganizationOwner")
   ownedTeams    Team[]    @relation("TeamOwner")
   memberships   TeamMember[]
   worklogs      Worklog[]
   ratings       Rating[]
 }
 
-model Team {
-  id          String       @id @default(cuid())
+model Organization {
+  id          String   @id @default(cuid())
   name        String
   description String?
-  project     String?      // What project the team is working on
-  organization String?     // Organization name
-  ownerId     String       @map("owner_id")
-  owner       User         @relation("TeamOwner", fields: [ownerId], references: [id])
-  members     TeamMember[]
-  worklogs    Worklog[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  ownerId     String   @map("owner_id")
+  owner       User     @relation("OrganizationOwner", fields: [ownerId], references: [id])
+  teams       Team[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Team {
+  id              String       @id @default(cuid())
+  name            String
+  description     String?
+  project         String?      // What project the team is working on
+  organizationId  String?      @map("organization_id") // Optional - teams can exist without organizations
+  organization    Organization? @relation(fields: [organizationId], references: [id])
+  ownerId         String       @map("owner_id")
+  owner           User         @relation("TeamOwner", fields: [ownerId], references: [id])
+  members         TeamMember[]
+  worklogs        Worklog[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 }
 
 model TeamMember {
@@ -118,18 +134,20 @@ model TeamMember {
 }
 
 model Worklog {
-  id          String   @id @default(cuid())
-  title       String
-  description String   @db.Text
-  githubLink  String?  // Optional GitHub commit/PR link
-  userId      String   @map("user_id")
-  teamId      String   @map("team_id")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String        @id @default(cuid())
+  title          String
+  description    String        @db.Text
+  githubLink     String?       // Optional GitHub commit/PR link
+  progressStatus ProgressStatus @default(STARTED)
+  deadline       DateTime?     // Optional deadline set by team owner
+  userId         String        @map("user_id")
+  teamId         String        @map("team_id")
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  ratings     Rating[]
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team           Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  ratings        Rating[]
 }
 
 model Rating {
@@ -137,7 +155,7 @@ model Rating {
   value     Int      // 1-10 scale
   comment   String?  @db.Text
   worklogId String   @map("worklog_id")
-  raterId   String   @map("rater_id") // Team owner who rated
+  raterId   String   @map("rater_id") // Organization owner who rated
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -152,17 +170,18 @@ enum MemberStatus {
   ACCEPTED
   REJECTED
 }
+
+enum ProgressStatus {
+  STARTED
+  HALF_DONE
+  COMPLETED
+  REVIEWED
+}
 ```
 
 ## Authentication Setup (Auth.js)
 
 Based on [official Prisma Auth.js guide](https://www.prisma.io/docs/guides/authjs-nextjs). Follow the guide for setup with Prisma adapter, Google/GitHub providers, and university domain restriction (e.g., `hd=nu.edu.pk` for Google).
-
-**Team Development Note**: For collaborative development, configure multiple authorized redirect URIs in your OAuth applications to allow team members to run the app on different localhost ports simultaneously:
-
-- Google OAuth: Add `http://localhost:3000/api/auth/callback/google`, `http://localhost:3001/api/auth/callback/google`, etc.
-- GitHub OAuth: Add corresponding callback URLs for each port
-- Assign different ports to team members to avoid OAuth conflicts
 
 ## Key Project Structure
 
@@ -178,13 +197,31 @@ Based on [official Prisma Auth.js guide](https://www.prisma.io/docs/guides/authj
 - `app/api/teams/[teamId]/invite/route.tsx`: Team invitation API endpoint
 - `app/api/invitations/[token]/accept/route.tsx`: Invitation acceptance endpoint
 - `app/api/invitations/[token]/reject/route.tsx`: Invitation rejection endpoint
-- `prisma/schema.prisma`: Database schema with Auth.js and team-based models
+- `prisma/schema.prisma`: Database schema with Auth.js and hierarchical models
 - `app/dashboard/`: Different views for team owners vs members
 - `app/teams/`: Team creation, invitation, and management
 - `app/worklogs/`: Worklog CRUD operations
 - Environment variables loaded via `dotenv/config` in `prisma.config.ts`
 
 ## Critical Patterns
+
+### Organization Authorization
+
+```typescript
+// Check if user is organization owner
+const isOrgOwner = await prisma.organization.findFirst({
+  where: { id: organizationId, ownerId: session.user.id },
+});
+
+// Check if user owns a team in an organization
+const ownsTeamInOrg = await prisma.team.findFirst({
+  where: {
+    id: teamId,
+    ownerId: session.user.id,
+    organizationId: organizationId,
+  },
+});
+```
 
 ### Team Authorization
 
@@ -204,16 +241,30 @@ const isMember = await prisma.teamMember.findFirst({
 });
 ```
 
+### Progress Status Authorization
+
+```typescript
+// Members can update: STARTED → HALF_DONE → COMPLETED
+const canUpdateProgress = isMember && 
+  (currentStatus === 'STARTED' || currentStatus === 'HALF_DONE');
+
+// Team owners can set: COMPLETED → REVIEWED
+const canReview = isOwner && currentStatus === 'COMPLETED';
+
+// Organization owners can rate: REVIEWED worklogs
+const canRate = isOrgOwner && currentStatus === 'REVIEWED';
+```
+
 ### Worklog Visibility
 
-- **Members**: See only their own worklogs
-- **Team Owners**: See all worklogs in their teams
-- **Super Admin**: See all worklogs (future feature)
+- **Members**: See only their own worklogs (up to COMPLETED status)
+- **Team Owners**: See all worklogs in their teams (up to REVIEWED status)
+- **Organization Owners**: See all worklogs in their organizations (all statuses + ratings)
 
 ### Rating Visibility
 
-- **Ratings are NEVER visible to team members**
-- **Only team owners can see ratings for their teams**
+- **Ratings are NEVER visible to team members or team owners**
+- **Only organization owners can see and manage ratings for worklogs in their organizations**
 - **Ratings are internal performance metrics**
 
 ### Email Invitations
@@ -233,55 +284,77 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 - **Database Setup**: Run `npx prisma migrate dev` after schema changes
 - **Client Generation**: Prisma client auto-generates to `app/generated/prisma/` on build/migrate
 - **Environment**: Requires `DATABASE_URL` in `.env` file
-- **Team Development**: Assign different localhost ports to team members (e.g., 3000, 3001, 3002) to avoid OAuth conflicts. Update `NEXTAUTH_URL` accordingly in each `.env` file
 - **Email Setup**: Configure email service for team invitations
 - **Linting and Formatting**: Use `npm run lint` for ESLint (with Next.js config) and `npx prettier --write .` for code formatting (Prettier integrated to avoid conflicts)
 
 ## UI/UX Best Practices
 
 - **Dashboard Routing**: Main dashboard page (`/dashboard`) with conditional logic:
-  - Completely new user with no team invites: Show "Create Team" button
-  - Team member: Redirect to `/member` page
-  - Team owner: Redirect to `/owner` page
-- **Separate Dashboards**: Team owners see team overview, member management, all worklogs, and ratings
-- **Member Dashboard**: Shows personal worklogs, team list, and submission forms
-- **Team Creation Flow**: Simple form with project name, organization, description
+  - Completely new user with no team invites: Show "Create Organization" and "Create Team" buttons
+  - Users with multiple roles: Show tabbed interface for different roles
+- **Multi-Role Tabs**: When users have multiple roles, display tabs:
+  - "My Organizations" (for organization owners)
+  - "My Teams (as Owner)" (for team ownership)
+  - "My Teams (as Member)" (for team membership)
+- **Role-Based Visibility**:
+  - **Members**: See worklog progress up to COMPLETED, their own deadlines
+  - **Team Owners**: See worklog progress up to REVIEWED, can set deadlines, review worklogs
+  - **Organization Owners**: See all progress statuses, ratings interface, organization management
+- **Organization Dashboard**: Organization owners see organization overview, team management, all worklogs and ratings
+- **Team Owner Dashboard**: Shows team overview, member management, worklogs up to REVIEWED status
+- **Member Dashboard**: Shows personal worklogs, team list, progress updates
+- **Organization Creation Flow**: Simple form with name and description
+- **Team Creation Flow**: Simple form with project name, optional organization selection, description
 - **Invitation Flow**: Email input field for team member emails (university domain only)
-- **Worklog Forms**: Rich text description, optional GitHub link validation
-- **Rating Interface**: 1-10 scale with optional comments, only visible to owners
-- **Responsive Design**: Mobile-friendly team management and worklog submission
+- **Worklog Forms**: Rich text description, optional GitHub link validation, progress status updates
+- **Deadline Setting**: Team owners can set optional deadlines per worklog with visual indicators
+- **Progress Tracking**: Members update STARTED → HALF_DONE → COMPLETED, team owners set REVIEWED
+- **Rating Interface**: 1-10 scale with optional comments, only visible to organization owners
+- **Deadline Indicators**: Show "due in X days", "overdue", or "completed on time"
+- **Responsive Design**: Mobile-friendly organization/team management and worklog submission
 
 ## Current State
 
 - ✅ **Authentication Backend**: Fully implemented with Auth.js v5, GitHub OAuth, Google OAuth, and Prisma integration
 - ✅ **Email Workflow**: Complete team invitation system with Resend SDK, secure tokens, and React Email templates
-- ✅ **Database Schema**: Team, TeamMember, Worklog, Rating models implemented with proper relations
+- **Database Schema**: Organization, Team, TeamMember, Worklog, Rating models implemented with proper relations
 - ✅ **API Endpoints**: Team invitation, acceptance, and rejection endpoints fully functional
-- **Authentication UI**: Sign-in/sign-out components and user data display (pending frontend implementation)
-- **Worklog/Rating Features**: Backend APIs ready, frontend implementation pending
+- **Organization Model**: Added to database schema with proper relations
+- **Progress Tracking**: Worklog progress status updates (STARTED → HALF_DONE → COMPLETED → REVIEWED)
+- **Rating System**: Organization owner rating interface and CRUD operations
+- **Deadline System**: Optional deadline setting and visual indicators
+- **Multi-Role UI**: Tabbed interface for users with multiple roles
+- **Organization Management**: Organization creation, team assignment, and hierarchical permissions
 
 ## Common Pitfalls
 
 - Don't import Prisma client from `@prisma/client` - use the custom generated path `../app/generated/prisma`
 - Ensure `dotenv/config` is imported before Prisma operations in config files
 - Use PostgreSQL connection string format for `DATABASE_URL`
-- Ratings must be hidden from team members (security requirement)
+- Ratings must be hidden from team members and team owners (security requirement)
+- Progress status transitions must follow: STARTED → HALF_DONE → COMPLETED → REVIEWED (with proper role permissions)
+- Organization owners can only access teams/worklogs within their own organizations
+- When an organization is deleted, teams/worklogs remain visible but all operations are blocked (read-only)
 - Google OAuth includes `hd=nu.edu.pk` parameter for university restriction (currently commented out for testing)
 - Team invitations validate university email format (currently commented out for testing)
-- Always check team membership status before allowing access
+- Always check team membership status and organizational ownership before allowing access
 - Tailwind CSS 4 requires `@import "tailwindcss"` syntax (not v3 style)
 - Auth.js middleware requires `runtime = 'nodejs'` for Prisma client compatibility
 - Remove `runtime = "vercel-edge"` from Prisma generator for local development
 
 ## Backend Requirements
 
-- **Database schema**: Prisma models for User, Team, TeamMember, Worklog, Rating (with relations and enums). Auth.js models (Account, Session, VerificationToken) implemented.
-- **APIs for CRUD operations on member worklogs**: Create, read, update, delete worklogs (members only access their own; includes dashboard data fetching).
-- **APIs for CRUD operations on team owner ratings**: Create, read, update, delete ratings (owners only for their teams' worklogs; hidden from members; includes dashboard data fetching).
+- **Database schema**: Prisma models for User, Organization, Team, TeamMember, Worklog, Rating (with relations and enums). Auth.js models (Account, Session, VerificationToken) implemented.
+- **APIs for CRUD operations on member worklogs**: Create, read, update, delete worklogs (members only access their own; includes progress status updates up to COMPLETED).
+- **APIs for team owner worklog management**: Update worklog status to REVIEWED, set deadlines, view all team worklogs up to REVIEWED status.
+- **APIs for CRUD operations on organization owner ratings**: Create, read, update, delete ratings (organization owners only for worklogs in their organizations; hidden from lower roles).
+- **APIs for organization management**: Create/read/update/delete organizations, assign teams to organizations, view organization details and teams.
 - **APIs for team management**: Create/read/update/delete teams, invite/accept/reject/remove members, view team details and members (owners only; includes dashboard data fetching).
+- **Progress status validation**: Ensure proper status transitions (STARTED → HALF_DONE → COMPLETED → REVIEWED) with role-based permissions.
+- **Deadline management**: CRUD operations on worklog deadlines by team owners, with optional enforcement.
 - **Authentication with OAuth**: ✅ COMPLETED - Auth.js setup with Prisma adapter, GitHub and Google providers, Node.js runtime compatibility.
 - **Email invites**: ✅ COMPLETED - Send invitations via Resend Node.js SDK, handle pending/accepted/rejected statuses in TeamMember model with secure token validation.
-- **Authorization checks**: Middleware or per-route validation to ensure users can only access their teams/worklogs/ratings (e.g., `isOwner`, `isMember` queries).
+- **Authorization checks**: Middleware or per-route validation to ensure users can only access their organizations/teams/worklogs/ratings based on hierarchical permissions.
 - **Input validation and error handling**: Use Zod for API request validation, standardize error responses (e.g., 400/403/404).
 - **GitHub link validation (optional)**: Utility to verify optional GitHub URLs in worklogs.
 - **Database setup and migrations**: Prisma client configuration, run migrations, handle connection pooling for production.
