@@ -88,7 +88,7 @@ export default function TeamsLayout({ children }: { children: React.ReactNode })
           >
             {contentTheme === "light" ? "🌙" : "☀️"}
           </button>
-          <button className="logout" onClick={() => router.push("/login")}>Logout</button>
+          <button className="logout" onClick={() => router.push("/")}>Logout</button>
         </div>
       </nav>
 
