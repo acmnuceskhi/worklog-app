@@ -5,10 +5,10 @@
 This is a hierarchical worklog tracking system for organizations, teams, and members. Key features:
 
 - **Three-Tier Hierarchy**: Organization Owner → Team Owner → Team Member
-- **OAuth Authentication**: Google university email + GitHub login (domain restriction implemented but commented for testing)
-- **Organization Management**: Users can create organizations and manage teams within them
+- **OAuth Authentication**: Google university email + GitHub login (restriction code has been implemented but commented out for the time being)
+- **Organization Management**: Users can create organizations, invite team owners via email to join the organization, and manage teams within them
 - **Team Management**: Team owners create teams, invite members, and set worklog deadlines
-- **Progress Tracking**: Members update worklog progress (STARTED → HALF_DONE → COMPLETED)
+- **Progress Tracking**: Members update worklog progress (STARTED → HALF_DONE → COMPLETED), team owners set REVIEWED
 - **Review System**: Team owners review completed worklogs
 - **Rating System**: Organization owners rate reviewed worklogs 1-10 (ratings hidden from lower roles)
 - **Deadline Management**: Optional deadlines per worklog with visual indicators
@@ -20,7 +20,7 @@ This is a hierarchical worklog tracking system for organizations, teams, and mem
 - **Framework**: Next.js 16 with App Router
 - **Database**: Prisma 7 + PostgreSQL (hosted on Prisma Cloud)
 - **Styling**: Tailwind CSS 4 with custom theme variables
-- **Auth**: ✅ Auth.js v5 with GitHub and Google OAuth (university domain restriction implemented but commented for testing)
+- **Auth**: ✅ Auth.js v5 with GitHub and Google OAuth (restriction code has been implemented but commented out for the time being)
 - **Email**: For team invitations
 - **Runtime**: Node.js-compatible with PrismaPg adapter
 
@@ -277,7 +277,7 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 - React Email templates with styled accept/reject buttons
 - Token validation with PENDING status requirement
 - Duplicate invitation prevention via database upsert
-- University email validation (commented out for testing)
+- University email validation (commented out for the time being. Basic OAuth works 100% ok)
 
 ## Development Workflow
 
@@ -291,7 +291,7 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 
 - **Dashboard Routing**: Main dashboard page (`/dashboard`) with conditional logic:
   - Completely new user with no team invites: Show "Create Organization" and "Create Team" buttons
-  - Users with multiple roles: Show tabbed interface for different roles
+  - Users with multiple roles: Show tabbed interface for different roles (no need to focus on the specifics. Just know that for users with more than single role, they can navigate role-suitable dashboard using navigation sidebar)
 - **Multi-Role Tabs**: When users have multiple roles, display tabs:
   - "My Organizations" (for organization owners)
   - "My Teams (as Owner)" (for team ownership)
@@ -306,7 +306,7 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 - **Organization Creation Flow**: Simple form with name and description
 - **Team Creation Flow**: Simple form with project name, optional organization selection, description
 - **Invitation Flow**: Email input field for team member emails (university domain only)
-- **Worklog Forms**: Rich text description, optional GitHub link validation, progress status updates
+- **Worklog Forms**: Rich text description, optional GitHub link validation, optional images as work evidence, progress status updates
 - **Deadline Setting**: Team owners can set optional deadlines per worklog with visual indicators
 - **Progress Tracking**: Members update STARTED → HALF_DONE → COMPLETED, team owners set REVIEWED
 - **Rating Interface**: 1-10 scale with optional comments, only visible to organization owners
@@ -317,11 +317,12 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 
 - ✅ **Authentication Backend**: Fully implemented with Auth.js v5, GitHub OAuth, Google OAuth, and Prisma integration
 - ✅ **Email Workflow**: Complete team invitation system with Resend SDK, secure tokens, and React Email templates
-- **Database Schema**: Organization, Team, TeamMember, Worklog, Rating models implemented with proper relations
+- **Database Schema**: Organization, Team, TeamMember, Worklog, Rating models documented with proper relations (implementation pending)
 - ✅ **API Endpoints**: Team invitation, acceptance, and rejection endpoints fully functional
 - **Organization Model**: Added to database schema with proper relations
 - **Progress Tracking**: Worklog progress status updates (STARTED → HALF_DONE → COMPLETED → REVIEWED)
 - **Rating System**: Organization owner rating interface and CRUD operations
+- **Rating Automation**: Tentative feature for automatic rating reduction on late worklog completions (details not finalized yet)
 - **Deadline System**: Optional deadline setting and visual indicators
 - **Multi-Role UI**: Tabbed interface for users with multiple roles
 - **Organization Management**: Organization creation, team assignment, and hierarchical permissions
@@ -334,9 +335,9 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 - Ratings must be hidden from team members and team owners (security requirement)
 - Progress status transitions must follow: STARTED → HALF_DONE → COMPLETED → REVIEWED (with proper role permissions)
 - Organization owners can only access teams/worklogs within their own organizations
-- When an organization is deleted, teams/worklogs remain visible but all operations are blocked (read-only)
-- Google OAuth includes `hd=nu.edu.pk` parameter for university restriction (currently commented out for testing)
-- Team invitations validate university email format (currently commented out for testing)
+- When an organization is deleted, teams/worklogs remain visible but all operations are blocked (read-only). They'll be check whether the organisation that team is tied to was prevously made but deleted. If yes then new team will have to be made
+- Google OAuth includes `hd=nu.edu.pk` parameter for university restriction (see Project Overview for implementation status)
+- Team invitations validate university email format (commented out for the time being. Basic OAuth works 100% ok)
 - Always check team membership status and organizational ownership before allowing access
 - Tailwind CSS 4 requires `@import "tailwindcss"` syntax (not v3 style)
 - Auth.js middleware requires `runtime = 'nodejs'` for Prisma client compatibility
@@ -345,13 +346,13 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 ## Backend Requirements
 
 - **Database schema**: Prisma models for User, Organization, Team, TeamMember, Worklog, Rating (with relations and enums). Auth.js models (Account, Session, VerificationToken) implemented.
-- **APIs for CRUD operations on member worklogs**: Create, read, update, delete worklogs (members only access their own; includes progress status updates up to COMPLETED).
+- **APIs for CRUD operations on member worklogs**: Create, read, update, delete worklogs (members only access their own; includes progress status updates up to COMPLETED and optional images/GitHub links)
 - **APIs for team owner worklog management**: Update worklog status to REVIEWED, set deadlines, view all team worklogs up to REVIEWED status.
 - **APIs for CRUD operations on organization owner ratings**: Create, read, update, delete ratings (organization owners only for worklogs in their organizations; hidden from lower roles).
 - **APIs for organization management**: Create/read/update/delete organizations, assign teams to organizations, view organization details and teams.
 - **APIs for team management**: Create/read/update/delete teams, invite/accept/reject/remove members, view team details and members (owners only; includes dashboard data fetching).
 - **Progress status validation**: Ensure proper status transitions (STARTED → HALF_DONE → COMPLETED → REVIEWED) with role-based permissions.
-- **Deadline management**: CRUD operations on worklog deadlines by team owners, with optional enforcement.
+- **Deadline management**: CRUD operations on worklog deadlines by team owners, with optional enforcement (enforcement is soft in the sense that they'll be visual indicator only if work completed after deadline set).
 - **Authentication with OAuth**: ✅ COMPLETED - Auth.js setup with Prisma adapter, GitHub and Google providers, Node.js runtime compatibility.
 - **Email invites**: ✅ COMPLETED - Send invitations via Resend Node.js SDK, handle pending/accepted/rejected statuses in TeamMember model with secure token validation.
 - **Authorization checks**: Middleware or per-route validation to ensure users can only access their organizations/teams/worklogs/ratings based on hierarchical permissions.
@@ -360,6 +361,8 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 - **Database setup and migrations**: Prisma client configuration, run migrations, handle connection pooling for production.
 
 ## Frontend Libraries Suggestions
+
+Just suggestions for frontend team. No need for further specifics.
 
 #### Core UI & Component Libraries
 
