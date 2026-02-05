@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+/* Centralized theme variables for consistent colors */
+:root {
+  --bg-gradient-start: #fdf6f0;
+  --bg-gradient-end: #e6f0ff;
+  --nav-bg: #0f172a; /* deep navy */
+  --panel-bg: rgba(15,23,42,0.9);
+  --card-bg: rgba(255,255,255,0.95);
+  --card-contrast: #e6f0ff;
+  --primary: #3b82f6; /* blue */
+  --accent: #60a5fa; /* lighter blue */
+  --accent-2: #f97316; /* orange accent */
+  --danger: #ef4444;
+  --success: #10b981;
+  --text: #0f172a; /* dark text */
+  --text-inverse: #ffffff;
+  --muted: #6b7280;
+  --glass: rgba(255,255,255,0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-gradient-start: #071032;
+    --bg-gradient-end: #071830;
+    --nav-bg: #061227;
+    --panel-bg: rgba(2,6,23,0.9);
+    --card-bg: rgba(12,18,45,0.8);
+    --card-contrast: rgba(59,130,246,0.08);
+    --text: #e6eef8;
+    --text-inverse: #ffffff;
+    --muted: #94a3b8;
+    --glass: rgba(255,255,255,0.04);
+  }
+}
+
+body {
+  background: linear-gradient(160deg, var(--bg-gradient-start), var(--bg-gradient-end));
+  color: var(--text);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  margin: 0;
+}
+
+/* Utility */
+.muted { color: var(--muted) }
+
+html, body {
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+}
