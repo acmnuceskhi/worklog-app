@@ -38,30 +38,50 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime? @map("email_verified")
-  image         String?
-  accounts      Account[]
-  sessions      Session[]
-  ownedTeams    Team[]    @relation("TeamOwner")
-  memberships   TeamMember[]
+  id                 String         @id @default(cuid())
+  name               String?
+  email              String?        @unique
+  emailVerified      DateTime?      @map("email_verified")
+  image              String?
+  accounts           Account[]
+  sessions           Session[]
+  ownedOrganizations Organization[] @relation("OrganizationOwner")
+  ownedTeams         Team[]         @relation("TeamOwner")
+  memberships        TeamMember[]
+  worklogs           Worklog[]
+  ratings            Rating[]
 
   @@map("users")
 }
 
-model Team {
-  id          String       @id @default(cuid())
+model Organization {
+  id          String   @id @default(cuid())
   name        String
   description String?
-  project     String?
-  organization String?
-  ownerId     String       @map("owner_id")
-  owner       User         @relation("TeamOwner", fields: [ownerId], references: [id])
-  members     TeamMember[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  credits     Int      @default(0)  // Credits system for organization
+  ownerId     String   @map("owner_id")
+  owner       User     @relation("OrganizationOwner", fields: [ownerId], references: [id])
+  teams       Team[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("organizations")
+}
+
+model Team {
+  id             String        @id @default(cuid())
+  name           String
+  description    String?
+  project        String?
+  credits        Int           @default(0)  // Credits system for team
+  organizationId String?       @map("organization_id")
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  ownerId        String        @map("owner_id")
+  owner          User          @relation("TeamOwner", fields: [ownerId], references: [id])
+  members        TeamMember[]
+  worklogs       Worklog[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   @@map("teams")
 }
@@ -88,6 +108,49 @@ enum MemberStatus {
   PENDING
   ACCEPTED
   REJECTED
+}
+
+enum ProgressStatus {
+  STARTED
+  HALF_DONE
+  COMPLETED
+  REVIEWED
+  GRADED
+}
+
+model Worklog {
+  id             String         @id @default(cuid())
+  title          String
+  description    String         @db.Text
+  githubLink     String?
+  progressStatus ProgressStatus @default(STARTED)
+  deadline       DateTime?
+  userId         String         @map("user_id")
+  teamId         String         @map("team_id")
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team    Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  ratings Rating[]
+
+  @@map("worklogs")
+}
+
+model Rating {
+  id        String   @id @default(cuid())
+  value     Int      // 1-10 scale
+  comment   String?  @db.Text
+  worklogId String   @map("worklog_id")
+  raterId   String   @map("rater_id")  // Organization owner who rated
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  worklog Worklog @relation(fields: [worklogId], references: [id], onDelete: Cascade)
+  rater   User    @relation(fields: [raterId], references: [id], onDelete: Cascade)
+
+  @@unique([worklogId, raterId])  // One rating per worklog per rater
+  @@map("ratings")
 }
 
 model VerificationToken {

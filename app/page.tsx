@@ -1,25 +1,58 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Sacramento } from "next/font/google";
 import { FcGoogle } from "react-icons/fc";
 import { FaGithub } from "react-icons/fa";
+import { signIn, useSession } from "next-auth/react";
 
 const sacramento = Sacramento({ weight: "400", subsets: ["latin"] });
 
 export default function Home() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Redirect to home if already logged in
+  useEffect(() => {
+    if (status === "authenticated" && session) {
+      router.push("/home");
+    }
+  }, [status, session, router]);
 
   const handleLogin = () => {
     if (email && password) router.push("/home");
     else alert("Please enter email and password");
   };
 
-  const handleGoogleLogin = () => alert("Google login clicked!");
-  const handleGithubLogin = () => alert("GitHub login clicked!");
+  const handleGoogleLogin = () => {
+    signIn("google", { callbackUrl: "/home" });
+  };
+
+  const handleGithubLogin = () => {
+    signIn("github", { callbackUrl: "/home" });
+  };
+
+  // Prevent hydration mismatch by waiting for client mount
+  if (!mounted || status === "loading") {
+    return null;
+  }
+
+  // If already authenticated, show loading while redirecting
+  if (status === "authenticated") {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", backgroundColor: "#0A173B" }}>
+        <p style={{ color: "white", fontSize: "1.2rem" }}>Redirecting to home...</p>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.container}>

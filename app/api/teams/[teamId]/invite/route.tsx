@@ -5,7 +5,8 @@ import { TeamInvitationEmail } from "@/components/team-invitation-email";
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Only initialize if API key exists
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 interface InviteRequest {
   emails: string[];
@@ -105,9 +106,10 @@ export async function POST(
         const acceptUrl = `${baseUrl}/api/invitations/${token}/accept`;
         const rejectUrl = `${baseUrl}/api/invitations/${token}/reject`;
 
-        // Send invitation email
-        const { data: emailData, error: emailError } = await resend.emails.send(
-          {
+        // Send invitation email (only if RESEND_API_KEY is configured)
+        let emailData = null;
+        if (resend) {
+          const { data, error: emailError } = await resend.emails.send({
             from: "Worklog App <noreply@worklog-app.com>",
             to: [email],
             subject: `You're invited to join ${team.name} on Worklog App`,
@@ -118,18 +120,26 @@ export async function POST(
               acceptUrl,
               rejectUrl,
             }),
-          },
-        );
-
-        if (emailError) {
-          errors.push({ email, error: emailError.message });
-        } else {
-          results.push({
-            email,
-            teamMemberId: teamMember.id,
-            emailId: emailData?.id,
           });
+
+          if (emailError) {
+            console.error("Failed to send invitation email:", emailError);
+            errors.push({ email, error: emailError.message });
+            continue; // Skip to next email
+          }
+          emailData = data;
+        } else {
+          // Email service not configured, but invitation is created
+          console.warn(
+            "RESEND_API_KEY not configured, invitation created but email not sent"
+          );
         }
+
+        results.push({
+          email,
+          teamMemberId: teamMember.id,
+          emailId: emailData?.id,
+        });
       } catch (error) {
         errors.push({
           email,
