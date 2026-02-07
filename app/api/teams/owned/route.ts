@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getCurrentUser, unauthorized } from "@/lib/auth-utils";
 
@@ -6,7 +6,7 @@ import { getCurrentUser, unauthorized } from "@/lib/auth-utils";
  * GET /api/teams/owned
  * Get all teams owned by the current user
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const user = await getCurrentUser();
     if (!user) {
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     console.error("Get owned teams error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

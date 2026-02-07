@@ -1,22 +1,38 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FaUsers, FaUserTie, FaBell, FaSearch, FaPlus, FaTimes } from "react-icons/fa";
+import Image from "next/image";
+import {
+  FaUsers,
+  FaUserTie,
+  FaBell,
+  FaSearch,
+  FaPlus,
+  FaTimes,
+} from "react-icons/fa";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
   const router = useRouter();
   const { data: session } = useSession();
-  const [invitations, setInvitations] = useState([
+  const invitations = [
     { id: 1, team: "Frontend Team", from: "Ayesha Khan" },
     { id: 2, team: "Backend Squad", from: "Hamza Ali" },
     { id: 3, team: "Marketing Team", from: "Ali Raza" },
-  ]);
+  ];
 
   const [query, setQuery] = useState("");
-  const [contentTheme, setContentTheme] = useState<"light" | "dark">("light");
-  const [mounted, setMounted] = useState(false);
+  const [contentTheme, setContentTheme] = useState<"light" | "dark">(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("contentTheme");
+        if (saved === "light" || saved === "dark") return saved;
+      } catch {}
+    }
+    return "light";
+  });
+  const mounted = typeof window !== "undefined";
 
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [teamName, setTeamName] = useState("");
@@ -25,29 +41,31 @@ export default function DashboardPage() {
   const [inviteInput, setInviteInput] = useState("");
 
   useEffect(() => {
-    setMounted(true);
     try {
-      const saved = localStorage.getItem("contentTheme");
-      if (saved === "light" || saved === "dark") setContentTheme(saved);
+      localStorage.setItem("contentTheme", contentTheme);
     } catch {}
-  }, []);
-
-  useEffect(() => {
-    if (mounted) {
-      try {
-        localStorage.setItem("contentTheme", contentTheme);
-      } catch {}
-    }
-  }, [contentTheme, mounted]);
+  }, [contentTheme]);
 
   const teamsData = [
-    { id: "t1", name: "Frontend Team", members: 8, progress: 72, role: "member" },
+    {
+      id: "t1",
+      name: "Frontend Team",
+      members: 8,
+      progress: 72,
+      role: "member",
+    },
     { id: "t2", name: "Backend Squad", members: 5, progress: 46, role: "lead" },
-    { id: "t3", name: "Marketing Team", members: 4, progress: 88, role: "member" },
+    {
+      id: "t3",
+      name: "Marketing Team",
+      members: 4,
+      progress: 88,
+      role: "member",
+    },
   ];
 
   const teams = teamsData.filter((t) =>
-    t.name.toLowerCase().includes(query.toLowerCase())
+    t.name.toLowerCase().includes(query.toLowerCase()),
   );
 
   const removeEmail = (email: string) => {
@@ -69,7 +87,9 @@ export default function DashboardPage() {
             <input
               placeholder="Search teams..."
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setQuery(e.target.value)
+              }
             />
           </div>
         </div>
@@ -85,12 +105,12 @@ export default function DashboardPage() {
             style={{ position: "relative" }}
           >
             {session?.user?.image ? (
-              <img
+              <Image
                 src={session.user.image}
                 alt="Profile"
+                width={32}
+                height={32}
                 style={{
-                  width: "32px",
-                  height: "32px",
                   borderRadius: "50%",
                   objectFit: "cover",
                 }}
@@ -110,9 +130,9 @@ export default function DashboardPage() {
                   color: "white",
                 }}
               >
-                {session?.user?.name?.charAt(0).toUpperCase() || 
-                 session?.user?.email?.charAt(0).toUpperCase() || 
-                 "U"}
+                {session?.user?.name?.charAt(0).toUpperCase() ||
+                  session?.user?.email?.charAt(0).toUpperCase() ||
+                  "U"}
               </div>
             )}
           </button>
@@ -124,7 +144,10 @@ export default function DashboardPage() {
           >
             {contentTheme === "light" ? "🌙" : "☀️"}
           </button>
-          <button className="logout" onClick={() => signOut({ callbackUrl: "/" })}>
+          <button
+            className="logout"
+            onClick={() => signOut({ callbackUrl: "/" })}
+          >
             Logout
           </button>
         </div>
@@ -241,19 +264,26 @@ export default function DashboardPage() {
       {showCreateTeam && (
         <div className="modal-backdrop">
           <div className="modal">
-            <button className="modal-close" onClick={() => setShowCreateTeam(false)}>
+            <button
+              className="modal-close"
+              onClick={() => setShowCreateTeam(false)}
+            >
               <FaTimes />
             </button>
             <h3>Create Team</h3>
             <input
               placeholder="Team Name"
               value={teamName}
-              onChange={(e) => setTeamName(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setTeamName(e.target.value)
+              }
             />
             <textarea
               placeholder="Team Description"
               value={teamDesc}
-              onChange={(e) => setTeamDesc(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                setTeamDesc(e.target.value)
+              }
             />
             <div className="email-chips">
               {inviteEmails.map((email) => (
@@ -265,8 +295,10 @@ export default function DashboardPage() {
               <input
                 placeholder="Add invite emails"
                 value={inviteInput}
-                onChange={(e) => setInviteInput(e.target.value)}
-                onKeyDown={(e) => {
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setInviteInput(e.target.value)
+                }
+                onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
                   if (e.key === "Enter" || e.key === ",") {
                     e.preventDefault();
                     const email = inviteInput.trim();
@@ -284,8 +316,8 @@ export default function DashboardPage() {
                 onClick={() => {
                   alert(
                     `Team Created!\nName: ${teamName}\nDescription: ${teamDesc}\nEmails: ${inviteEmails.join(
-                      ", "
-                    )}`
+                      ", ",
+                    )}`,
                   );
                   setShowCreateTeam(false);
                   setTeamName("");

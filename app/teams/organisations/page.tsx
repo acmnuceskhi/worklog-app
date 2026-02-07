@@ -14,7 +14,12 @@ export default function OrganisationsPageContent() {
 
   const handleCreateTeam = () => {
     if (!teamName || !organisation || !teamLeader) return;
-    const newTeam = { id: Date.now(), name: teamName, organisation, leader: teamLeader };
+    const newTeam = {
+      id: Date.now(),
+      name: teamName,
+      organisation,
+      leader: teamLeader,
+    };
     setTeams([...teams, newTeam]);
     setTeamName("");
     setOrganisation("");
@@ -25,7 +30,10 @@ export default function OrganisationsPageContent() {
   return (
     <main className="content">
       {/* Create Team Button */}
-      <button className="create-team-btn" onClick={() => setShowCreateTeam(true)}>
+      <button
+        className="create-team-btn"
+        onClick={() => setShowCreateTeam(true)}
+      >
         <FaPlus /> Create Team
       </button>
 
@@ -51,7 +59,7 @@ export default function OrganisationsPageContent() {
       <section className="card">
         <h3>Featured Teams</h3>
         {teams.length === 0 ? (
-          <p>No teams yet. Click "Create Team" to add one.</p>
+          <p>No teams yet. Click &quot;Create Team&quot; to add one.</p>
         ) : (
           <div className="grid">
             {teams.map((t) => (
@@ -81,7 +89,10 @@ export default function OrganisationsPageContent() {
       {showCreateTeam && (
         <div className="modal-backdrop">
           <div className="modal">
-            <button className="modal-close" onClick={() => setShowCreateTeam(false)}>
+            <button
+              className="modal-close"
+              onClick={() => setShowCreateTeam(false)}
+            >
               <FaTimes />
             </button>
             <h3>Create Team</h3>

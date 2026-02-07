@@ -51,10 +51,8 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 
 ## Documentation
 
-- **[API_DOCUMENTATION.md](./API_DOCUMENTATION.md)** - Complete API reference
-- **[IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md)** - Backend implementation overview
-- **[TESTING_GUIDE.md](./TESTING_GUIDE.md)** - API testing guide
-- **[ONBOARDING.md](./ONBOARDING.md)** - Repository navigation and file organization
+- **[api-documentation.md](./api-documentation.md)** - Complete API reference
+- **[onboarding.md](./onboarding.md)** - Repository navigation and file organization
 - **[.github/copilot-instructions.md](./.github/copilot-instructions.md)** - AI coding guidelines
 
 ## Available Scripts
@@ -64,9 +62,3 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 - `npm run start` - Start production server
 - `npm run lint` - Run ESLint
 - `npx prisma studio` - Open Prisma Studio (database GUI)
-
-## Roadmap
-
-- **By Friday, Jan 30**: Prototype ready (landing page, owner dashboard, member dashboard with basic UI and mock data).
-- **Feedback Phase**: Review prototype and gather input.
-- **By Sunday, Feb 1**: Full application complete (auth, APIs, CRUD operations, ratings, email invites).

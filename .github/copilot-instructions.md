@@ -268,16 +268,18 @@ import {
 } from "@/lib/auth-utils";
 
 // Members can update: STARTED → HALF_DONE → COMPLETED
-const canUpdateProgress = await isWorklogOwner(userId, worklogId) || 
-  await isTeamMember(userId, teamId);
+const canUpdateProgress =
+  (await isWorklogOwner(userId, worklogId)) ||
+  (await isTeamMember(userId, teamId));
 
 // Team owners can set: COMPLETED → REVIEWED
-const canReview = await isTeamOwner(userId, teamId) && 
-  currentStatus === 'COMPLETED';
+const canReview =
+  (await isTeamOwner(userId, teamId)) && currentStatus === "COMPLETED";
 
 // Organization owners can rate: REVIEWED → GRADED
-const canRate = await isOrganizationOwner(userId, organizationId) && 
-  currentStatus === 'REVIEWED';
+const canRate =
+  (await isOrganizationOwner(userId, organizationId)) &&
+  currentStatus === "REVIEWED";
 
 // Valid status transitions (enforced by API)
 const VALID_TRANSITIONS = {

@@ -32,7 +32,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
  */
 export async function isOrganizationOwner(
   userId: string,
-  organizationId: string
+  organizationId: string,
 ): Promise<boolean> {
   const org = await prisma.organization.findFirst({
     where: {
@@ -48,7 +48,7 @@ export async function isOrganizationOwner(
  */
 export async function isTeamOwner(
   userId: string,
-  teamId: string
+  teamId: string,
 ): Promise<boolean> {
   const team = await prisma.team.findFirst({
     where: {
@@ -64,7 +64,7 @@ export async function isTeamOwner(
  */
 export async function isTeamMember(
   userId: string,
-  teamId: string
+  teamId: string,
 ): Promise<boolean> {
   const member = await prisma.teamMember.findFirst({
     where: {
@@ -92,7 +92,7 @@ export async function getTeamOrganization(teamId: string) {
  */
 export async function canTeamOwnerAccessTeam(
   userId: string,
-  teamId: string
+  teamId: string,
 ): Promise<boolean> {
   const team = await prisma.team.findFirst({
     where: {
@@ -134,7 +134,7 @@ export async function getUserOrganizations(userId: string) {
  */
 export async function getUserTeamsInOrganization(
   userId: string,
-  organizationId: string
+  organizationId: string,
 ) {
   return await prisma.team.findMany({
     where: {
@@ -153,7 +153,7 @@ export async function getUserTeamsInOrganization(
  */
 export async function isWorklogOwner(
   userId: string,
-  worklogId: string
+  worklogId: string,
 ): Promise<boolean> {
   const worklog = await prisma.worklog.findFirst({
     where: {
@@ -183,6 +183,6 @@ export const notFound = (message: string = "Not found") => {
   return NextResponse.json({ error: message }, { status: 404 });
 };
 
-export const success = (data: any, status: number = 200) => {
+export const success = (data: unknown, status: number = 200) => {
   return NextResponse.json(data, { status });
 };

@@ -3,21 +3,21 @@ import prisma from "@/lib/prisma";
 import {
   getCurrentUser,
   isTeamOwner,
-  canTeamOwnerAccessTeam,
   unauthorized,
   forbidden,
   notFound,
   success,
   badRequest,
 } from "@/lib/auth-utils";
+import { validateRequest, creditsUpdateSchema } from "@/lib/validations";
 
 /**
  * GET /api/teams/[teamId]/credits
  * Get team credits (team owner only)
  */
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ teamId: string }> }
+  _request: NextRequest,
+  { params }: { params: Promise<{ teamId: string }> },
 ) {
   try {
     const user = await getCurrentUser();
@@ -52,7 +52,7 @@ export async function GET(
     console.error("Get team credits error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -64,7 +64,7 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ teamId: string }> }
+  { params }: { params: Promise<{ teamId: string }> },
 ) {
   try {
     const user = await getCurrentUser();
@@ -73,17 +73,11 @@ export async function PATCH(
     }
 
     const { teamId } = await params;
-    const body = await request.json();
-    const { action, amount } = body;
-
-    // Validate input
-    if (!action || !["add", "subtract", "set"].includes(action)) {
-      return badRequest("Action must be 'add', 'subtract', or 'set'");
+    const validation = await validateRequest(request, creditsUpdateSchema);
+    if (!validation.success) {
+      return badRequest(validation.error);
     }
-
-    if (typeof amount !== "number" || amount < 0) {
-      return badRequest("Amount must be a non-negative number");
-    }
+    const { action, amount } = validation.data;
 
     // Check if user is team owner
     const isOwner = await isTeamOwner(user.id, teamId);
@@ -142,7 +136,7 @@ export async function PATCH(
     console.error("Update team credits error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

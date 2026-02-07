@@ -85,10 +85,7 @@ export const teamCreateSchema = z.object({
     .string()
     .max(100, "Project name must be at most 100 characters")
     .optional(),
-  organizationId: z
-    .string()
-    .cuid("Invalid organization ID format")
-    .optional(),
+  organizationId: z.string().cuid("Invalid organization ID format").optional(),
 });
 
 export const teamUpdateSchema = z.object({
@@ -111,6 +108,12 @@ export const teamInviteSchema = z.object({
   email: z.string().email("Invalid email format"),
 });
 
+export const teamInviteMultipleSchema = z.object({
+  emails: z
+    .array(z.string().email("Invalid email format"))
+    .min(1, "At least one email is required"),
+});
+
 /**
  * Worklog Schemas
  */
@@ -123,10 +126,7 @@ export const worklogCreateSchema = z.object({
   githubLink: z
     .string()
     .url("Invalid GitHub link URL")
-    .regex(
-      /^https:\/\/(www\.)?github\.com\/.+/,
-      "Must be a valid GitHub URL"
-    )
+    .regex(/^https:\/\/(www\.)?github\.com\/.+/, "Must be a valid GitHub URL")
     .optional(),
   deadline: z
     .string()
@@ -142,17 +142,11 @@ export const worklogUpdateSchema = z.object({
     .min(1, "Title must not be empty")
     .max(200, "Title must be at most 200 characters")
     .optional(),
-  description: z
-    .string()
-    .min(1, "Description must not be empty")
-    .optional(),
+  description: z.string().min(1, "Description must not be empty").optional(),
   githubLink: z
     .string()
     .url("Invalid GitHub link URL")
-    .regex(
-      /^https:\/\/(www\.)?github\.com\/.+/,
-      "Must be a valid GitHub URL"
-    )
+    .regex(/^https:\/\/(www\.)?github\.com\/.+/, "Must be a valid GitHub URL")
     .optional()
     .nullable(),
   deadline: z
@@ -168,7 +162,7 @@ export const worklogUpdateSchema = z.object({
  */
 export async function validateRequest<T>(
   request: Request,
-  schema: z.ZodSchema<T>
+  schema: z.ZodSchema<T>,
 ): Promise<{ success: true; data: T } | { success: false; error: string }> {
   try {
     const body = await request.json();

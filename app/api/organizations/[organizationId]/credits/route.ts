@@ -9,14 +9,15 @@ import {
   success,
   badRequest,
 } from "@/lib/auth-utils";
+import { validateRequest, creditsUpdateSchema } from "@/lib/validations";
 
 /**
  * GET /api/organizations/[organizationId]/credits
  * Get organization credits
  */
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ organizationId: string }> }
+  _request: NextRequest,
+  { params }: { params: Promise<{ organizationId: string }> },
 ) {
   try {
     const user = await getCurrentUser();
@@ -50,7 +51,7 @@ export async function GET(
     console.error("Get organization credits error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -61,7 +62,7 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ organizationId: string }> }
+  { params }: { params: Promise<{ organizationId: string }> },
 ) {
   try {
     const user = await getCurrentUser();
@@ -70,17 +71,11 @@ export async function PATCH(
     }
 
     const { organizationId } = await params;
-    const body = await request.json();
-    const { credits, action } = body;
-
-    // Validate input
-    if (typeof credits !== "number" || credits < 0) {
-      return badRequest("Credits must be a non-negative number");
+    const validation = await validateRequest(request, creditsUpdateSchema);
+    if (!validation.success) {
+      return badRequest(validation.error);
     }
-
-    if (action && !["add", "subtract", "set"].includes(action)) {
-      return badRequest("Action must be 'add', 'subtract', or 'set'");
-    }
+    const { action, amount } = validation.data;
 
     // Check if user is organization owner
     const isOwner = await isOrganizationOwner(user.id, organizationId);
@@ -100,14 +95,14 @@ export async function PATCH(
 
     switch (action) {
       case "add":
-        newCredits = organization.credits + credits;
+        newCredits = organization.credits + amount;
         break;
       case "subtract":
-        newCredits = Math.max(0, organization.credits - credits);
+        newCredits = Math.max(0, organization.credits - amount);
         break;
       case "set":
       default:
-        newCredits = credits;
+        newCredits = amount;
         break;
     }
 
@@ -127,7 +122,7 @@ export async function PATCH(
     console.error("Update organization credits error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

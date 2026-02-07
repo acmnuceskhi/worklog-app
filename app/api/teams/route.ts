@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getCurrentUser, unauthorized } from "@/lib/auth-utils";
+import { getCurrentUser, unauthorized, badRequest } from "@/lib/auth-utils";
+import { validateRequest, teamCreateSchema } from "@/lib/validations";
 
 /**
  * POST /api/teams
@@ -13,15 +14,11 @@ export async function POST(request: NextRequest) {
       return unauthorized();
     }
 
-    const body = await request.json();
-    const { name, description, project, organizationId } = body;
-
-    if (!name || typeof name !== "string") {
-      return NextResponse.json(
-        { error: "Team name is required" },
-        { status: 400 }
-      );
+    const validation = await validateRequest(request, teamCreateSchema);
+    if (!validation.success) {
+      return badRequest(validation.error);
     }
+    const { name, description, project, organizationId } = validation.data;
 
     // Verify organization ownership if organizationId is provided
     if (organizationId) {
@@ -35,7 +32,7 @@ export async function POST(request: NextRequest) {
       if (!organization) {
         return NextResponse.json(
           { error: "Organization not found or unauthorized" },
-          { status: 403 }
+          { status: 403 },
         );
       }
     }
@@ -55,7 +52,7 @@ export async function POST(request: NextRequest) {
     console.error("Create team error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

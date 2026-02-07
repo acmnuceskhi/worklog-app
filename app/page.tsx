@@ -14,11 +14,7 @@ export default function Home() {
   const { data: session, status } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = typeof window !== "undefined";
 
   // Redirect to home if already logged in
   useEffect(() => {
@@ -48,8 +44,18 @@ export default function Home() {
   // If already authenticated, show loading while redirecting
   if (status === "authenticated") {
     return (
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", backgroundColor: "#0A173B" }}>
-        <p style={{ color: "white", fontSize: "1.2rem" }}>Redirecting to home...</p>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "100vh",
+          backgroundColor: "#0A173B",
+        }}
+      >
+        <p style={{ color: "white", fontSize: "1.2rem" }}>
+          Redirecting to home...
+        </p>
       </div>
     );
   }
@@ -63,7 +69,10 @@ export default function Home() {
       <div style={styles.innerContainer}>
         {/* LEFT SIDE */}
         <div style={styles.left}>
-          <div className={`${shareTechMono.className} worklog`} style={styles.worklog}>
+          <div
+            className={`${shareTechMono.className} worklog`}
+            style={styles.worklog}
+          >
             WORKLOG<span className="caret">_</span>
           </div>
           <div style={styles.tagline}>Track your projects like a pro</div>
@@ -97,10 +106,12 @@ export default function Home() {
 
           <div style={styles.socialContainer}>
             <button style={styles.socialButton} onClick={handleGoogleLogin}>
-              <FcGoogle size={20} /> <span style={{ marginLeft: 8 }}>Google</span>
+              <FcGoogle size={20} />{" "}
+              <span style={{ marginLeft: 8 }}>Google</span>
             </button>
             <button style={styles.socialButton} onClick={handleGithubLogin}>
-              <FaGithub size={20} /> <span style={{ marginLeft: 8 }}>GitHub</span>
+              <FaGithub size={20} />{" "}
+              <span style={{ marginLeft: 8 }}>GitHub</span>
             </button>
           </div>
         </div>
@@ -119,14 +130,16 @@ export default function Home() {
           animation: blink 1s steps(2, start) infinite;
         }
         @keyframes blink {
-          50% { opacity: 0; }
+          50% {
+            opacity: 0;
+          }
         }
       `}</style>
     </div>
   );
 }
 
-const styles: any = {
+const styles: Record<string, React.CSSProperties> = {
   container: {
     minHeight: "100vh",
     display: "flex",
@@ -170,7 +183,7 @@ const styles: any = {
   },
 
   left: {
-    flex: '0 0 45%',
+    flex: "0 0 45%",
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",
@@ -193,7 +206,7 @@ const styles: any = {
   },
 
   card: {
-    flex: '1 1 55%',
+    flex: "1 1 55%",
     padding: 36,
     borderRadius: 16,
     background: "#111c2b",

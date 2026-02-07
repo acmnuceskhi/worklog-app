@@ -4,13 +4,12 @@ import { Resend } from "resend";
 import { TeamInvitationEmail } from "@/components/team-invitation-email";
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "crypto";
+import { validateRequest, teamInviteMultipleSchema } from "@/lib/validations";
 
 // Only initialize if API key exists
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
-
-interface InviteRequest {
-  emails: string[];
-}
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
 
 export async function POST(
   request: NextRequest,
@@ -25,15 +24,11 @@ export async function POST(
     }
 
     const { teamId } = await params;
-    const body: InviteRequest = await request.json();
-    const { emails } = body;
-
-    if (!emails || !Array.isArray(emails) || emails.length === 0) {
-      return NextResponse.json(
-        { error: "At least one email address is required" },
-        { status: 400 },
-      );
+    const validation = await validateRequest(request, teamInviteMultipleSchema);
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
     }
+    const { emails } = validation.data;
 
     // Validate email domains (university only) - COMMENTED OUT FOR TESTING
     // const universityDomain = '@nu.edu.pk';
@@ -131,7 +126,7 @@ export async function POST(
         } else {
           // Email service not configured, but invitation is created
           console.warn(
-            "RESEND_API_KEY not configured, invitation created but email not sent"
+            "RESEND_API_KEY not configured, invitation created but email not sent",
           );
         }
 

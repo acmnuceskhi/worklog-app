@@ -2,17 +2,20 @@
 
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { FaArrowLeft, FaSignOutAlt, FaEnvelope, FaCalendar, FaShieldAlt } from "react-icons/fa";
+import { useEffect } from "react";
+import Image from "next/image";
+import {
+  FaArrowLeft,
+  FaSignOutAlt,
+  FaEnvelope,
+  FaCalendar,
+  FaShieldAlt,
+} from "react-icons/fa";
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = typeof window !== "undefined";
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -42,7 +45,10 @@ export default function ProfilePage() {
           <FaArrowLeft /> Back to Dashboard
         </button>
         <h1 style={styles.navTitle}>Profile</h1>
-        <button style={styles.signOutButton} onClick={() => signOut({ callbackUrl: "/" })}>
+        <button
+          style={styles.signOutButton}
+          onClick={() => signOut({ callbackUrl: "/" })}
+        >
           <FaSignOutAlt /> Sign Out
         </button>
       </nav>
@@ -53,10 +59,18 @@ export default function ProfilePage() {
         <div style={styles.profileHeader}>
           <div style={styles.avatarContainer}>
             {user?.image ? (
-              <img src={user.image} alt={user.name || "User"} style={styles.avatar} />
+              <Image
+                src={user.image}
+                alt={user.name || "User"}
+                width={120}
+                height={120}
+                style={styles.avatar}
+              />
             ) : (
               <div style={styles.avatarPlaceholder}>
-                {user?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || "U"}
+                {user?.name?.charAt(0).toUpperCase() ||
+                  user?.email?.charAt(0).toUpperCase() ||
+                  "U"}
               </div>
             )}
           </div>
@@ -67,7 +81,7 @@ export default function ProfilePage() {
         {/* Profile Details */}
         <div style={styles.detailsSection}>
           <h3 style={styles.sectionTitle}>Account Information</h3>
-          
+
           <div style={styles.detailItem}>
             <div style={styles.detailIcon}>
               <FaEnvelope />
@@ -103,7 +117,10 @@ export default function ProfilePage() {
 
         {/* Actions */}
         <div style={styles.actionsSection}>
-          <button style={styles.actionButton} onClick={() => router.push("/home")}>
+          <button
+            style={styles.actionButton}
+            onClick={() => router.push("/home")}
+          >
             Go to Dashboard
           </button>
         </div>
@@ -112,7 +129,7 @@ export default function ProfilePage() {
   );
 }
 
-const styles: any = {
+const styles: Record<string, React.CSSProperties> = {
   container: {
     minHeight: "100vh",
     backgroundColor: "#0A173B",

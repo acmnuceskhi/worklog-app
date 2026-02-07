@@ -3,7 +3,13 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 
-const teams = [
+interface Team {
+  id: string;
+  name: string;
+  leader: string;
+}
+
+const teams: Team[] = [
   { id: "1", name: "Alpha Squad", leader: "Alice" },
   { id: "2", name: "Design Gurus", leader: "Bob" },
   { id: "3", name: "Product Masters", leader: "Charlie" },
@@ -25,7 +31,7 @@ export default function LeadTeamsPage() {
   };
 
   return (
-    <div style={styles.container as any}>
+    <div style={styles.container}>
       {activePage === "teams" ? (
         <div style={styles.teamGrid}>
           {teams.map((team) => (
@@ -42,7 +48,12 @@ export default function LeadTeamsPage() {
         </div>
       ) : (
         <div style={styles.createTeamCard}>
-          <button style={styles.closeButton} onClick={() => setActivePage("teams")}>×</button>
+          <button
+            style={styles.closeButton}
+            onClick={() => setActivePage("teams")}
+          >
+            ×
+          </button>
           <h2 style={styles.formTitle}>Create a New Team</h2>
 
           <input
@@ -67,15 +78,58 @@ export default function LeadTeamsPage() {
   );
 }
 
-const styles: any = {
+const styles: Record<string, React.CSSProperties> = {
   container: { minHeight: "100%", padding: 20 },
-  teamGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px,1fr))", gap: 16 },
-  teamCard: { padding: 16, borderRadius: 12, background: "#2a2a2a", color: "#fff", cursor: "pointer", transition: "all 0.3s ease", border: "2px solid transparent" },
+  teamGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(220px,1fr))",
+    gap: 16,
+  },
+  teamCard: {
+    padding: 16,
+    borderRadius: 12,
+    background: "#2a2a2a",
+    color: "#fff",
+    cursor: "pointer",
+    transition: "all 0.3s ease",
+    border: "2px solid transparent",
+  },
   clickText: { fontSize: 12, marginTop: 8, color: "#FFD700" },
-  createTeamCard: { padding: 20, borderRadius: 12, background: "#2a2a2a", color: "#fff" },
-  closeButton: { position: "absolute", top: 12, right: 12, background: "transparent", border: "none", color: "#ffd700", fontSize: 24, cursor: "pointer" },
-  formTitle: { fontSize: "1.6rem", fontWeight: 700, color: "#ffd700", marginBottom: 12 },
-  input: { padding: "10px 12px", borderRadius: 8, border: "1px solid #ccc", width: "100%", marginBottom: 8 },
-  createTeamButton: { padding: "10px 14px", background: "#ffd700", color: "#111", border: "none", borderRadius: 10, cursor: "pointer" },
+  createTeamCard: {
+    padding: 20,
+    borderRadius: 12,
+    background: "#2a2a2a",
+    color: "#fff",
+  },
+  closeButton: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    background: "transparent",
+    border: "none",
+    color: "#ffd700",
+    fontSize: 24,
+    cursor: "pointer",
+  },
+  formTitle: {
+    fontSize: "1.6rem",
+    fontWeight: 700,
+    color: "#ffd700",
+    marginBottom: 12,
+  },
+  input: {
+    padding: "10px 12px",
+    borderRadius: 8,
+    border: "1px solid #ccc",
+    width: "100%",
+    marginBottom: 8,
+  },
+  createTeamButton: {
+    padding: "10px 14px",
+    background: "#ffd700",
+    color: "#111",
+    border: "none",
+    borderRadius: 10,
+    cursor: "pointer",
+  },
 };
-

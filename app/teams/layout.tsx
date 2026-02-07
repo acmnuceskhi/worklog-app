@@ -4,40 +4,44 @@ import React, { useState, useEffect } from "react";
 import { Lobster_Two } from "next/font/google";
 import { FaUsers, FaUserTie, FaBell, FaSearch, FaPlus } from "react-icons/fa";
 import { useRouter, usePathname } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const lobsterTwo = Lobster_Two({ weight: "400", subsets: ["latin"] });
 
-export default function TeamsLayout({ children }: { children: React.ReactNode }) {
+export default function TeamsLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const router = useRouter();
   const pathname = usePathname();
-  const [contentTheme, setContentTheme] = useState<"light" | "dark">("light");
+  const [contentTheme, setContentTheme] = useState<"light" | "dark">(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("contentTheme");
+        if (saved === "light" || saved === "dark") return saved;
+      } catch {}
+    }
+    return "light";
+  });
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [sentInvites, setSentInvites] = useState<string[]>([]);
-  const [receivedInvites, setReceivedInvites] = useState<{ from: string; team: string }[]>([
+  const [receivedInvites, setReceivedInvites] = useState<
+    { from: string; team: string }[]
+  >([
     { from: "Alice", team: "Design Masters" },
     { from: "Bob", team: "Dev Team" },
   ]);
-  const [activeNav, setActiveNav] = useState<"lead" | "member" | null>(null);
-
   const isLeadPage = pathname.includes("/lead");
   const isMemberPage = pathname.includes("/member");
-
-  useEffect(() => {
-    if (isLeadPage) setActiveNav("lead");
-    else if (isMemberPage) setActiveNav("member");
-  }, [isLeadPage, isMemberPage]);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("contentTheme");
-      if (saved === "light" || saved === "dark") setContentTheme(saved);
-    } catch {}
-  }, []);
+  const activeNav = isLeadPage ? "lead" : isMemberPage ? "member" : null;
 
   useEffect(() => {
     try {
@@ -61,14 +65,17 @@ export default function TeamsLayout({ children }: { children: React.ReactNode })
     setReceivedInvites(receivedInvites.filter((_, i) => i !== idx));
   };
 
-  const styles: any = {
+  const styles: Record<string, React.CSSProperties> = {
     page: {
       minHeight: "100vh",
       width: "100vw",
       padding: 12,
       display: "flex",
       flexDirection: "column",
-      background: contentTheme === "dark" ? "#021629" : "linear-gradient(135deg, #fbc2eb, #a6c1ee)",
+      background:
+        contentTheme === "dark"
+          ? "#021629"
+          : "linear-gradient(135deg, #fbc2eb, #a6c1ee)",
       color: contentTheme === "dark" ? "#f8fafc" : "#020617",
     },
     navbar: {
@@ -195,42 +202,44 @@ export default function TeamsLayout({ children }: { children: React.ReactNode })
   };
 
   return (
-    <div style={styles.page as any} className={contentTheme}>
-      <nav style={styles.navbar as any}>
-        <div style={styles.navLeft as any}>
-          <h1 style={styles.logo as any} className={lobsterTwo.className}>
+    <div style={styles.page} className={contentTheme}>
+      <nav style={styles.navbar}>
+        <div style={styles.navLeft}>
+          <h1 style={styles.logo} className={lobsterTwo.className}>
             Worklog
           </h1>
-          <div style={styles.search as any}>
+          <div style={styles.search}>
             <FaSearch />
             <input placeholder="Search teams..." />
           </div>
         </div>
 
-        <div style={styles.navRight as any}>
-          <button style={styles.iconBtn as any}>
+        <div style={styles.navRight}>
+          <button style={styles.iconBtn}>
             <FaBell />
           </button>
           <button
-            style={styles.themeToggle as any}
-            onClick={() => setContentTheme(contentTheme === "dark" ? "light" : "dark")}
+            style={styles.themeToggle}
+            onClick={() =>
+              setContentTheme(contentTheme === "dark" ? "light" : "dark")
+            }
           >
             {contentTheme === "light" ? "🌙" : "☀️"}
           </button>
-          <button style={styles.logout as any} onClick={() => router.push("/")}>
+          <button style={styles.logout} onClick={() => router.push("/")}>
             Logout
           </button>
         </div>
       </nav>
 
-      <div style={styles.layout as any}>
-        <aside style={styles.sidebar as any}>
+      <div style={styles.layout}>
+        <aside style={styles.sidebar}>
           <button
             onClick={() => router.push("/teams/lead")}
             style={{
               ...styles.createTeamBtn,
               marginBottom: 12,
-            } as any}
+            }}
           >
             <FaPlus /> Create Team
           </button>
@@ -239,7 +248,7 @@ export default function TeamsLayout({ children }: { children: React.ReactNode })
             style={{
               ...styles.sideItem,
               ...(activeNav === "member" ? styles.sideItemActive : {}),
-            } as any}
+            }}
             onClick={() => router.push("/teams/member")}
           >
             <FaUsers /> Member Teams
@@ -248,18 +257,24 @@ export default function TeamsLayout({ children }: { children: React.ReactNode })
             style={{
               ...styles.sideItem,
               ...(activeNav === "lead" ? styles.sideItemActive : {}),
-            } as any}
+            }}
             onClick={() => router.push("/teams/lead")}
           >
             <FaUserTie /> Lead Teams
           </div>
         </aside>
 
-        <main style={styles.content as any}>{children}</main>
+        <main style={styles.content}>{children}</main>
 
-        <aside style={styles.invites as any}>
+        <aside style={styles.invites}>
           {isLeadPage ? (
-            <div style={{ height: "100%", display: "flex", flexDirection: "column" } as any}>
+            <div
+              style={{
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
               <h3 style={{ marginTop: 0 }}>Send Invites</h3>
               <button
                 onClick={() => setShowInviteModal(true)}
@@ -277,35 +292,107 @@ export default function TeamsLayout({ children }: { children: React.ReactNode })
                   gap: 8,
                   alignItems: "center",
                   justifyContent: "center",
-                } as any}
+                }}
               >
                 <FaPlus /> Invite
               </button>
 
-              <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 } as any}>
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: "auto",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                }}
+              >
                 {sentInvites.length > 0 ? (
                   sentInvites.map((email, idx) => (
-                    <div key={idx} style={{ background: "#03243a", border: "1px solid #FFD700", padding: 8, borderRadius: 8, fontSize: 12 } as any}>
-                      <p style={{ margin: 0, fontWeight: 600, color: "#FFD700" }}>{email}</p>
-                      <p style={{ margin: "4px 0 0 0", color: "#b0b9c1", fontSize: 11 }}>Pending...</p>
+                    <div
+                      key={idx}
+                      style={{
+                        background: "#03243a",
+                        border: "1px solid #FFD700",
+                        padding: 8,
+                        borderRadius: 8,
+                        fontSize: 12,
+                      }}
+                    >
+                      <p
+                        style={{ margin: 0, fontWeight: 600, color: "#FFD700" }}
+                      >
+                        {email}
+                      </p>
+                      <p
+                        style={{
+                          margin: "4px 0 0 0",
+                          color: "#b0b9c1",
+                          fontSize: 11,
+                        }}
+                      >
+                        Pending...
+                      </p>
                     </div>
                   ))
                 ) : (
-                  <p style={{ color: "#999", textAlign: "center", margin: "auto" }}>No invites sent</p>
+                  <p
+                    style={{
+                      color: "#999",
+                      textAlign: "center",
+                      margin: "auto",
+                    }}
+                  >
+                    No invites sent
+                  </p>
                 )}
               </div>
             </div>
           ) : isMemberPage ? (
-            <div style={{ height: "100%", display: "flex", flexDirection: "column" } as any}>
+            <div
+              style={{
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
               <h3 style={{ marginTop: 0 }}>Invitations</h3>
 
-              <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 12 } as any}>
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: "auto",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 12,
+                }}
+              >
                 {receivedInvites.length > 0 ? (
                   receivedInvites.map((invite, idx) => (
-                    <div key={idx} style={{ background: "#03243a", border: "1px solid #FFD700", padding: 10, borderRadius: 8, borderLeft: "4px solid #FFD700" } as any}>
-                      <p style={{ margin: 0, fontWeight: 600, color: "#FFD700" }}>{invite.team}</p>
-                      <p style={{ margin: "4px 0 8px 0", color: "#b0b9c1", fontSize: 12 }}>From: {invite.from}</p>
-                      <div style={{ display: "flex", gap: 6 } as any}>
+                    <div
+                      key={idx}
+                      style={{
+                        background: "#03243a",
+                        border: "1px solid #FFD700",
+                        padding: 10,
+                        borderRadius: 8,
+                        borderLeft: "4px solid #FFD700",
+                      }}
+                    >
+                      <p
+                        style={{ margin: 0, fontWeight: 600, color: "#FFD700" }}
+                      >
+                        {invite.team}
+                      </p>
+                      <p
+                        style={{
+                          margin: "4px 0 8px 0",
+                          color: "#b0b9c1",
+                          fontSize: 12,
+                        }}
+                      >
+                        From: {invite.from}
+                      </p>
+                      <div style={{ display: "flex", gap: 6 }}>
                         <button
                           onClick={() => handleAcceptInvite(idx)}
                           style={{
@@ -318,7 +405,7 @@ export default function TeamsLayout({ children }: { children: React.ReactNode })
                             fontSize: 12,
                             fontWeight: 600,
                             cursor: "pointer",
-                          } as any}
+                          }}
                         >
                           Accept
                         </button>
@@ -334,7 +421,7 @@ export default function TeamsLayout({ children }: { children: React.ReactNode })
                             fontSize: 12,
                             fontWeight: 600,
                             cursor: "pointer",
-                          } as any}
+                          }}
                         >
                           Decline
                         </button>
@@ -342,7 +429,15 @@ export default function TeamsLayout({ children }: { children: React.ReactNode })
                     </div>
                   ))
                 ) : (
-                  <p style={{ color: "#999", textAlign: "center", margin: "auto" }}>No invitations</p>
+                  <p
+                    style={{
+                      color: "#999",
+                      textAlign: "center",
+                      margin: "auto",
+                    }}
+                  >
+                    No invitations
+                  </p>
                 )}
               </div>
             </div>
@@ -357,23 +452,42 @@ export default function TeamsLayout({ children }: { children: React.ReactNode })
       {/* Send Invite Dialog */}
       {isLeadPage && (
         <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
-          <DialogContent style={{ background: "#03243a", borderColor: "rgba(255, 215, 0, 0.3)" } as any}>
+          <DialogContent
+            style={{
+              background: "#03243a",
+              borderColor: "rgba(255, 215, 0, 0.3)",
+            }}
+          >
             <DialogHeader>
-              <DialogTitle style={{ color: "#FFD700" }}>Invite Team Member</DialogTitle>
+              <DialogTitle style={{ color: "#FFD700" }}>
+                Invite Team Member
+              </DialogTitle>
             </DialogHeader>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 } as any}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div>
-                <label style={{ color: "#FFD700", fontSize: 14, fontWeight: 600, display: "block", marginBottom: 8 }}>
+                <label
+                  style={{
+                    color: "#FFD700",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    display: "block",
+                    marginBottom: 8,
+                  }}
+                >
                   Email Address
                 </label>
                 <Input
                   placeholder="member@example.com"
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
-                  style={{ background: "#04243f", borderColor: "rgba(255, 215, 0, 0.3)", color: "#FFD700" } as any}
+                  style={{
+                    background: "#04243f",
+                    borderColor: "rgba(255, 215, 0, 0.3)",
+                    color: "#FFD700",
+                  }}
                 />
               </div>
-              <div style={{ display: "flex", gap: 8 } as any}>
+              <div style={{ display: "flex", gap: 8 }}>
                 <button
                   onClick={handleSendInvite}
                   style={{
@@ -385,7 +499,7 @@ export default function TeamsLayout({ children }: { children: React.ReactNode })
                     color: "white",
                     fontWeight: 600,
                     cursor: "pointer",
-                  } as any}
+                  }}
                 >
                   Send Invite
                 </button>
@@ -400,7 +514,7 @@ export default function TeamsLayout({ children }: { children: React.ReactNode })
                     color: "white",
                     fontWeight: 600,
                     cursor: "pointer",
-                  } as any}
+                  }}
                 >
                   Cancel
                 </button>

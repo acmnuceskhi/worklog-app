@@ -5,7 +5,6 @@ import {
   isTeamOwner,
   isTeamMember,
   isWorklogOwner,
-  getTeamOrganization,
   isOrganizationOwner,
   unauthorized,
   forbidden,
@@ -13,8 +12,14 @@ import {
   success,
   badRequest,
 } from "@/lib/auth-utils";
+import { validateRequest, worklogStatusUpdateSchema } from "@/lib/validations";
 
-type ProgressStatus = "STARTED" | "HALF_DONE" | "COMPLETED" | "REVIEWED" | "GRADED";
+type ProgressStatus =
+  | "STARTED"
+  | "HALF_DONE"
+  | "COMPLETED"
+  | "REVIEWED"
+  | "GRADED";
 
 /**
  * Valid status transitions
@@ -32,7 +37,7 @@ const VALID_TRANSITIONS: Record<ProgressStatus, ProgressStatus[]> = {
  */
 function isValidTransition(
   currentStatus: ProgressStatus,
-  newStatus: ProgressStatus
+  newStatus: ProgressStatus,
 ): boolean {
   if (currentStatus === newStatus) return true; // No change
   return VALID_TRANSITIONS[currentStatus]?.includes(newStatus) || false;
@@ -44,7 +49,7 @@ function isValidTransition(
 async function canUpdateToStatus(
   userId: string,
   worklogId: string,
-  newStatus: ProgressStatus
+  newStatus: ProgressStatus,
 ): Promise<{ allowed: boolean; reason?: string }> {
   const worklog = await prisma.worklog.findUnique({
     where: { id: worklogId },
@@ -65,11 +70,14 @@ async function canUpdateToStatus(
   if (["STARTED", "HALF_DONE", "COMPLETED"].includes(newStatus)) {
     const isOwner = await isWorklogOwner(userId, worklogId);
     const isMember = await isTeamMember(userId, worklog.teamId);
-    
+
     if (isOwner || isMember) {
       return { allowed: true };
     }
-    return { allowed: false, reason: "Only worklog owner or team members can update to this status" };
+    return {
+      allowed: false,
+      reason: "Only worklog owner or team members can update to this status",
+    };
   }
 
   // Team owners can update: COMPLETED → REVIEWED
@@ -88,12 +96,15 @@ async function canUpdateToStatus(
     }
     const isOrgOwner = await isOrganizationOwner(
       userId,
-      worklog.team.organizationId
+      worklog.team.organizationId,
     );
     if (isOrgOwner) {
       return { allowed: true };
     }
-    return { allowed: false, reason: "Only organization owners can mark as GRADED" };
+    return {
+      allowed: false,
+      reason: "Only organization owners can mark as GRADED",
+    };
   }
 
   return { allowed: false, reason: "Invalid status" };
@@ -105,7 +116,7 @@ async function canUpdateToStatus(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ worklogId: string }> }
+  { params }: { params: Promise<{ worklogId: string }> },
 ) {
   try {
     const user = await getCurrentUser();
@@ -114,16 +125,14 @@ export async function PATCH(
     }
 
     const { worklogId } = await params;
-    const body = await request.json();
-    const { status: newStatus } = body;
-
-    if (!newStatus) {
-      return badRequest("Status is required");
+    const validation = await validateRequest(
+      request,
+      worklogStatusUpdateSchema,
+    );
+    if (!validation.success) {
+      return badRequest(validation.error);
     }
-
-    if (!["STARTED", "HALF_DONE", "COMPLETED", "REVIEWED", "GRADED"].includes(newStatus)) {
-      return badRequest("Invalid status");
-    }
+    const { status: newStatus } = validation.data;
 
     // Get current worklog
     const worklog = await prisma.worklog.findUnique({
@@ -135,17 +144,29 @@ export async function PATCH(
     }
 
     // Check if transition is valid
-    if (!isValidTransition(worklog.progressStatus as ProgressStatus, newStatus as ProgressStatus)) {
+    if (
+      !isValidTransition(
+        worklog.progressStatus as ProgressStatus,
+        newStatus as ProgressStatus,
+      )
+    ) {
       return badRequest(
         `Invalid status transition from ${worklog.progressStatus} to ${newStatus}. ` +
-        `Valid next statuses: ${VALID_TRANSITIONS[worklog.progressStatus as ProgressStatus]?.join(", ") || "none"}`
+          `Valid next statuses: ${VALID_TRANSITIONS[worklog.progressStatus as ProgressStatus]?.join(", ") || "none"}`,
       );
     }
 
     // Check if user has permission to update to this status
-    const permission = await canUpdateToStatus(user.id, worklogId, newStatus as ProgressStatus);
+    const permission = await canUpdateToStatus(
+      user.id,
+      worklogId,
+      newStatus as ProgressStatus,
+    );
     if (!permission.allowed) {
-      return forbidden(permission.reason || "You don't have permission to update to this status");
+      return forbidden(
+        permission.reason ||
+          "You don't have permission to update to this status",
+      );
     }
 
     // Update the status
@@ -181,7 +202,7 @@ export async function PATCH(
     console.error("Update worklog status error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -191,8 +212,8 @@ export async function PATCH(
  * Get worklog status and valid next transitions
  */
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ worklogId: string }> }
+  _request: NextRequest,
+  { params }: { params: Promise<{ worklogId: string }> },
 ) {
   try {
     const user = await getCurrentUser();
@@ -216,7 +237,8 @@ export async function GET(
       return notFound("Worklog not found");
     }
 
-    const validNextStatuses = VALID_TRANSITIONS[worklog.progressStatus as ProgressStatus] || [];
+    const validNextStatuses =
+      VALID_TRANSITIONS[worklog.progressStatus as ProgressStatus] || [];
 
     return success({
       ...worklog,
@@ -226,7 +248,7 @@ export async function GET(
     console.error("Get worklog status error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

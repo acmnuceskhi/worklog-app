@@ -9,6 +9,7 @@ import {
   success,
   badRequest,
 } from "@/lib/auth-utils";
+import { validateRequest, ratingCreateSchema } from "@/lib/validations";
 
 /**
  * POST /api/worklogs/[worklogId]/ratings
@@ -16,7 +17,7 @@ import {
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ worklogId: string }> }
+  { params }: { params: Promise<{ worklogId: string }> },
 ) {
   try {
     const user = await getCurrentUser();
@@ -25,13 +26,11 @@ export async function POST(
     }
 
     const { worklogId } = await params;
-    const body = await request.json();
-    const { value, comment } = body;
-
-    // Validate rating value
-    if (typeof value !== "number" || value < 1 || value > 10) {
-      return badRequest("Rating value must be between 1 and 10");
+    const validation = await validateRequest(request, ratingCreateSchema);
+    if (!validation.success) {
+      return badRequest(validation.error);
     }
+    const { value, comment } = validation.data;
 
     // Get worklog with team and organization
     const worklog = await prisma.worklog.findUnique({
@@ -51,13 +50,15 @@ export async function POST(
 
     // Check if team belongs to an organization
     if (!worklog.team.organizationId) {
-      return forbidden("Cannot rate worklogs for teams without an organization");
+      return forbidden(
+        "Cannot rate worklogs for teams without an organization",
+      );
     }
 
     // Check if user is organization owner
     const isOrgOwner = await isOrganizationOwner(
       user.id,
-      worklog.team.organizationId
+      worklog.team.organizationId,
     );
 
     if (!isOrgOwner) {
@@ -67,7 +68,7 @@ export async function POST(
     // Check if worklog is in REVIEWED or GRADED status
     if (!["REVIEWED", "GRADED"].includes(worklog.progressStatus)) {
       return badRequest(
-        "Can only rate worklogs with REVIEWED or GRADED status"
+        "Can only rate worklogs with REVIEWED or GRADED status",
       );
     }
 
@@ -115,7 +116,7 @@ export async function POST(
     console.error("Create rating error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -125,8 +126,8 @@ export async function POST(
  * Get ratings for a worklog (organization owners only)
  */
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ worklogId: string }> }
+  _request: NextRequest,
+  { params }: { params: Promise<{ worklogId: string }> },
 ) {
   try {
     const user = await getCurrentUser();
@@ -160,7 +161,7 @@ export async function GET(
     // Check if user is organization owner
     const isOrgOwner = await isOrganizationOwner(
       user.id,
-      worklog.team.organizationId
+      worklog.team.organizationId,
     );
 
     if (!isOrgOwner) {
@@ -189,7 +190,7 @@ export async function GET(
     console.error("Get ratings error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getCurrentUser, unauthorized } from "@/lib/auth-utils";
+import { getCurrentUser, unauthorized, badRequest } from "@/lib/auth-utils";
+import { validateRequest, organizationCreateSchema } from "@/lib/validations";
 
 /**
  * GET /api/organizations
  * Get all organizations owned by the current user
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const user = await getCurrentUser();
     if (!user) {
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
     console.error("Get organizations error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -51,15 +52,11 @@ export async function POST(request: NextRequest) {
       return unauthorized();
     }
 
-    const body = await request.json();
-    const { name, description } = body;
-
-    if (!name || typeof name !== "string") {
-      return NextResponse.json(
-        { error: "Organization name is required" },
-        { status: 400 }
-      );
+    const validation = await validateRequest(request, organizationCreateSchema);
+    if (!validation.success) {
+      return badRequest(validation.error);
     }
+    const { name, description } = validation.data;
 
     const organization = await prisma.organization.create({
       data: {
@@ -77,7 +74,7 @@ export async function POST(request: NextRequest) {
     console.error("Create organization error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

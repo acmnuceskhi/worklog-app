@@ -16,7 +16,7 @@ import {
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ ratingId: string }> }
+  { params }: { params: Promise<{ ratingId: string }> },
 ) {
   try {
     const user = await getCurrentUser();
@@ -29,7 +29,10 @@ export async function PATCH(
     const { value, comment } = body;
 
     // Validate rating value if provided
-    if (value !== undefined && (typeof value !== "number" || value < 1 || value > 10)) {
+    if (
+      value !== undefined &&
+      (typeof value !== "number" || value < 1 || value > 10)
+    ) {
       return badRequest("Rating value must be between 1 and 10");
     }
 
@@ -60,12 +63,14 @@ export async function PATCH(
 
     // Verify user is still organization owner
     if (!rating.worklog.team.organizationId) {
-      return forbidden("Cannot update ratings for teams without an organization");
+      return forbidden(
+        "Cannot update ratings for teams without an organization",
+      );
     }
 
     const isOrgOwner = await isOrganizationOwner(
       user.id,
-      rating.worklog.team.organizationId
+      rating.worklog.team.organizationId,
     );
 
     if (!isOrgOwner) {
@@ -101,7 +106,7 @@ export async function PATCH(
     console.error("Update rating error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -112,7 +117,7 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ ratingId: string }> }
+  { params }: { params: Promise<{ ratingId: string }> },
 ) {
   try {
     const user = await getCurrentUser();
@@ -149,12 +154,14 @@ export async function DELETE(
 
     // Verify user is still organization owner
     if (!rating.worklog.team.organizationId) {
-      return forbidden("Cannot delete ratings for teams without an organization");
+      return forbidden(
+        "Cannot delete ratings for teams without an organization",
+      );
     }
 
     const isOrgOwner = await isOrganizationOwner(
       user.id,
-      rating.worklog.team.organizationId
+      rating.worklog.team.organizationId,
     );
 
     if (!isOrgOwner) {
@@ -171,7 +178,7 @@ export async function DELETE(
     console.error("Delete rating error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -182,7 +189,7 @@ export async function DELETE(
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ ratingId: string }> }
+  { params }: { params: Promise<{ ratingId: string }> },
 ) {
   try {
     const user = await getCurrentUser();
@@ -227,7 +234,7 @@ export async function GET(
     // Check if user is organization owner
     const isOrgOwner = await isOrganizationOwner(
       user.id,
-      rating.worklog.team.organizationId
+      rating.worklog.team.organizationId,
     );
 
     if (!isOrgOwner) {
@@ -239,7 +246,7 @@ export async function GET(
     console.error("Get rating error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getCurrentUser, unauthorized } from "@/lib/auth-utils";
+import { getCurrentUser, unauthorized, badRequest } from "@/lib/auth-utils";
+import { validateRequest, worklogCreateSchema } from "@/lib/validations";
 
 /**
  * GET /api/worklogs
  * Get all worklogs created by the current user
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const user = await getCurrentUser();
     if (!user) {
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest) {
     console.error("Get worklogs error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -64,22 +65,12 @@ export async function POST(request: NextRequest) {
       return unauthorized();
     }
 
-    const body = await request.json();
-    const { title, description, teamId, githubLink } = body;
-
-    if (!title || typeof title !== "string") {
-      return NextResponse.json(
-        { error: "Worklog title is required" },
-        { status: 400 }
-      );
+    const validation = await validateRequest(request, worklogCreateSchema);
+    if (!validation.success) {
+      return badRequest(validation.error);
     }
-
-    if (!teamId || typeof teamId !== "string") {
-      return NextResponse.json(
-        { error: "Team ID is required" },
-        { status: 400 }
-      );
-    }
+    const { title, description, teamId, githubLink, deadline } =
+      validation.data;
 
     // Verify user is a member or owner of the team
     const teamMember = await prisma.teamMember.findFirst({
@@ -100,15 +91,16 @@ export async function POST(request: NextRequest) {
     if (!teamMember && !isTeamOwner) {
       return NextResponse.json(
         { error: "You are not a member of this team" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
     const worklog = await prisma.worklog.create({
       data: {
         title,
-        description: description || "",
+        description,
         githubLink: githubLink || undefined,
+        deadline: deadline ? new Date(deadline) : undefined,
         userId: user.id,
         teamId,
       },
@@ -126,7 +118,7 @@ export async function POST(request: NextRequest) {
     console.error("Create worklog error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
