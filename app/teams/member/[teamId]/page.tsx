@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { use } from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,9 +42,9 @@ const memberTeamDetails: Record<string, TeamDetails> = {
 export default function ContributionFlashcardPage({
   params,
 }: {
-  params: { teamId: string };
+  params: Promise<{ teamId: string }>;
 }) {
-  const teamId = params?.teamId;
+  const { teamId } = use(params);
   const team = memberTeamDetails[teamId] || {
     name: "Unknown Team",
     leader: "N/A",

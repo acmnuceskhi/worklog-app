@@ -21,15 +21,8 @@ export default function TeamsLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [contentTheme, setContentTheme] = useState<"light" | "dark">(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("contentTheme");
-        if (saved === "light" || saved === "dark") return saved;
-      } catch {}
-    }
-    return "light";
-  });
+  const [contentTheme, setContentTheme] = useState<"light" | "dark">("light");
+  const [mounted, setMounted] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [sentInvites, setSentInvites] = useState<string[]>([]);
@@ -44,10 +37,23 @@ export default function TeamsLayout({
   const activeNav = isLeadPage ? "lead" : isMemberPage ? "member" : null;
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
     try {
-      localStorage.setItem("contentTheme", contentTheme);
+      const saved = localStorage.getItem("contentTheme");
+      if (saved === "light" || saved === "dark") {
+        setContentTheme(saved);
+      }
     } catch {}
-  }, [contentTheme]);
+  }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      try {
+        localStorage.setItem("contentTheme", contentTheme);
+      } catch {}
+    }
+  }, [contentTheme, mounted]);
 
   const handleSendInvite = () => {
     if (inviteEmail.trim()) {
@@ -200,6 +206,26 @@ export default function TeamsLayout({
       overflow: "hidden",
     },
   };
+
+  // Prevent hydration mismatch by waiting for client mount
+  if (!mounted) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          width: "100vw",
+          padding: 12,
+          display: "flex",
+          flexDirection: "column",
+          background: "#021629",
+          color: "#f8fafc",
+        }}
+        className="light"
+      >
+        <div style={{ textAlign: "center", padding: "2rem" }}>Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.page} className={contentTheme}>

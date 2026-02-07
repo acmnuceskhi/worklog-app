@@ -1,246 +1,192 @@
 "use client";
 
-import React, { useState } from "react";
-import { FaTimes, FaPlus } from "react-icons/fa";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import {
+  FaBuilding,
+  FaUsers,
+  FaPlus,
+  FaArrowRight,
+  FaSpinner,
+} from "react-icons/fa";
 
-export default function OrganisationsPageContent() {
-  const [teams, setTeams] = useState<
-    { id: number; name: string; organisation: string; leader: string }[]
-  >([]);
-  const [showCreateTeam, setShowCreateTeam] = useState(false);
-  const [teamName, setTeamName] = useState("");
-  const [organisation, setOrganisation] = useState("");
-  const [teamLeader, setTeamLeader] = useState("");
+interface Organization {
+  id: string;
+  name: string;
+  description: string | null;
+  credits: number;
+  teams: {
+    id: string;
+    name: string;
+  }[];
+  _count: {
+    teams: number;
+  };
+}
 
-  const handleCreateTeam = () => {
-    if (!teamName || !organisation || !teamLeader) return;
-    const newTeam = {
-      id: Date.now(),
-      name: teamName,
-      organisation,
-      leader: teamLeader,
-    };
-    setTeams([...teams, newTeam]);
-    setTeamName("");
-    setOrganisation("");
-    setTeamLeader("");
-    setShowCreateTeam(false);
+export default function OrganisationsPage() {
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchOrganizations();
+  }, []);
+
+  const fetchOrganizations = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/organizations");
+      if (!response.ok) {
+        throw new Error("Failed to fetch organizations");
+      }
+      const data = await response.json();
+      setOrganizations(data.data || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setLoading(false);
+    }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        <div className="text-center">
+          <FaSpinner className="h-8 w-8 animate-spin text-blue-400 mx-auto mb-4" />
+          <p className="text-slate-400">Loading organizations...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        <div className="text-center">
+          <p className="text-red-400 mb-4">{error}</p>
+          <button
+            onClick={fetchOrganizations}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <main className="content">
-      {/* Create Team Button */}
-      <button
-        className="create-team-btn"
-        onClick={() => setShowCreateTeam(true)}
-      >
-        <FaPlus /> Create Team
-      </button>
-
-      {/* Hero Section */}
-      <section className="card hero">
-        <div>
-          <h2>My Organisations</h2>
-          <p className="muted">Manage organisations and view their teams.</p>
-        </div>
-        <div className="stats">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
           <div>
-            <strong>{teams.length}</strong>
-            <span>Total Teams</span>
+            <h1 className="text-3xl font-bold text-white mb-2">
+              My Organizations
+            </h1>
+            <p className="text-slate-400">
+              Manage your organizations and their teams
+            </p>
           </div>
-          <div>
-            <strong>—</strong>
-            <span>Pending</span>
-          </div>
-        </div>
-      </section>
-
-      {/* Teams Grid */}
-      <section className="card">
-        <h3>Featured Teams</h3>
-        {teams.length === 0 ? (
-          <p>No teams yet. Click &quot;Create Team&quot; to add one.</p>
-        ) : (
-          <div className="grid">
-            {teams.map((t) => (
-              <div key={t.id} className="team">
-                <div className="team-top">
-                  <div className="avatar">
-                    {t.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .slice(0, 2)
-                      .join("")}
-                  </div>
-                  <div>
-                    <strong>{t.name}</strong>
-                    <div className="muted">
-                      {t.organisation} • Leader: {t.leader}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Create Team Modal */}
-      {showCreateTeam && (
-        <div className="modal-backdrop">
-          <div className="modal">
-            <button
-              className="modal-close"
-              onClick={() => setShowCreateTeam(false)}
-            >
-              <FaTimes />
+          <Link href="/organizations/create">
+            <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold rounded-lg transition-all duration-200">
+              <FaPlus className="h-4 w-4" />
+              Create Organization
             </button>
-            <h3>Create Team</h3>
-            <input
-              placeholder="Team Name"
-              value={teamName}
-              onChange={(e) => setTeamName(e.target.value)}
-            />
-            <input
-              placeholder="Organisation"
-              value={organisation}
-              onChange={(e) => setOrganisation(e.target.value)}
-            />
-            <input
-              placeholder="Team Leader"
-              value={teamLeader}
-              onChange={(e) => setTeamLeader(e.target.value)}
-            />
-            <div className="modal-actions">
-              <button onClick={() => setShowCreateTeam(false)}>Cancel</button>
-              <button onClick={handleCreateTeam}>Add</button>
+          </Link>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-6 border border-slate-700">
+            <div className="flex items-center gap-3">
+              <FaBuilding className="h-8 w-8 text-blue-400" />
+              <div>
+                <p className="text-2xl font-bold text-white">
+                  {organizations.length}
+                </p>
+                <p className="text-slate-400">Organizations</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-6 border border-slate-700">
+            <div className="flex items-center gap-3">
+              <FaUsers className="h-8 w-8 text-green-400" />
+              <div>
+                <p className="text-2xl font-bold text-white">
+                  {organizations.reduce(
+                    (sum, org) => sum + org._count.teams,
+                    0,
+                  )}
+                </p>
+                <p className="text-slate-400">Total Teams</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-6 border border-slate-700">
+            <div className="flex items-center gap-3">
+              <FaPlus className="h-8 w-8 text-purple-400" />
+              <div>
+                <p className="text-2xl font-bold text-white">
+                  {organizations.reduce((sum, org) => sum + org.credits, 0)}
+                </p>
+                <p className="text-slate-400">Total Credits</p>
+              </div>
             </div>
           </div>
         </div>
-      )}
 
-      {/* Page Styles */}
-      <style jsx>{`
-        .create-team-btn {
-          background: #ef4444; /* Red */
-          color: white;
-          border: none;
-          border-radius: 10px;
-          padding: 10px 16px;
-          font-weight: 700;
-          cursor: pointer;
-          display: flex;
-          gap: 6px;
-          align-items: center;
-          margin-bottom: 16px;
-        }
+        {/* Organizations Grid */}
+        {organizations.length === 0 ? (
+          <div className="text-center py-12">
+            <FaBuilding className="h-16 w-16 text-slate-600 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-white mb-2">
+              No organizations yet
+            </h3>
+            <p className="text-slate-400 mb-6">
+              Create your first organization to get started
+            </p>
+            <Link href="/organizations/create">
+              <button className="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold rounded-lg transition-all duration-200">
+                Create Organization
+              </button>
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {organizations.map((org) => (
+              <Link key={org.id} href={`/organizations/${org.id}`}>
+                <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-6 border border-slate-700 hover:border-slate-600 transition-all duration-200 cursor-pointer group">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="p-3 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500">
+                      <FaBuilding className="h-6 w-6 text-white" />
+                    </div>
+                    <FaArrowRight className="h-5 w-5 text-slate-400 group-hover:text-white transition-colors" />
+                  </div>
 
-        .hero {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-        .muted {
-          color: #6b7280;
-        }
-        .stats {
-          display: flex;
-          gap: 16px;
-          text-align: center;
-        }
-        .card {
-          background: white;
-          padding: 16px;
-          border-radius: 12px;
-          margin-bottom: 16px;
-        }
-        .grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-          gap: 12px;
-        }
-        .team {
-          padding: 12px;
-          border-radius: 12px;
-          background: #f1f5f9;
-        }
-        .team-top {
-          display: flex;
-          gap: 10px;
-          align-items: center;
-        }
-        .avatar {
-          width: 48px;
-          height: 48px;
-          border-radius: 10px;
-          background: linear-gradient(135deg, #3b82f6, #06b6d4);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-weight: bold;
-        }
+                  <h3 className="text-xl font-semibold text-white mb-2">
+                    {org.name}
+                  </h3>
+                  {org.description && (
+                    <p className="text-slate-400 text-sm mb-4 line-clamp-2">
+                      {org.description}
+                    </p>
+                  )}
 
-        /* Modal */
-        .modal-backdrop {
-          position: fixed;
-          inset: 0;
-          background: rgba(0, 0, 0, 0.55);
-          display: flex;
-          align-items: flex-start;
-          justify-content: center;
-          padding-top: 80px;
-          z-index: 200;
-        }
-        .modal {
-          background: #111c2b;
-          padding: 24px;
-          border-radius: 16px;
-          width: 380px;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          color: #fff;
-          position: relative;
-        }
-        .modal-close {
-          position: absolute;
-          top: 12px;
-          right: 12px;
-          border: none;
-          background: transparent;
-          color: #fff;
-          font-size: 20px;
-          cursor: pointer;
-        }
-        .modal input {
-          padding: 12px;
-          border-radius: 12px;
-          border: none;
-          outline: none;
-          background: rgba(255, 255, 255, 0.06);
-          color: #fff;
-        }
-        .modal-actions {
-          display: flex;
-          justify-content: flex-end;
-          gap: 10px;
-        }
-        .modal-actions button:first-child {
-          background: rgba(255, 255, 255, 0.1);
-          color: #fff;
-        }
-        .modal-actions button:last-child {
-          background: linear-gradient(90deg, #22c55e, #16a34a);
-          color: #fff;
-          font-weight: 600;
-        }
-        @media (max-width: 900px) {
-          .grid {
-            grid-template-columns: 1fr;
-          }
-        }
-      `}</style>
-    </main>
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2 text-slate-400">
+                      <FaUsers className="h-4 w-4" />
+                      <span>{org._count.teams} teams</span>
+                    </div>
+                    <div className="text-slate-400">{org.credits} credits</div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

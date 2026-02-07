@@ -211,10 +211,9 @@ Based on [official Prisma Auth.js guide](https://www.prisma.io/docs/guides/authj
 - `lib/auth-utils.ts`: Comprehensive RBAC helper functions (isOrganizationOwner, isTeamOwner, etc.)
 - `lib/validations.ts`: Zod validation schemas for all API requests
 - `prisma/schema.prisma`: Database schema with Auth.js and hierarchical models
-- `app/dashboard/`: Different views for team owners vs members
-- `app/teams/`: Team creation, invitation, and management
-- `app/worklogs/`: Worklog CRUD operations
-- `API_DOCUMENTATION.md`: Complete API reference documentation
+- `app/home/`: Main dashboard page
+- `app/teams/`: Role-specific team views and worklog management
+- `api-documentation.md`: Complete API reference documentation
 - Environment variables loaded via `dotenv/config` in `prisma.config.ts`
 
 ## Critical Patterns
@@ -325,7 +324,7 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 
 ## UI/UX Best Practices
 
-- **Dashboard Routing**: Main dashboard page (`/dashboard`) with conditional logic:
+- **Dashboard Routing**: Main dashboard page (`/home`) with conditional logic:
   - Completely new user with no team invites: Show "Create Organization" and "Create Team" buttons
   - Users with multiple roles: Show tabbed interface for different roles (no need to focus on the specifics. Just know that for users with more than single role, they can navigate role-suitable dashboard using navigation sidebar)
 - **Multi-Role Tabs**: When users have multiple roles, display tabs:
@@ -361,10 +360,10 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 - ✅ **Credits System**: Organization and team credits management APIs (GET/PATCH endpoints)
 - ✅ **Authorization Utilities**: Comprehensive RBAC helper functions in lib/auth-utils.ts
 - ✅ **Validation Layer**: Zod schemas for all API request validation
+- ✅ **Deadline System**: API-level deadline management implemented (CRUD operations for team owners); visual indicators partially implemented in GanttChart component
 - **Rating Automation**: Tentative feature for automatic rating reduction on late worklog completions (details not finalized yet)
-- **Deadline System**: Optional deadline setting and visual indicators
-- **Multi-Role UI**: Tabbed interface for users with multiple roles
-- **Organization Management**: Organization creation, team assignment, and hierarchical permissions
+- 🔄 **Multi-Role UI**: Sidebar navigation structure implemented in main dashboard (static items for Member Teams, Lead Teams, My Organisations); dynamic behavior planned for implementation
+- ✅ **Organization Management**: Organization creation API implemented; team assignment to organizations supported in database schema
 
 ## Common Pitfalls
 
@@ -380,6 +379,7 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 - Always check team membership status and organizational ownership before allowing access
 - Tailwind CSS 4 requires `@import "tailwindcss"` syntax (not v3 style)
 - Auth.js middleware requires `runtime = 'nodejs'` for Prisma client compatibility
+- Next.js 16 shows middleware deprecation warning but Auth.js v5 still requires middleware.ts (safe to ignore per official Auth.js docs)
 - Remove `runtime = "vercel-edge"` from Prisma generator for local development
 
 ## Backend Requirements
@@ -389,17 +389,17 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 - **APIs for team owner worklog management**: ✅ COMPLETED - Update worklog status to REVIEWED via /api/worklogs/[worklogId]/status, set deadlines, view all team worklogs up to REVIEWED status.
 - **APIs for CRUD operations on organization owner ratings**: ✅ COMPLETED - Create, read, update, delete ratings (POST/GET at /api/worklogs/[worklogId]/ratings, GET/PATCH/DELETE at /api/ratings/[ratingId]; organization owners only for worklogs in their organizations; hidden from lower roles).
 - **APIs for credits management**: ✅ COMPLETED - Organization credits (GET/PATCH at /api/organizations/[organizationId]/credits) and team credits (GET/PATCH at /api/teams/[teamId]/credits) with add/subtract/set actions.
-- **APIs for organization management**: Create/read/update/delete organizations, assign teams to organizations, view organization details and teams.
-- **APIs for team management**: Create/read/update/delete teams, invite/accept/reject/remove members, view team details and members (owners only; includes dashboard data fetching).
+- **APIs for organization management**: 🔄 PARTIALLY COMPLETED - Create organizations (POST /api/organizations), list organizations (GET /api/organizations with teams included), assign teams on creation. Missing: individual org CRUD operations, team reassignment to different orgs, org updates/deletion.
+- **APIs for team management**: 🔄 PARTIALLY COMPLETED - Create teams (POST /api/teams), invite/accept/reject members, view team details (via owned/member routes). Missing: individual team CRUD operations, team updates/deletion, member removal.
 - **Progress status validation**: ✅ COMPLETED - Ensure proper status transitions (STARTED → HALF_DONE → COMPLETED → REVIEWED → GRADED) with role-based permissions enforced at API level.
 - **Authorization layer**: ✅ COMPLETED - Comprehensive RBAC helper functions in lib/auth-utils.ts (isOrganizationOwner, isTeamOwner, isTeamMember, isWorklogOwner, canTeamOwnerAccessTeam, etc.).
 - **Input validation**: ✅ COMPLETED - Zod schemas for all API request validation in lib/validations.ts (credits, status, ratings, organizations, teams, worklogs).
-- **Deadline management**: CRUD operations on worklog deadlines by team owners, with optional enforcement (enforcement is soft in the sense that they'll be visual indicator only if work completed after deadline set).
+- **Deadline management**: 🔄 PARTIALLY COMPLETED - Deadlines can be set on worklog creation; visual indicators partially implemented in GanttChart component. Missing: deadline update/delete operations.
 - **Authentication with OAuth**: ✅ COMPLETED - Auth.js setup with Prisma adapter, GitHub and Google providers, Node.js runtime compatibility.
 - **Email invites**: ✅ COMPLETED - Send invitations via Resend Node.js SDK, handle pending/accepted/rejected statuses in TeamMember model with secure token validation.
 - **Authorization checks**: Middleware or per-route validation to ensure users can only access their organizations/teams/worklogs/ratings based on hierarchical permissions.
-- **Input validation and error handling**: Use Zod for API request validation, standardize error responses (e.g., 400/403/404).
-- **GitHub link validation (optional)**: Utility to verify optional GitHub URLs in worklogs.
+- **Input validation and error handling**: ✅ COMPLETED - Use Zod for API request validation, standardize error responses (e.g., 400/403/404).
+- **GitHub link validation (optional)**: ✅ COMPLETED - Zod schema validation for GitHub URLs in worklog creation
 - **Database setup and migrations**: Prisma client configuration, run migrations, handle connection pooling for production.
 
 ## Frontend Libraries Suggestions

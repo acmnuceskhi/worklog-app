@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { use } from "react";
 import { useState } from "react";
 import { FaPlus } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
@@ -92,9 +92,9 @@ const teamDetails: Record<string, TeamData> = {
 export default function TeamDetailsPage({
   params,
 }: {
-  params: { teamId: string };
+  params: Promise<{ teamId: string }>;
 }) {
-  const teamId = params?.teamId;
+  const { teamId } = use(params);
   const team = teamDetails[teamId] || {
     name: "Unknown",
     leader: "N/A",

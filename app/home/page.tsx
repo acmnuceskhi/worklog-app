@@ -23,16 +23,8 @@ export default function DashboardPage() {
   ];
 
   const [query, setQuery] = useState("");
-  const [contentTheme, setContentTheme] = useState<"light" | "dark">(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("contentTheme");
-        if (saved === "light" || saved === "dark") return saved;
-      } catch {}
-    }
-    return "light";
-  });
-  const mounted = typeof window !== "undefined";
+  const [contentTheme, setContentTheme] = useState<"light" | "dark">("light");
+  const [mounted, setMounted] = useState(false);
 
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [teamName, setTeamName] = useState("");
@@ -41,10 +33,23 @@ export default function DashboardPage() {
   const [inviteInput, setInviteInput] = useState("");
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
     try {
-      localStorage.setItem("contentTheme", contentTheme);
+      const saved = localStorage.getItem("contentTheme");
+      if (saved === "light" || saved === "dark") {
+        setContentTheme(saved);
+      }
     } catch {}
-  }, [contentTheme]);
+  }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      try {
+        localStorage.setItem("contentTheme", contentTheme);
+      } catch {}
+    }
+  }, [contentTheme, mounted]);
 
   const teamsData = [
     {
@@ -74,7 +79,11 @@ export default function DashboardPage() {
 
   // Prevent hydration mismatch by waiting for client mount
   if (!mounted) {
-    return null;
+    return (
+      <div className="page light">
+        <div className="loading">Loading...</div>
+      </div>
+    );
   }
 
   return (
