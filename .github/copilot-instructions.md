@@ -8,9 +8,10 @@ This is a hierarchical worklog tracking system for organizations, teams, and mem
 - **OAuth Authentication**: Google university email + GitHub login (restriction code has been implemented but commented out for the time being)
 - **Organization Management**: Users can create organizations, invite team owners via email to join the organization, and manage teams within them
 - **Team Management**: Team owners create teams, invite members, and set worklog deadlines
-- **Progress Tracking**: Members update worklog progress (STARTED → HALF_DONE → COMPLETED), team owners set REVIEWED
-- **Review System**: Team owners review completed worklogs
-- **Rating System**: Organization owners rate reviewed worklogs 1-10 (ratings hidden from lower roles)
+- **Credits System**: Organizations and teams have credit management (add/subtract/set credits)
+- **Progress Tracking**: 5-state worklog progress (STARTED → HALF_DONE → COMPLETED → REVIEWED → GRADED) with strict role-based transitions
+- **Review System**: Team owners review completed worklogs (COMPLETED → REVIEWED)
+- **Rating System**: Organization owners rate reviewed worklogs 1-10 (REVIEWED → GRADED, ratings hidden from lower roles)
 - **Deadline Management**: Optional deadlines per worklog with visual indicators
 - **Multi-Role Support**: Users can have different roles across organizations/teams
 - **Role-Based Dashboards**: Separate views for organization owners, team owners, and members
@@ -93,6 +94,7 @@ model Organization {
   id          String   @id @default(cuid())
   name        String
   description String?
+  credits     Int      @default(0)
   ownerId     String   @map("owner_id")
   owner       User     @relation("OrganizationOwner", fields: [ownerId], references: [id])
   teams       Team[]
@@ -105,6 +107,7 @@ model Team {
   name            String
   description     String?
   project         String?      // What project the team is working on
+  credits         Int          @default(0)
   organizationId  String?      @map("organization_id") // Optional - teams can exist without organizations
   organization    Organization? @relation(fields: [organizationId], references: [id])
   ownerId         String       @map("owner_id")
@@ -176,6 +179,9 @@ enum ProgressStatus {
   HALF_DONE
   COMPLETED
   REVIEWED
+  GRADED
+}
+  REVIEWED
 }
 ```
 
@@ -195,12 +201,20 @@ Based on [official Prisma Auth.js guide](https://www.prisma.io/docs/guides/authj
 - `app/api/auth/[...nextauth]/route.ts`: Authentication API routes
 - `app/api/send/route.tsx`: Email testing endpoint
 - `app/api/teams/[teamId]/invite/route.tsx`: Team invitation API endpoint
+- `app/api/teams/[teamId]/credits/route.ts`: Team credits management API (GET/PATCH)
+- `app/api/organizations/[organizationId]/credits/route.ts`: Organization credits API (GET/PATCH)
+- `app/api/worklogs/[worklogId]/status/route.ts`: Worklog status transition API with strict validation
+- `app/api/worklogs/[worklogId]/ratings/route.ts`: Create and list ratings (org owners only)
+- `app/api/ratings/[ratingId]/route.ts`: Individual rating management (GET/PATCH/DELETE)
 - `app/api/invitations/[token]/accept/route.tsx`: Invitation acceptance endpoint
 - `app/api/invitations/[token]/reject/route.tsx`: Invitation rejection endpoint
+- `lib/auth-utils.ts`: Comprehensive RBAC helper functions (isOrganizationOwner, isTeamOwner, etc.)
+- `lib/validations.ts`: Zod validation schemas for all API requests
 - `prisma/schema.prisma`: Database schema with Auth.js and hierarchical models
 - `app/dashboard/`: Different views for team owners vs members
 - `app/teams/`: Team creation, invitation, and management
 - `app/worklogs/`: Worklog CRUD operations
+- `API_DOCUMENTATION.md`: Complete API reference documentation
 - Environment variables loaded via `dotenv/config` in `prisma.config.ts`
 
 ## Critical Patterns
@@ -244,15 +258,35 @@ const isMember = await prisma.teamMember.findFirst({
 ### Progress Status Authorization
 
 ```typescript
+// Use auth-utils helper functions for authorization checks
+import {
+  getCurrentUser,
+  isOrganizationOwner,
+  isTeamOwner,
+  isTeamMember,
+  isWorklogOwner,
+} from "@/lib/auth-utils";
+
 // Members can update: STARTED → HALF_DONE → COMPLETED
-const canUpdateProgress = isMember && 
-  (currentStatus === 'STARTED' || currentStatus === 'HALF_DONE');
+const canUpdateProgress = await isWorklogOwner(userId, worklogId) || 
+  await isTeamMember(userId, teamId);
 
 // Team owners can set: COMPLETED → REVIEWED
-const canReview = isOwner && currentStatus === 'COMPLETED';
+const canReview = await isTeamOwner(userId, teamId) && 
+  currentStatus === 'COMPLETED';
 
-// Organization owners can rate: REVIEWED worklogs
-const canRate = isOrgOwner && currentStatus === 'REVIEWED';
+// Organization owners can rate: REVIEWED → GRADED
+const canRate = await isOrganizationOwner(userId, organizationId) && 
+  currentStatus === 'REVIEWED';
+
+// Valid status transitions (enforced by API)
+const VALID_TRANSITIONS = {
+  STARTED: ["HALF_DONE"],
+  HALF_DONE: ["COMPLETED"],
+  COMPLETED: ["REVIEWED"],
+  REVIEWED: ["GRADED"],
+  GRADED: [], // Terminal state
+};
 ```
 
 ### Worklog Visibility
@@ -308,8 +342,8 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 - **Invitation Flow**: Email input field for team member emails (university domain only)
 - **Worklog Forms**: Rich text description, optional GitHub link validation, optional images as work evidence, progress status updates
 - **Deadline Setting**: Team owners can set optional deadlines per worklog with visual indicators
-- **Progress Tracking**: Members update STARTED → HALF_DONE → COMPLETED, team owners set REVIEWED
-- **Rating Interface**: 1-10 scale with optional comments, only visible to organization owners
+- **Progress Tracking**: Members update STARTED → HALF_DONE → COMPLETED, team owners set REVIEWED, organization owners set GRADED
+- **Rating Interface**: 1-10 scale with optional comments, only visible to organization owners, can only rate REVIEWED or GRADED worklogs
 - **Deadline Indicators**: Show "due in X days", "overdue", or "completed on time"
 - **Responsive Design**: Mobile-friendly organization/team management and worklog submission
 
@@ -317,11 +351,14 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 
 - ✅ **Authentication Backend**: Fully implemented with Auth.js v5, GitHub OAuth, Google OAuth, and Prisma integration
 - ✅ **Email Workflow**: Complete team invitation system with Resend SDK, secure tokens, and React Email templates
-- **Database Schema**: Organization, Team, TeamMember, Worklog, Rating models documented with proper relations (implementation pending)
+- ✅ **Database Schema**: Organization, Team, TeamMember, Worklog, Rating models implemented with migrations applied
 - ✅ **API Endpoints**: Team invitation, acceptance, and rejection endpoints fully functional
-- **Organization Model**: Added to database schema with proper relations
-- **Progress Tracking**: Worklog progress status updates (STARTED → HALF_DONE → COMPLETED → REVIEWED)
-- **Rating System**: Organization owner rating interface and CRUD operations
+- ✅ **Organization Model**: Added to database with credits field and proper relations
+- ✅ **Progress Tracking**: Worklog progress status updates (STARTED → HALF_DONE → COMPLETED → REVIEWED → GRADED) with strict role-based enforcement
+- ✅ **Rating System**: Organization owner rating interface and CRUD operations (POST/GET ratings, PATCH/DELETE individual ratings)
+- ✅ **Credits System**: Organization and team credits management APIs (GET/PATCH endpoints)
+- ✅ **Authorization Utilities**: Comprehensive RBAC helper functions in lib/auth-utils.ts
+- ✅ **Validation Layer**: Zod schemas for all API request validation
 - **Rating Automation**: Tentative feature for automatic rating reduction on late worklog completions (details not finalized yet)
 - **Deadline System**: Optional deadline setting and visual indicators
 - **Multi-Role UI**: Tabbed interface for users with multiple roles
@@ -333,7 +370,7 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 - Ensure `dotenv/config` is imported before Prisma operations in config files
 - Use PostgreSQL connection string format for `DATABASE_URL`
 - Ratings must be hidden from team members and team owners (security requirement)
-- Progress status transitions must follow: STARTED → HALF_DONE → COMPLETED → REVIEWED (with proper role permissions)
+- Progress status transitions must follow: STARTED → HALF_DONE → COMPLETED → REVIEWED → GRADED (with proper role permissions)
 - Organization owners can only access teams/worklogs within their own organizations
 - When an organization is deleted, teams/worklogs remain visible but all operations are blocked (read-only). They'll be check whether the organisation that team is tied to was prevously made but deleted. If yes then new team will have to be made
 - Google OAuth includes `hd=nu.edu.pk` parameter for university restriction (see Project Overview for implementation status)
@@ -345,13 +382,16 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 
 ## Backend Requirements
 
-- **Database schema**: Prisma models for User, Organization, Team, TeamMember, Worklog, Rating (with relations and enums). Auth.js models (Account, Session, VerificationToken) implemented.
+- **Database schema**: ✅ COMPLETED - Prisma models for User, Organization (with credits), Team (with credits), TeamMember, Worklog (with 5-state ProgressStatus), Rating (with relations and enums). Auth.js models (Account, Session, VerificationToken) implemented. Migrations applied successfully.
 - **APIs for CRUD operations on member worklogs**: Create, read, update, delete worklogs (members only access their own; includes progress status updates up to COMPLETED and optional images/GitHub links)
-- **APIs for team owner worklog management**: Update worklog status to REVIEWED, set deadlines, view all team worklogs up to REVIEWED status.
-- **APIs for CRUD operations on organization owner ratings**: Create, read, update, delete ratings (organization owners only for worklogs in their organizations; hidden from lower roles).
+- **APIs for team owner worklog management**: ✅ COMPLETED - Update worklog status to REVIEWED via /api/worklogs/[worklogId]/status, set deadlines, view all team worklogs up to REVIEWED status.
+- **APIs for CRUD operations on organization owner ratings**: ✅ COMPLETED - Create, read, update, delete ratings (POST/GET at /api/worklogs/[worklogId]/ratings, GET/PATCH/DELETE at /api/ratings/[ratingId]; organization owners only for worklogs in their organizations; hidden from lower roles).
+- **APIs for credits management**: ✅ COMPLETED - Organization credits (GET/PATCH at /api/organizations/[organizationId]/credits) and team credits (GET/PATCH at /api/teams/[teamId]/credits) with add/subtract/set actions.
 - **APIs for organization management**: Create/read/update/delete organizations, assign teams to organizations, view organization details and teams.
 - **APIs for team management**: Create/read/update/delete teams, invite/accept/reject/remove members, view team details and members (owners only; includes dashboard data fetching).
-- **Progress status validation**: Ensure proper status transitions (STARTED → HALF_DONE → COMPLETED → REVIEWED) with role-based permissions.
+- **Progress status validation**: ✅ COMPLETED - Ensure proper status transitions (STARTED → HALF_DONE → COMPLETED → REVIEWED → GRADED) with role-based permissions enforced at API level.
+- **Authorization layer**: ✅ COMPLETED - Comprehensive RBAC helper functions in lib/auth-utils.ts (isOrganizationOwner, isTeamOwner, isTeamMember, isWorklogOwner, canTeamOwnerAccessTeam, etc.).
+- **Input validation**: ✅ COMPLETED - Zod schemas for all API request validation in lib/validations.ts (credits, status, ratings, organizations, teams, worklogs).
 - **Deadline management**: CRUD operations on worklog deadlines by team owners, with optional enforcement (enforcement is soft in the sense that they'll be visual indicator only if work completed after deadline set).
 - **Authentication with OAuth**: ✅ COMPLETED - Auth.js setup with Prisma adapter, GitHub and Google providers, Node.js runtime compatibility.
 - **Email invites**: ✅ COMPLETED - Send invitations via Resend Node.js SDK, handle pending/accepted/rejected statuses in TeamMember model with secure token validation.

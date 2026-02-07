@@ -2,8 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { FaUsers, FaUserTie, FaBell, FaSearch, FaPlus, FaTimes } from "react-icons/fa";
+import { signOut, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const { data: session } = useSession();
   const [invitations, setInvitations] = useState([
     { id: 1, team: "Frontend Team", from: "Ayesha Khan" },
     { id: 2, team: "Backend Squad", from: "Hamza Ali" },
@@ -12,6 +16,7 @@ export default function DashboardPage() {
 
   const [query, setQuery] = useState("");
   const [contentTheme, setContentTheme] = useState<"light" | "dark">("light");
+  const [mounted, setMounted] = useState(false);
 
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [teamName, setTeamName] = useState("");
@@ -20,6 +25,7 @@ export default function DashboardPage() {
   const [inviteInput, setInviteInput] = useState("");
 
   useEffect(() => {
+    setMounted(true);
     try {
       const saved = localStorage.getItem("contentTheme");
       if (saved === "light" || saved === "dark") setContentTheme(saved);
@@ -27,10 +33,12 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    try {
-      localStorage.setItem("contentTheme", contentTheme);
-    } catch {}
-  }, [contentTheme]);
+    if (mounted) {
+      try {
+        localStorage.setItem("contentTheme", contentTheme);
+      } catch {}
+    }
+  }, [contentTheme, mounted]);
 
   const teamsData = [
     { id: "t1", name: "Frontend Team", members: 8, progress: 72, role: "member" },
@@ -45,6 +53,11 @@ export default function DashboardPage() {
   const removeEmail = (email: string) => {
     setInviteEmails(inviteEmails.filter((e) => e !== email));
   };
+
+  // Prevent hydration mismatch by waiting for client mount
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <div className={`page ${contentTheme}`}>
@@ -66,6 +79,44 @@ export default function DashboardPage() {
             <FaBell />
           </button>
           <button
+            className="icon-btn"
+            onClick={() => router.push("/profile")}
+            title="View Profile"
+            style={{ position: "relative" }}
+          >
+            {session?.user?.image ? (
+              <img
+                src={session.user.image}
+                alt="Profile"
+                style={{
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "50%",
+                  backgroundColor: "rgba(96, 165, 250, 0.3)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "0.9rem",
+                  fontWeight: "700",
+                  color: "white",
+                }}
+              >
+                {session?.user?.name?.charAt(0).toUpperCase() || 
+                 session?.user?.email?.charAt(0).toUpperCase() || 
+                 "U"}
+              </div>
+            )}
+          </button>
+          <button
             className="theme-toggle"
             onClick={() =>
               setContentTheme((t) => (t === "light" ? "dark" : "light"))
@@ -73,7 +124,9 @@ export default function DashboardPage() {
           >
             {contentTheme === "light" ? "🌙" : "☀️"}
           </button>
-          <button className="logout">Logout</button>
+          <button className="logout" onClick={() => signOut({ callbackUrl: "/" })}>
+            Logout
+          </button>
         </div>
       </nav>
 
