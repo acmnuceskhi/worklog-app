@@ -13,12 +13,11 @@ export default function DashboardPage() {
   const [query, setQuery] = useState("");
   const [contentTheme, setContentTheme] = useState<"light" | "dark">("light");
 
-  // CREATE TEAM MODAL STATES
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [teamName, setTeamName] = useState("");
   const [teamDesc, setTeamDesc] = useState("");
-  const [inviteEmails, setInviteEmails] = useState<string[]>([]); // email chips
-  const [inviteInput, setInviteInput] = useState(""); // current input
+  const [inviteEmails, setInviteEmails] = useState<string[]>([]);
+  const [inviteInput, setInviteInput] = useState("");
 
   useEffect(() => {
     try {
@@ -43,7 +42,6 @@ export default function DashboardPage() {
     t.name.toLowerCase().includes(query.toLowerCase())
   );
 
-  // Remove email chip
   const removeEmail = (email: string) => {
     setInviteEmails(inviteEmails.filter((e) => e !== email));
   };
@@ -87,8 +85,11 @@ export default function DashboardPage() {
           <div className="side-item">
             <FaUserTie /> Lead Teams
           </div>
+          {/* NEW BUTTON */}
+          <div className="side-item">
+            <FaUsers /> My Organisations
+          </div>
 
-          {/* ➕ CREATE TEAM BUTTON */}
           <button
             className="create-team-btn"
             onClick={() => setShowCreateTeam(true)}
@@ -156,10 +157,7 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="bar">
-                    <div
-                      className="fill"
-                      style={{ width: `${t.progress}%` }}
-                    />
+                    <div className="fill" style={{ width: `${t.progress}%` }} />
                   </div>
 
                   <div className="progress">
@@ -187,107 +185,28 @@ export default function DashboardPage() {
         </aside>
       </div>
 
-      {/* 🪟 CREATE TEAM MODAL WITH EMAIL CHIPS */}
       {showCreateTeam && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.55)",
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "center",
-            paddingTop: "80px",
-            zIndex: 200,
-          }}
-        >
-          <div
-            style={{
-              background: "#111c2b",
-              padding: 24,
-              borderRadius: 16,
-              width: 380,
-              display: "flex",
-              flexDirection: "column",
-              gap: 12,
-              color: "#fff",
-              position: "relative",
-            }}
-          >
-            <button
-              onClick={() => setShowCreateTeam(false)}
-              style={{
-                position: "absolute",
-                top: 12,
-                right: 12,
-                border: "none",
-                background: "transparent",
-                color: "#fff",
-                fontSize: 20,
-                cursor: "pointer",
-              }}
-            >
+        <div className="modal-backdrop">
+          <div className="modal">
+            <button className="modal-close" onClick={() => setShowCreateTeam(false)}>
               <FaTimes />
             </button>
-
-            <h3 style={{ margin: 0, marginBottom: 8 }}>Create Team</h3>
-
+            <h3>Create Team</h3>
             <input
               placeholder="Team Name"
               value={teamName}
               onChange={(e) => setTeamName(e.target.value)}
-              style={{
-                padding: 12,
-                borderRadius: 12,
-                border: "none",
-                outline: "none",
-                background: "rgba(255,255,255,0.06)",
-                color: "#fff",
-              }}
             />
             <textarea
               placeholder="Team Description"
               value={teamDesc}
               onChange={(e) => setTeamDesc(e.target.value)}
-              style={{
-                padding: 12,
-                borderRadius: 12,
-                border: "none",
-                outline: "none",
-                background: "rgba(255,255,255,0.06)",
-                color: "#fff",
-                minHeight: 60,
-              }}
             />
-
-            {/* EMAIL CHIPS INPUT */}
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 6,
-                padding: 6,
-                borderRadius: 8,
-                border: "1px solid rgba(255,255,255,0.3)",
-              }}
-            >
+            <div className="email-chips">
               {inviteEmails.map((email) => (
-                <span
-                  key={email}
-                  style={{
-                    background: "#22c55e",
-                    padding: "4px 8px",
-                    borderRadius: 12,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                  }}
-                >
+                <span key={email}>
                   {email}
-                  <FaTimes
-                    style={{ cursor: "pointer" }}
-                    onClick={() => removeEmail(email)}
-                  />
+                  <FaTimes onClick={() => removeEmail(email)} />
                 </span>
               ))}
               <input
@@ -304,32 +223,10 @@ export default function DashboardPage() {
                     setInviteInput("");
                   }
                 }}
-                style={{
-                  flex: 1,
-                  border: "none",
-                  outline: "none",
-                  background: "transparent",
-                  color: "#fff",
-                  padding: 4,
-                  minWidth: 80,
-                }}
               />
             </div>
-
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-              <button
-                onClick={() => setShowCreateTeam(false)}
-                style={{
-                  padding: "10px 16px",
-                  borderRadius: 12,
-                  border: "none",
-                  cursor: "pointer",
-                  background: "rgba(255,255,255,0.1)",
-                  color: "#fff",
-                }}
-              >
-                Cancel
-              </button>
+            <div className="modal-actions">
+              <button onClick={() => setShowCreateTeam(false)}>Cancel</button>
               <button
                 onClick={() => {
                   alert(
@@ -343,15 +240,6 @@ export default function DashboardPage() {
                   setInviteInput("");
                   setInviteEmails([]);
                 }}
-                style={{
-                  padding: "10px 16px",
-                  borderRadius: 12,
-                  border: "none",
-                  cursor: "pointer",
-                  background: "linear-gradient(90deg, #22c55e, #16a34a)",
-                  color: "#fff",
-                  fontWeight: 600,
-                }}
               >
                 Create
               </button>
@@ -360,40 +248,25 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <style jsx global>{`
-        * {
-          box-sizing: border-box;
-        }
-
-        html,
-        body {
-          margin: 0;
-          padding: 0;
-          width: 100%;
-          overflow-x: hidden;
-        }
-      `}</style>
-
       <style jsx>{`
+        /* PAGE */
         .page {
           min-height: 100vh;
           width: 100vw;
-          overflow-x: hidden;
           padding: 12px;
           display: flex;
           flex-direction: column;
         }
-
         .page.light {
-          background: linear-gradient(135deg, #fbc2eb, #a6c1ee); /* pastel gradient */
+          background: linear-gradient(135deg, #fbc2eb, #a6c1ee);
           color: #020617;
         }
-
         .page.dark {
           background: #021629;
           color: #f8fafc;
         }
 
+        /* NAVBAR */
         .navbar {
           height: 64px;
           padding: 0 16px;
@@ -404,29 +277,24 @@ export default function DashboardPage() {
           background: linear-gradient(90deg, #04243f, #06325a);
           color: white;
         }
-
         .nav-left {
           display: flex;
           gap: 16px;
           align-items: center;
         }
-
         .logo {
-          font-size: 1.8rem; /* bigger logo */
+          font-size: 1.8rem;
         }
-
         .logo::after {
           content: "_";
           margin-left: 6px;
           animation: blink 1s infinite;
         }
-
         @keyframes blink {
           50% {
             opacity: 0;
           }
         }
-
         .search {
           display: flex;
           gap: 8px;
@@ -435,56 +303,49 @@ export default function DashboardPage() {
           padding: 6px 10px;
           border-radius: 10px;
         }
-
         .search input {
           background: transparent;
           border: none;
           outline: none;
           color: white;
         }
-
-        .nav-left .search svg,
-        .nav-right button svg {
-          font-size: 1.3rem; /* bigger icons */
-        }
-
         .nav-right {
           display: flex;
           gap: 12px;
         }
 
+        /* LAYOUT */
         .layout {
           display: flex;
           gap: 16px;
           flex: 1;
           margin-top: 12px;
           width: 100%;
-          overflow-x: hidden;
         }
 
+        /* SIDEBAR */
         .sidebar {
           width: 220px;
           padding: 16px;
           border-radius: 12px;
           background: #04243f;
           color: white;
-          flex-shrink: 0;
           display: flex;
           flex-direction: column;
         }
-
         .side-item {
           padding: 10px;
           border-radius: 10px;
           display: flex;
           gap: 8px;
           cursor: pointer;
+          margin-bottom: 8px;
         }
-
         .side-item.active {
           background: linear-gradient(90deg, #3b82f6, #06b6d4);
         }
 
+        /* CONTENT */
         .content {
           flex: 1;
           display: flex;
@@ -492,51 +353,42 @@ export default function DashboardPage() {
           gap: 16px;
           overflow: hidden;
         }
-
         .card {
           background: white;
           padding: 16px;
           border-radius: 12px;
         }
-
         .page.dark .card {
           background: #03243a;
         }
-
         .hero {
           display: flex;
           justify-content: space-between;
           align-items: center;
         }
-
         .stats {
           display: flex;
           gap: 16px;
           text-align: center;
         }
-
         .grid {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
           gap: 12px;
         }
-
         .team {
           padding: 12px;
           border-radius: 12px;
           background: #f1f5f9;
         }
-
         .page.dark .team {
           background: #04243f;
         }
-
         .team-top {
           display: flex;
           gap: 10px;
           align-items: center;
         }
-
         .avatar {
           width: 48px;
           height: 48px;
@@ -548,7 +400,6 @@ export default function DashboardPage() {
           color: white;
           font-weight: bold;
         }
-
         .bar {
           height: 8px;
           background: rgba(0, 0, 0, 0.1);
@@ -556,18 +407,17 @@ export default function DashboardPage() {
           overflow: hidden;
           margin-top: 10px;
         }
-
         .fill {
           height: 100%;
           background: linear-gradient(90deg, #3b82f6, #06b6d4);
         }
-
         .progress {
           display: flex;
           justify-content: space-between;
           margin-top: 6px;
         }
 
+        /* INVITES */
         .invites {
           width: 300px;
           padding: 16px;
@@ -575,11 +425,7 @@ export default function DashboardPage() {
           background: #04243f;
           color: yellow;
           flex-shrink: 0;
-          .invites h3 
-  font-family: "Courier New"
-
         }
-
         .invite {
           background: white;
           color: black;
@@ -587,13 +433,11 @@ export default function DashboardPage() {
           border-radius: 10px;
           margin-top: 10px;
         }
-
         .actions {
           display: flex;
           gap: 8px;
           margin-top: 8px;
         }
-
         .accept {
           background: #22c55e;
           border: none;
@@ -601,7 +445,6 @@ export default function DashboardPage() {
           border-radius: 8px;
           flex: 1;
         }
-
         .decline {
           background: #ef4444;
           border: none;
@@ -609,6 +452,81 @@ export default function DashboardPage() {
           border-radius: 8px;
           flex: 1;
           color: white;
+        }
+
+        /* MODAL */
+        .modal-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.55);
+          display: flex;
+          align-items: flex-start;
+          justify-content: center;
+          padding-top: 80px;
+          z-index: 200;
+        }
+        .modal {
+          background: #111c2b;
+          padding: 24px;
+          border-radius: 16px;
+          width: 380px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          color: #fff;
+          position: relative;
+        }
+        .modal-close {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          border: none;
+          background: transparent;
+          color: #fff;
+          font-size: 20px;
+          cursor: pointer;
+        }
+        .modal input,
+        .modal textarea {
+          padding: 12px;
+          border-radius: 12px;
+          border: none;
+          outline: none;
+          background: rgba(255, 255, 255, 0.06);
+          color: #fff;
+        }
+        .modal textarea {
+          min-height: 60px;
+        }
+        .email-chips {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          padding: 6px;
+          border-radius: 8px;
+          border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .email-chips span {
+          background: #22c55e;
+          padding: 4px 8px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+        .modal-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+        }
+        .modal-actions button:first-child {
+          background: rgba(255, 255, 255, 0.1);
+          color: #fff;
+        }
+        .modal-actions button:last-child {
+          background: linear-gradient(90deg, #22c55e, #16a34a);
+          color: #fff;
+          font-weight: 600;
         }
 
         @media (max-width: 900px) {

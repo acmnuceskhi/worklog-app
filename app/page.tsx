@@ -2,11 +2,11 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Sacramento } from "next/font/google";
+import { Share_Tech_Mono } from "next/font/google"; // Techy font
 import { FcGoogle } from "react-icons/fc";
 import { FaGithub } from "react-icons/fa";
 
-const sacramento = Sacramento({ weight: "400", subsets: ["latin"] });
+const shareTechMono = Share_Tech_Mono({ weight: "400", subsets: ["latin"] });
 
 export default function Home() {
   const router = useRouter();
@@ -28,13 +28,12 @@ export default function Home() {
       <div style={styles.blob2}></div>
 
       <div style={styles.innerContainer}>
-        <div className="overlay" />
         {/* LEFT SIDE */}
         <div style={styles.left}>
-          <div className={`${sacramento.className} worklog`} style={styles.worklog}>
-              Worklog<span className="caret">_</span>
+          <div className={`${shareTechMono.className} worklog`} style={styles.worklog}>
+            WORKLOG<span className="caret">_</span>
           </div>
-          <div style={styles.tagline}>Track ur progress</div>
+          <div style={styles.tagline}>Track your projects like a pro</div>
         </div>
 
         {/* RIGHT SIDE: LOGIN CARD */}
@@ -75,11 +74,20 @@ export default function Home() {
       </div>
 
       <style jsx>{`
-        .overlay { position:absolute; inset:0; pointer-events:none; background-image: linear-gradient(rgba(96,165,250,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(96,165,250,0.02) 1px, transparent 1px); background-size:24px 24px,24px 24px; mix-blend-mode:overlay; }
-        .worklog { display:inline-block; position:relative; }
-        .caret { color: #60a5fa; margin-left:6px; opacity:0.95; animation: blink 1s steps(2,start) infinite }
-        @keyframes blink { 50% { opacity: 0 } }
-        @media (max-width:900px) { .overlay { background-size: 16px 16px, 16px 16px } }
+        .worklog {
+          display: inline-block;
+          position: relative;
+          letter-spacing: 1px;
+          color: #fff; /* white for text */
+        }
+        .caret {
+          color: #a6c1ee; /* subtle pink-blue accent */
+          margin-left: 6px;
+          animation: blink 1s steps(2, start) infinite;
+        }
+        @keyframes blink {
+          50% { opacity: 0; }
+        }
       `}</style>
     </div>
   );
@@ -94,7 +102,7 @@ const styles: any = {
     position: "relative",
     overflow: "hidden",
     padding: "0 20px",
-    backgroundColor: "#0A173B", // darker blue
+    backgroundColor: "#0A173B", // dark blue background
   },
 
   blob1: {
@@ -105,7 +113,7 @@ const styles: any = {
     background: "radial-gradient(circle, #00FFF0 0%, transparent 70%)",
     top: "-20%",
     left: "-15%",
-    filter: "blur(180px)",
+    filter: "blur(120px)",
     zIndex: 0,
   },
   blob2: {
@@ -116,7 +124,7 @@ const styles: any = {
     background: "radial-gradient(circle, #FF6ECF 0%, transparent 70%)",
     bottom: "-25%",
     right: "-15%",
-    filter: "blur(200px)",
+    filter: "blur(150px)",
     zIndex: 0,
   },
 
@@ -135,57 +143,52 @@ const styles: any = {
     justifyContent: "center",
     alignItems: "center",
     textAlign: "center",
-    paddingTop: "18px",
     position: "relative",
   },
 
   worklog: {
-    fontSize: "4.8rem",
-    color: "#fff",
-    textShadow: "0 0 26px rgba(96,165,250,0.14)",
+    fontSize: "4rem",
+    fontWeight: 500,
   },
 
   tagline: {
     marginTop: 8,
-    marginLeft: 0,
-    fontSize: "1.25rem",
-    color: "#00FFF0",
+    fontSize: "1.2rem",
+    color: "#a6c1ee", // subtle pink-blue
     fontWeight: 500,
     letterSpacing: "0.02em",
   },
 
   card: {
     flex: '1 1 55%',
-    padding: 40,
-    borderRadius: 20,
-    background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))",
-    backdropFilter: "blur(10px)",
+    padding: 36,
+    borderRadius: 16,
+    background: "#111c2b",
     display: "flex",
     flexDirection: "column",
-    gap: 20,
-    boxShadow: "0 12px 48px rgba(37,99,235,0.12)",
+    gap: 18,
+    boxShadow: "0 6px 20px rgba(37,99,235,0.12)",
   },
 
   input: {
-    padding: "14px 16px",
-    borderRadius: 14,
+    padding: "12px 14px",
+    borderRadius: 8,
     border: "none",
     outline: "none",
     fontSize: "1rem",
-    background: "rgba(255,255,255,0.06)",
+    background: "#1b2435",
     color: "#fff",
   },
 
   loginButton: {
-    padding: "14px",
-    borderRadius: 14,
+    padding: "12px",
+    borderRadius: 8,
     border: "none",
     cursor: "pointer",
     background: "linear-gradient(135deg, #00FFF0, #FF6ECF)",
-    color: "#fff",
+    color: "#111c2b",
     fontWeight: 600,
     fontSize: "1rem",
-    transition: "all 0.25s ease",
   },
 
   divider: {
@@ -200,12 +203,12 @@ const styles: any = {
   dividerLine: {
     flex: 1,
     height: 1,
-    background: "rgba(255,255,255,0.3)",
+    background: "#555",
   },
 
   dividerText: {
     color: "#fff",
-    fontWeight: 600,
+    fontWeight: 500,
     fontSize: "0.9rem",
   },
 
@@ -217,17 +220,16 @@ const styles: any = {
 
   socialButton: {
     flex: 1,
-    padding: "12px",
-    borderRadius: 14,
+    padding: "10px",
+    borderRadius: 8,
     border: "none",
     cursor: "pointer",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    background: "rgba(255,255,255,0.1)",
+    background: "#1b2435",
     color: "#fff",
     fontWeight: 500,
-    fontSize: "0.95rem",
-    transition: "all 0.25s ease",
+    fontSize: "0.9rem",
   },
 };
