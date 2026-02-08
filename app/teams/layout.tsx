@@ -1,10 +1,22 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Lobster_Two } from "next/font/google";
-import { FaUsers, FaUserTie, FaBell, FaSearch, FaPlus } from "react-icons/fa";
+import {
+  FaUsers,
+  FaUserTie,
+  FaBell,
+  FaSearch,
+  FaPlus,
+  FaClipboardList,
+  FaCheckCircle,
+  FaBars,
+  FaChevronLeft,
+  FaChevronRight,
+} from "react-icons/fa";
 import { useRouter, usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -36,16 +48,20 @@ export default function TeamsLayout({
   ]);
 
   // Dynamic sidebar state
-  const [userStats, setUserStats] = useState({
+  const [sidebarStats, setSidebarStats] = useState({
     memberTeamsCount: 0,
     leadTeamsCount: 0,
     organizationsCount: 0,
+    worklogsCount: 0,
+    pendingReviewsCount: 0,
   });
   const [sidebarLoading, setSidebarLoading] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   const isLeadPage = pathname.includes("/lead");
   const isMemberPage = pathname.includes("/member");
-  const activeNav = isLeadPage ? "lead" : isMemberPage ? "member" : null;
 
   useEffect(() => {
     setMounted(true);
@@ -65,61 +81,66 @@ export default function TeamsLayout({
     }
   }, [contentTheme, mounted]);
 
-  // Fetch user role statistics for dynamic sidebar
   useEffect(() => {
-    const fetchUserStats = async () => {
-      if (!session?.user?.id) {
-        setSidebarLoading(false);
-        return;
+    const mediaQuery = window.matchMedia("(max-width: 960px)");
+    const update = () => setIsMobile(mediaQuery.matches);
+    update();
+    mediaQuery.addEventListener("change", update);
+    return () => mediaQuery.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    setIsSidebarOpen(!isMobile);
+    if (isMobile) {
+      setIsSidebarCollapsed(false);
+    }
+  }, [isMobile]);
+
+  const fetchSidebarStats = useCallback(async () => {
+    if (!session?.user?.id) {
+      setSidebarLoading(false);
+      return;
+    }
+
+    try {
+      setSidebarLoading(true);
+      const response = await fetch("/api/sidebar/stats");
+      if (!response.ok) {
+        throw new Error("Failed to load sidebar stats");
       }
 
-      try {
-        setSidebarLoading(true);
+      const payload = await response.json();
+      const data = payload.data || payload;
+      setSidebarStats({
+        memberTeamsCount: data.memberTeamsCount ?? 0,
+        leadTeamsCount: data.leadTeamsCount ?? 0,
+        organizationsCount: data.organizationsCount ?? 0,
+        worklogsCount: data.worklogsCount ?? 0,
+        pendingReviewsCount: data.pendingReviewsCount ?? 0,
+      });
+    } catch (error) {
+      console.error("Failed to fetch sidebar stats:", error);
+    } finally {
+      setSidebarLoading(false);
+    }
+  }, [session?.user?.id]);
 
-        // Fetch all user stats in parallel for better performance
-        const [memberTeamsRes, leadTeamsRes, organizationsRes] =
-          await Promise.allSettled([
-            fetch("/api/teams/member"),
-            fetch("/api/teams/owned"),
-            fetch("/api/organizations"),
-          ]);
+  useEffect(() => {
+    fetchSidebarStats();
 
-        // Safely extract counts with error handling
-        const getCount = async (result: PromiseSettledResult<Response>) => {
-          if (result.status === "fulfilled" && result.value.ok) {
-            try {
-              const response = await result.value.json();
-              // API returns { data: items } format
-              const data = response.data || response;
-              return Array.isArray(data) ? data.length : 0;
-            } catch {
-              return 0;
-            }
-          }
-          return 0;
-        };
-
-        const [memberTeamsCount, leadTeamsCount, organizationsCount] =
-          await Promise.all([
-            getCount(memberTeamsRes),
-            getCount(leadTeamsRes),
-            getCount(organizationsRes),
-          ]);
-
-        setUserStats({
-          memberTeamsCount,
-          leadTeamsCount,
-          organizationsCount,
-        });
-      } catch (error) {
-        console.error("Failed to fetch user stats:", error);
-      } finally {
-        setSidebarLoading(false);
+    const interval = setInterval(fetchSidebarStats, 30000);
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        fetchSidebarStats();
       }
     };
+    document.addEventListener("visibilitychange", handleVisibility);
 
-    fetchUserStats();
-  }, [session?.user?.id]);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [fetchSidebarStats]);
 
   const handleSendInvite = () => {
     if (inviteEmail.trim()) {
@@ -136,6 +157,56 @@ export default function TeamsLayout({
   const handleDeclineInvite = (idx: number) => {
     setReceivedInvites(receivedInvites.filter((_, i) => i !== idx));
   };
+
+  const sidebarItems = [
+    {
+      id: "member",
+      label: "Member Teams",
+      href: "/teams/member",
+      icon: <FaUsers />,
+      count: sidebarStats.memberTeamsCount,
+    },
+    {
+      id: "lead",
+      label: "Lead Teams",
+      href: "/teams/lead",
+      icon: <FaUserTie />,
+      count: sidebarStats.leadTeamsCount,
+    },
+    {
+      id: "orgs",
+      label: "My Organisations",
+      href: "/teams/organisations",
+      icon: <FaUsers />,
+      count: sidebarStats.organizationsCount,
+    },
+    {
+      id: "worklogs",
+      label: "My Worklogs",
+      href: "/teams/member",
+      icon: <FaClipboardList />,
+      count: sidebarStats.worklogsCount,
+    },
+    {
+      id: "pending",
+      label: "Pending Reviews",
+      href: "/teams/lead",
+      icon: <FaCheckCircle />,
+      count: sidebarStats.pendingReviewsCount,
+    },
+  ];
+
+  const sidebarWidth = isMobile ? 260 : isSidebarCollapsed ? 72 : 220;
+  const showSidebarLabels = !isSidebarCollapsed || isMobile;
+  const handleNavigate = useCallback(
+    (href: string) => {
+      router.push(href);
+      if (isMobile) {
+        setIsSidebarOpen(false);
+      }
+    },
+    [router, isMobile],
+  );
 
   const styles: Record<string, React.CSSProperties> = {
     page: {
@@ -166,6 +237,15 @@ export default function TeamsLayout({
       gap: 16,
       alignItems: "center",
       flexShrink: 0,
+    },
+    sidebarToggle: {
+      background: "transparent",
+      border: "1px solid rgba(255, 255, 255, 0.2)",
+      color: "white",
+      borderRadius: 10,
+      padding: "6px 10px",
+      cursor: "pointer",
+      display: "none",
     },
     logo: {
       fontSize: "1.8rem",
@@ -217,6 +297,12 @@ export default function TeamsLayout({
       width: "100%",
       overflowX: "hidden",
     },
+    sidebarOverlay: {
+      position: "fixed",
+      inset: 0,
+      background: "rgba(2, 6, 23, 0.6)",
+      zIndex: 90,
+    },
     sidebar: {
       width: 220,
       padding: 16,
@@ -226,6 +312,43 @@ export default function TeamsLayout({
       flexShrink: 0,
       display: "flex",
       flexDirection: "column",
+      gap: 12,
+      position: "relative",
+      zIndex: 100,
+    },
+    sidebarMobile: {
+      position: "fixed",
+      top: 88,
+      left: 12,
+      bottom: 12,
+      height: "auto",
+      boxShadow: "0 24px 80px rgba(2, 6, 23, 0.4)",
+    },
+    sidebarHeader: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      fontWeight: 600,
+      fontSize: "0.95rem",
+    },
+    sidebarTitle: {
+      textTransform: "uppercase",
+      letterSpacing: "0.08em",
+      fontSize: "0.7rem",
+      color: "rgba(255, 255, 255, 0.7)",
+    },
+    sidebarCollapse: {
+      background: "rgba(255, 255, 255, 0.08)",
+      border: "none",
+      color: "white",
+      borderRadius: 8,
+      padding: "6px 8px",
+      cursor: "pointer",
+    },
+    sidebarItems: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 6,
     },
     sideItem: {
       padding: 10,
@@ -234,9 +357,22 @@ export default function TeamsLayout({
       gap: 8,
       cursor: "pointer",
       marginBottom: 8,
+      alignItems: "center",
+    },
+    sideIcon: {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: 20,
+    },
+    sideLabel: {
+      whiteSpace: "nowrap",
     },
     sideItemActive: {
       background: "linear-gradient(90deg, #3b82f6, #06b6d4)",
+    },
+    countCollapsed: {
+      marginLeft: 0,
     },
     count: {
       marginLeft: "auto",
@@ -305,6 +441,19 @@ export default function TeamsLayout({
     <div style={styles.page} className={contentTheme}>
       <nav style={styles.navbar}>
         <div style={styles.navLeft}>
+          <button
+            style={{
+              ...styles.sidebarToggle,
+              display: isMobile ? "inline-flex" : "none",
+              alignItems: "center",
+              gap: 6,
+            }}
+            onClick={() => setIsSidebarOpen((prev) => !prev)}
+            aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+            aria-expanded={isSidebarOpen}
+          >
+            <FaBars />
+          </button>
           <h1 style={styles.logo} className={lobsterTwo.className}>
             Worklog
           </h1>
@@ -333,54 +482,100 @@ export default function TeamsLayout({
       </nav>
 
       <div style={styles.layout}>
-        <aside style={styles.sidebar}>
-          {/* Dynamic sidebar items based on user roles */}
-          <div
-            style={{
-              ...styles.sideItem,
-              ...(activeNav === "member" ? styles.sideItemActive : {}),
-            }}
-            onClick={() => router.push("/teams/member")}
-          >
-            <FaUsers /> Member Teams
-            <span style={styles.count} aria-hidden="true">
-              {userStats.memberTeamsCount}
+        <AnimatePresence>
+          {isMobile && isSidebarOpen && (
+            <motion.div
+              style={styles.sidebarOverlay}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSidebarOpen(false)}
+              aria-hidden="true"
+            />
+          )}
+        </AnimatePresence>
+
+        <motion.aside
+          style={{
+            ...styles.sidebar,
+            width: sidebarWidth,
+            ...(isMobile ? styles.sidebarMobile : {}),
+          }}
+          aria-label="Main navigation"
+          aria-expanded={isSidebarOpen}
+          initial={false}
+          animate={{
+            width: sidebarWidth,
+            x: isMobile && !isSidebarOpen ? -sidebarWidth - 24 : 0,
+          }}
+          transition={{ type: "spring", stiffness: 260, damping: 26 }}
+        >
+          <div style={styles.sidebarHeader}>
+            <span style={styles.sidebarTitle}>
+              {showSidebarLabels ? "Navigation" : "Nav"}
             </span>
-          </div>
-          <div
-            style={{
-              ...styles.sideItem,
-              ...(activeNav === "lead" ? styles.sideItemActive : {}),
-            }}
-            onClick={() => router.push("/teams/lead")}
-          >
-            <FaUserTie /> Lead Teams
-            <span style={styles.count} aria-hidden="true">
-              {userStats.leadTeamsCount}
-            </span>
-          </div>
-          <div
-            style={styles.sideItem}
-            onClick={() => router.push("/teams/organisations")}
-          >
-            <FaUsers /> My Organisations
-            <span style={styles.count} aria-hidden="true">
-              {userStats.organizationsCount}
-            </span>
+            {!isMobile && (
+              <button
+                style={styles.sidebarCollapse}
+                onClick={() => setIsSidebarCollapsed((prev) => !prev)}
+                aria-label={
+                  isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
+                }
+              >
+                {isSidebarCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
+              </button>
+            )}
           </div>
 
-          {/* Show loading state */}
-          {sidebarLoading && (
-            <div
-              style={{
-                ...styles.sideItem,
-                opacity: 0.6,
-              }}
-              aria-live="polite"
-            >
-              <FaUsers /> Loading...
-            </div>
-          )}
+          <div style={styles.sidebarItems}>
+            {sidebarItems.map((item) => {
+              const isActive = pathname.startsWith(item.href);
+              const ariaLabel = item.count
+                ? `${item.label} (${item.count})`
+                : item.label;
+
+              return (
+                <div
+                  key={item.id}
+                  style={{
+                    ...styles.sideItem,
+                    ...(isActive ? styles.sideItemActive : {}),
+                  }}
+                  onClick={() => handleNavigate(item.href)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleNavigate(item.href);
+                    }
+                  }}
+                  tabIndex={0}
+                  role="button"
+                  aria-current={isActive ? "page" : undefined}
+                  aria-label={ariaLabel}
+                >
+                  <span style={styles.sideIcon}>{item.icon}</span>
+                  {showSidebarLabels && (
+                    <span style={styles.sideLabel}>{item.label}</span>
+                  )}
+                  <span
+                    style={{
+                      ...styles.count,
+                      ...(showSidebarLabels ? {} : styles.countCollapsed),
+                    }}
+                    aria-live="polite"
+                  >
+                    {item.count}
+                  </span>
+                </div>
+              );
+            })}
+
+            {sidebarLoading && (
+              <div style={{ ...styles.sideItem, opacity: 0.6 }}>
+                <FaUsers /> {showSidebarLabels ? "Loading..." : "..."}
+              </div>
+            )}
+          </div>
 
           <button
             onClick={() => router.push("/home")}
@@ -390,9 +585,9 @@ export default function TeamsLayout({
               background: "linear-gradient(90deg, #22c55e, #16a34a)",
             }}
           >
-            <FaPlus /> Back to Dashboard
+            <FaPlus /> {showSidebarLabels ? "Back to Dashboard" : "Back"}
           </button>
-        </aside>
+        </motion.aside>
 
         <main style={styles.content}>{children}</main>
 

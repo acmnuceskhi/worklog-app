@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import {
   FaUsers,
@@ -9,12 +9,19 @@ import {
   FaSearch,
   FaPlus,
   FaTimes,
+  FaClipboardList,
+  FaCheckCircle,
+  FaBars,
+  FaChevronLeft,
+  FaChevronRight,
 } from "react-icons/fa";
 import { signOut, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 
 export default function DashboardPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const { data: session } = useSession();
 
   // State declarations
@@ -29,12 +36,17 @@ export default function DashboardPage() {
   const [inviteInput, setInviteInput] = useState("");
 
   // Dynamic sidebar state
-  const [userStats, setUserStats] = useState({
+  const [sidebarStats, setSidebarStats] = useState({
     memberTeamsCount: 0,
     leadTeamsCount: 0,
     organizationsCount: 0,
+    worklogsCount: 0,
+    pendingReviewsCount: 0,
   });
   const [sidebarLoading, setSidebarLoading] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [invitations, setInvitations] = useState<
     { from: string; team: string }[]
@@ -58,67 +70,66 @@ export default function DashboardPage() {
     }
   }, [contentTheme, mounted]);
 
-  // Fetch user role statistics for dynamic sidebar
   useEffect(() => {
-    const fetchUserStats = async () => {
-      if (!session?.user?.id) {
-        setSidebarLoading(false);
-        return;
+    const mediaQuery = window.matchMedia("(max-width: 960px)");
+    const update = () => setIsMobile(mediaQuery.matches);
+    update();
+    mediaQuery.addEventListener("change", update);
+    return () => mediaQuery.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    setIsSidebarOpen(!isMobile);
+    if (isMobile) {
+      setIsSidebarCollapsed(false);
+    }
+  }, [isMobile]);
+
+  const fetchSidebarStats = useCallback(async () => {
+    if (!session?.user?.id) {
+      setSidebarLoading(false);
+      return;
+    }
+
+    try {
+      setSidebarLoading(true);
+      const response = await fetch("/api/sidebar/stats");
+      if (!response.ok) {
+        throw new Error("Failed to load sidebar stats");
       }
 
-      try {
-        setSidebarLoading(true);
+      const payload = await response.json();
+      const data = payload.data || payload;
+      setSidebarStats({
+        memberTeamsCount: data.memberTeamsCount ?? 0,
+        leadTeamsCount: data.leadTeamsCount ?? 0,
+        organizationsCount: data.organizationsCount ?? 0,
+        worklogsCount: data.worklogsCount ?? 0,
+        pendingReviewsCount: data.pendingReviewsCount ?? 0,
+      });
+    } catch (error) {
+      console.error("Failed to fetch sidebar stats:", error);
+    } finally {
+      setSidebarLoading(false);
+    }
+  }, [session?.user?.id]);
 
-        // Fetch all user stats in parallel for better performance
-        const [memberTeamsRes, leadTeamsRes, organizationsRes] =
-          await Promise.allSettled([
-            fetch("/api/teams/member"),
-            fetch("/api/teams/owned"),
-            fetch("/api/organizations"),
-          ]);
+  useEffect(() => {
+    fetchSidebarStats();
 
-        // Safely extract counts with error handling
-        const getCount = async (result: PromiseSettledResult<Response>) => {
-          if (result.status === "fulfilled" && result.value.ok) {
-            try {
-              const response = await result.value.json();
-              // API returns { data: items } format
-              const data = response.data || response;
-              return Array.isArray(data) ? data.length : 0;
-            } catch {
-              return 0;
-            }
-          }
-          return 0;
-        };
-
-        const [memberTeamsCount, leadTeamsCount, organizationsCount] =
-          await Promise.all([
-            getCount(memberTeamsRes),
-            getCount(leadTeamsRes),
-            getCount(organizationsRes),
-          ]);
-
-        setUserStats({
-          memberTeamsCount,
-          leadTeamsCount,
-          organizationsCount,
-        });
-      } catch (error) {
-        console.error("Failed to fetch user stats:", error);
-        // Set default values on error
-        setUserStats({
-          memberTeamsCount: 0,
-          leadTeamsCount: 0,
-          organizationsCount: 0,
-        });
-      } finally {
-        setSidebarLoading(false);
+    const interval = setInterval(fetchSidebarStats, 30000);
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        fetchSidebarStats();
       }
     };
+    document.addEventListener("visibilitychange", handleVisibility);
 
-    fetchUserStats();
-  }, [session?.user?.id]);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [fetchSidebarStats]);
 
   const teamsData = [
     {
@@ -142,6 +153,56 @@ export default function DashboardPage() {
     t.name.toLowerCase().includes(query.toLowerCase()),
   );
 
+  const sidebarItems = [
+    {
+      id: "member",
+      label: "Member Teams",
+      href: "/teams/member",
+      icon: <FaUsers />,
+      count: sidebarStats.memberTeamsCount,
+    },
+    {
+      id: "lead",
+      label: "Lead Teams",
+      href: "/teams/lead",
+      icon: <FaUserTie />,
+      count: sidebarStats.leadTeamsCount,
+    },
+    {
+      id: "orgs",
+      label: "My Organisations",
+      href: "/teams/organisations",
+      icon: <FaUsers />,
+      count: sidebarStats.organizationsCount,
+    },
+    {
+      id: "worklogs",
+      label: "My Worklogs",
+      href: "/teams/member",
+      icon: <FaClipboardList />,
+      count: sidebarStats.worklogsCount,
+    },
+    {
+      id: "pending",
+      label: "Pending Reviews",
+      href: "/teams/lead",
+      icon: <FaCheckCircle />,
+      count: sidebarStats.pendingReviewsCount,
+    },
+  ];
+
+  const sidebarWidth = isMobile ? 260 : isSidebarCollapsed ? 72 : 220;
+  const showSidebarLabels = !isSidebarCollapsed || isMobile;
+  const handleNavigate = useCallback(
+    (href: string) => {
+      router.push(href);
+      if (isMobile) {
+        setIsSidebarOpen(false);
+      }
+    },
+    [router, isMobile],
+  );
+
   const removeEmail = (email: string) => {
     setInviteEmails(inviteEmails.filter((e) => e !== email));
   };
@@ -159,6 +220,14 @@ export default function DashboardPage() {
     <div className={`page ${contentTheme}`}>
       <nav className="navbar">
         <div className="nav-left">
+          <button
+            className="sidebar-toggle"
+            onClick={() => setIsSidebarOpen((prev) => !prev)}
+            aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+            aria-expanded={isSidebarOpen}
+          >
+            <FaBars />
+          </button>
           <h1 className="logo">Worklog</h1>
           <div className="search">
             <FaSearch />
@@ -232,112 +301,108 @@ export default function DashboardPage() {
       </nav>
 
       <div className="layout">
-        <aside className="sidebar">
-          {/* Dynamic sidebar items based on user roles */}
-          <div
-            className="side-item"
-            onClick={() => router.push("/teams/member")}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                router.push("/teams/member");
-              }
-            }}
-            tabIndex={0}
-            role="button"
-            aria-label={`Member Teams (${userStats.memberTeamsCount})`}
-            style={{ cursor: "pointer" }}
-          >
-            <FaUsers /> Member Teams
-            <span className="count" aria-hidden="true">
-              {userStats.memberTeamsCount}
-            </span>
-          </div>
-
-          <div
-            className="side-item"
-            onClick={() => router.push("/teams/lead")}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                router.push("/teams/lead");
-              }
-            }}
-            tabIndex={0}
-            role="button"
-            aria-label={`Lead Teams (${userStats.leadTeamsCount})`}
-            style={{ cursor: "pointer" }}
-          >
-            <FaUserTie /> Lead Teams
-            <span className="count" aria-hidden="true">
-              {userStats.leadTeamsCount}
-            </span>
-          </div>
-
-          <div
-            className="side-item"
-            onClick={() => router.push("/teams/organisations")}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                router.push("/teams/organisations");
-              }
-            }}
-            tabIndex={0}
-            role="button"
-            aria-label={`My Organisations (${userStats.organizationsCount})`}
-            style={{ cursor: "pointer" }}
-          >
-            <FaUsers /> My Organisations
-            <span className="count" aria-hidden="true">
-              {userStats.organizationsCount}
-            </span>
-          </div>
-
-          {/* Show loading state or empty state */}
-          {sidebarLoading && (
-            <div
-              className="side-item"
-              style={{ opacity: 0.6 }}
-              aria-live="polite"
-            >
-              <FaUsers /> Loading...
-            </div>
+        <AnimatePresence>
+          {isMobile && isSidebarOpen && (
+            <motion.div
+              className="sidebar-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSidebarOpen(false)}
+              aria-hidden="true"
+            />
           )}
+        </AnimatePresence>
 
-          {!sidebarLoading &&
-            userStats.memberTeamsCount === 0 &&
-            userStats.leadTeamsCount === 0 &&
-            userStats.organizationsCount === 0 && (
+        <motion.aside
+          className={`sidebar ${isMobile ? "mobile" : ""} ${
+            isSidebarCollapsed ? "collapsed" : ""
+          }`}
+          aria-label="Main navigation"
+          aria-expanded={isSidebarOpen}
+          initial={false}
+          animate={{
+            width: sidebarWidth,
+            x: isMobile && !isSidebarOpen ? -sidebarWidth - 24 : 0,
+          }}
+          transition={{ type: "spring", stiffness: 260, damping: 26 }}
+        >
+          <div className="sidebar-header">
+            <span className="sidebar-title">
+              {showSidebarLabels ? "Navigation" : "Nav"}
+            </span>
+            {!isMobile && (
+              <button
+                className="sidebar-collapse"
+                onClick={() => setIsSidebarCollapsed((prev) => !prev)}
+                aria-label={
+                  isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
+                }
+              >
+                {isSidebarCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
+              </button>
+            )}
+          </div>
+
+          <div className="sidebar-items">
+            {sidebarItems.map((item) => {
+              const isActive = pathname?.startsWith(item.href);
+              const ariaLabel = item.count
+                ? `${item.label} (${item.count})`
+                : item.label;
+
+              return (
+                <div
+                  key={item.id}
+                  className={`side-item ${isActive ? "active" : ""}`}
+                  onClick={() => handleNavigate(item.href)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleNavigate(item.href);
+                    }
+                  }}
+                  tabIndex={0}
+                  role="button"
+                  aria-current={isActive ? "page" : undefined}
+                  aria-label={ariaLabel}
+                >
+                  <span className="side-icon">{item.icon}</span>
+                  {showSidebarLabels && (
+                    <span className="side-label">{item.label}</span>
+                  )}
+                  <span className="count" aria-live="polite">
+                    {item.count}
+                  </span>
+                </div>
+              );
+            })}
+
+            {sidebarLoading && (
               <div className="side-item" style={{ opacity: 0.6 }}>
-                <FaUsers /> No teams yet
+                <FaUsers /> {showSidebarLabels ? "Loading..." : "..."}
               </div>
             )}
+
+            {!sidebarLoading &&
+              sidebarStats.memberTeamsCount === 0 &&
+              sidebarStats.leadTeamsCount === 0 &&
+              sidebarStats.organizationsCount === 0 && (
+                <div className="side-item" style={{ opacity: 0.6 }}>
+                  <FaUsers /> {showSidebarLabels ? "No teams yet" : "0"}
+                </div>
+              )}
+          </div>
 
           <button
             className="create-team-btn"
             onClick={() => setShowCreateTeam(true)}
-            style={{
-              marginTop: "auto",
-              width: "100%",
-              padding: "10px",
-              borderRadius: "10px",
-              border: "none",
-              background: "linear-gradient(90deg, #22c55e, #16a34a)",
-              color: "white",
-              fontWeight: 700,
-              cursor: "pointer",
-              display: "flex",
-              gap: "8px",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
           >
-            <FaPlus /> Create Team
+            <FaPlus /> {showSidebarLabels ? "Create Team" : "Create"}
           </button>
-        </aside>
+        </motion.aside>
 
-        <main className={`content ${contentTheme}`}>
+        <main className="content">
           <section className="card hero">
             <div>
               <h2>Welcome back 👋</h2>
@@ -353,8 +418,12 @@ export default function DashboardPage() {
                 <span>Visible Teams</span>
               </div>
               <div>
-                <strong>{invitations.length}</strong>
-                <span>Pending Invites</span>
+                <strong>{sidebarStats.worklogsCount}</strong>
+                <span>My Worklogs</span>
+              </div>
+              <div>
+                <strong>{sidebarStats.pendingReviewsCount}</strong>
+                <span>Pending Reviews</span>
               </div>
             </div>
           </section>
@@ -515,6 +584,15 @@ export default function DashboardPage() {
           gap: 16px;
           align-items: center;
         }
+        .sidebar-toggle {
+          background: transparent;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          color: white;
+          border-radius: 10px;
+          padding: 6px 10px;
+          cursor: pointer;
+          display: none;
+        }
         .logo {
           font-size: 1.8rem;
         }
@@ -556,6 +634,13 @@ export default function DashboardPage() {
           width: 100%;
         }
 
+        .sidebar-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(2, 6, 23, 0.6);
+          z-index: 90;
+        }
+
         /* SIDEBAR */
         .sidebar {
           width: 220px;
@@ -565,6 +650,49 @@ export default function DashboardPage() {
           color: white;
           display: flex;
           flex-direction: column;
+          gap: 12px;
+          position: relative;
+          z-index: 100;
+        }
+        .sidebar.mobile {
+          position: fixed;
+          top: 88px;
+          left: 12px;
+          bottom: 12px;
+          height: auto;
+          box-shadow: 0 24px 80px rgba(2, 6, 23, 0.4);
+        }
+        .sidebar.collapsed .side-label {
+          display: none;
+        }
+        .sidebar.collapsed .count {
+          margin-left: 0;
+        }
+        .sidebar-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          font-weight: 600;
+          font-size: 0.95rem;
+        }
+        .sidebar-title {
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          font-size: 0.7rem;
+          color: rgba(255, 255, 255, 0.7);
+        }
+        .sidebar-collapse {
+          background: rgba(255, 255, 255, 0.08);
+          border: none;
+          color: white;
+          border-radius: 8px;
+          padding: 6px 8px;
+          cursor: pointer;
+        }
+        .sidebar-items {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
         }
         .side-item {
           padding: 10px;
@@ -573,9 +701,32 @@ export default function DashboardPage() {
           gap: 8px;
           cursor: pointer;
           margin-bottom: 8px;
+          align-items: center;
+        }
+        .side-icon {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 20px;
+        }
+        .side-label {
+          white-space: nowrap;
         }
         .side-item.active {
           background: linear-gradient(90deg, #3b82f6, #06b6d4);
+        }
+        .create-team-btn {
+          margin-top: auto;
+          background: linear-gradient(90deg, #22c55e, #16a34a);
+          border: none;
+          padding: 10px 12px;
+          border-radius: 10px;
+          color: white;
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
         }
 
         /* CONTENT */
@@ -658,6 +809,26 @@ export default function DashboardPage() {
           background: #04243f;
           color: yellow;
           flex-shrink: 0;
+        }
+
+        @media (max-width: 960px) {
+          .layout {
+            flex-direction: column;
+          }
+          .sidebar-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+          }
+          .nav-left .search {
+            display: none;
+          }
+          .sidebar {
+            width: 260px;
+          }
+          .invites {
+            width: 100%;
+          }
         }
         .invite {
           background: white;
