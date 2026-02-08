@@ -2,14 +2,18 @@
 
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import {
-  FaArrowLeft,
   FaSignOutAlt,
   FaEnvelope,
   FaCalendar,
   FaShieldAlt,
+  FaUsers,
+  FaUserTie,
+  FaBell,
+  FaSearch,
+  FaPlus,
 } from "react-icons/fa";
 
 export default function ProfilePage() {
@@ -17,11 +21,86 @@ export default function ProfilePage() {
   const router = useRouter();
   const mounted = typeof window !== "undefined";
 
+  // Dynamic sidebar state
+  const [userStats, setUserStats] = useState({
+    memberTeamsCount: 0,
+    leadTeamsCount: 0,
+    organizationsCount: 0,
+  });
+  const [sidebarLoading, setSidebarLoading] = useState(true);
+  const [contentTheme, setContentTheme] = useState<"light" | "dark">("light");
+
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/");
     }
   }, [status, router]);
+
+  // Theme management
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("contentTheme");
+      if (saved === "light" || saved === "dark") {
+        setContentTheme(saved);
+      }
+    } catch {}
+  }, []);
+
+  // Fetch user role statistics for dynamic sidebar
+  useEffect(() => {
+    const fetchUserStats = async () => {
+      if (!session?.user?.id) {
+        setSidebarLoading(false);
+        return;
+      }
+
+      try {
+        setSidebarLoading(true);
+
+        // Fetch all user stats in parallel for better performance
+        const [memberTeamsRes, leadTeamsRes, organizationsRes] =
+          await Promise.allSettled([
+            fetch("/api/teams/member"),
+            fetch("/api/teams/owned"),
+            fetch("/api/organizations"),
+          ]);
+
+        // Safely extract counts with error handling
+        const getCount = async (result: PromiseSettledResult<Response>) => {
+          if (result.status === "fulfilled" && result.value.ok) {
+            try {
+              const response = await result.value.json();
+              // API returns { data: items } format
+              const data = response.data || response;
+              return Array.isArray(data) ? data.length : 0;
+            } catch {
+              return 0;
+            }
+          }
+          return 0;
+        };
+
+        const [memberTeamsCount, leadTeamsCount, organizationsCount] =
+          await Promise.all([
+            getCount(memberTeamsRes),
+            getCount(leadTeamsRes),
+            getCount(organizationsRes),
+          ]);
+
+        setUserStats({
+          memberTeamsCount,
+          leadTeamsCount,
+          organizationsCount,
+        });
+      } catch (error) {
+        console.error("Failed to fetch user stats:", error);
+      } finally {
+        setSidebarLoading(false);
+      }
+    };
+
+    fetchUserStats();
+  }, [session?.user?.id]);
 
   if (!mounted || status === "loading") {
     return (
@@ -38,92 +117,175 @@ export default function ProfilePage() {
   const user = session.user;
 
   return (
-    <div style={styles.container}>
-      {/* Header */}
+    <div
+      style={{
+        ...styles.container,
+        ...(contentTheme === "dark" ? styles.darkTheme : {}),
+      }}
+    >
       <nav style={styles.navbar}>
-        <button style={styles.backButton} onClick={() => router.push("/home")}>
-          <FaArrowLeft /> Back to Dashboard
-        </button>
-        <h1 style={styles.navTitle}>Profile</h1>
-        <button
-          style={styles.signOutButton}
-          onClick={() => signOut({ callbackUrl: "/" })}
-        >
-          <FaSignOutAlt /> Sign Out
-        </button>
-      </nav>
-
-      {/* Profile Card */}
-      <div style={styles.profileCard}>
-        {/* Profile Header */}
-        <div style={styles.profileHeader}>
-          <div style={styles.avatarContainer}>
-            {user?.image ? (
-              <Image
-                src={user.image}
-                alt={user.name || "User"}
-                width={120}
-                height={120}
-                style={styles.avatar}
-              />
-            ) : (
-              <div style={styles.avatarPlaceholder}>
-                {user?.name?.charAt(0).toUpperCase() ||
-                  user?.email?.charAt(0).toUpperCase() ||
-                  "U"}
-              </div>
-            )}
-          </div>
-          <h2 style={styles.userName}>{user?.name || "Anonymous User"}</h2>
-          <p style={styles.userEmail}>{user?.email || "No email provided"}</p>
-        </div>
-
-        {/* Profile Details */}
-        <div style={styles.detailsSection}>
-          <h3 style={styles.sectionTitle}>Account Information</h3>
-
-          <div style={styles.detailItem}>
-            <div style={styles.detailIcon}>
-              <FaEnvelope />
-            </div>
-            <div>
-              <p style={styles.detailLabel}>Email</p>
-              <p style={styles.detailValue}>{user?.email || "Not provided"}</p>
-            </div>
-          </div>
-
-          <div style={styles.detailItem}>
-            <div style={styles.detailIcon}>
-              <FaShieldAlt />
-            </div>
-            <div>
-              <p style={styles.detailLabel}>Name</p>
-              <p style={styles.detailValue}>{user?.name || "Not set"}</p>
-            </div>
-          </div>
-
-          <div style={styles.detailItem}>
-            <div style={styles.detailIcon}>
-              <FaCalendar />
-            </div>
-            <div>
-              <p style={styles.detailLabel}>Account Status</p>
-              <p style={styles.detailValue}>
-                <span style={styles.statusBadge}>Active</span>
-              </p>
-            </div>
+        <div style={styles.navLeft}>
+          <h1 style={styles.logo}>Worklog</h1>
+          <div style={styles.search}>
+            <FaSearch />
+            <input placeholder="Search teams..." />
           </div>
         </div>
 
-        {/* Actions */}
-        <div style={styles.actionsSection}>
+        <div style={styles.navRight}>
+          <button style={styles.iconBtn}>
+            <FaBell />
+          </button>
           <button
-            style={styles.actionButton}
-            onClick={() => router.push("/home")}
+            style={styles.themeToggle}
+            onClick={() =>
+              setContentTheme(contentTheme === "dark" ? "light" : "dark")
+            }
           >
-            Go to Dashboard
+            {contentTheme === "light" ? "🌙" : "☀️"}
+          </button>
+          <button
+            style={styles.signOutButton}
+            onClick={() => signOut({ callbackUrl: "/" })}
+          >
+            <FaSignOutAlt /> Sign Out
           </button>
         </div>
+      </nav>
+
+      <div style={styles.layout}>
+        <aside style={styles.sidebar}>
+          {/* Dynamic sidebar items based on user roles */}
+          <div
+            style={styles.sideItem}
+            onClick={() => router.push("/teams/member")}
+          >
+            <FaUsers /> Member Teams
+            <span style={styles.count} aria-hidden="true">
+              {userStats.memberTeamsCount}
+            </span>
+          </div>
+          <div
+            style={styles.sideItem}
+            onClick={() => router.push("/teams/lead")}
+          >
+            <FaUserTie /> Lead Teams
+            <span style={styles.count} aria-hidden="true">
+              {userStats.leadTeamsCount}
+            </span>
+          </div>
+          <div
+            style={styles.sideItem}
+            onClick={() => router.push("/teams/organisations")}
+          >
+            <FaUsers /> My Organisations
+            <span style={styles.count} aria-hidden="true">
+              {userStats.organizationsCount}
+            </span>
+          </div>
+
+          {/* Show loading state */}
+          {sidebarLoading && (
+            <div
+              style={{
+                ...styles.sideItem,
+                opacity: 0.6,
+              }}
+              aria-live="polite"
+            >
+              <FaUsers /> Loading...
+            </div>
+          )}
+
+          <button
+            style={{
+              ...styles.createTeamBtn,
+              marginTop: "auto",
+            }}
+            onClick={() => router.push("/home")}
+          >
+            <FaPlus /> Back to Dashboard
+          </button>
+        </aside>
+
+        <main style={styles.content}>
+          {/* Profile Card */}
+          <div style={styles.profileCard}>
+            {/* Profile Header */}
+            <div style={styles.profileHeader}>
+              <div style={styles.avatarContainer}>
+                {user?.image ? (
+                  <Image
+                    src={user.image}
+                    alt={user.name || "User"}
+                    width={120}
+                    height={120}
+                    style={styles.avatar}
+                  />
+                ) : (
+                  <div style={styles.avatarPlaceholder}>
+                    {user?.name?.charAt(0).toUpperCase() ||
+                      user?.email?.charAt(0).toUpperCase() ||
+                      "U"}
+                  </div>
+                )}
+              </div>
+              <h2 style={styles.userName}>{user?.name || "Anonymous User"}</h2>
+              <p style={styles.userEmail}>
+                {user?.email || "No email provided"}
+              </p>
+            </div>
+
+            {/* Profile Details */}
+            <div style={styles.detailsSection}>
+              <h3 style={styles.sectionTitle}>Account Information</h3>
+
+              <div style={styles.detailItem}>
+                <div style={styles.detailIcon}>
+                  <FaEnvelope />
+                </div>
+                <div>
+                  <p style={styles.detailLabel}>Email</p>
+                  <p style={styles.detailValue}>
+                    {user?.email || "Not provided"}
+                  </p>
+                </div>
+              </div>
+
+              <div style={styles.detailItem}>
+                <div style={styles.detailIcon}>
+                  <FaShieldAlt />
+                </div>
+                <div>
+                  <p style={styles.detailLabel}>Name</p>
+                  <p style={styles.detailValue}>{user?.name || "Not set"}</p>
+                </div>
+              </div>
+
+              <div style={styles.detailItem}>
+                <div style={styles.detailIcon}>
+                  <FaCalendar />
+                </div>
+                <div>
+                  <p style={styles.detailLabel}>Account Status</p>
+                  <p style={styles.detailValue}>
+                    <span style={styles.statusBadge}>Active</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div style={styles.actionsSection}>
+              <button
+                style={styles.actionButton}
+                onClick={() => router.push("/home")}
+              >
+                Go to Dashboard
+              </button>
+            </div>
+          </div>
+        </main>
       </div>
     </div>
   );
@@ -150,27 +312,113 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "20px 0",
-    marginBottom: "30px",
-  },
-  navTitle: {
+    padding: "20px",
+    background: "#021629",
     color: "white",
-    fontSize: "1.5rem",
-    margin: 0,
+    borderRadius: "12px",
+    marginBottom: "20px",
   },
-  backButton: {
+  navLeft: {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
-    padding: "10px 20px",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    color: "white",
-    border: "none",
-    borderRadius: "10px",
-    cursor: "pointer",
-    fontSize: "1rem",
-    transition: "background 0.3s",
+    gap: 16,
+    flexShrink: 0,
   },
+  logo: {
+    fontSize: "1.8rem",
+    whiteSpace: "nowrap",
+    margin: 0,
+    background: "linear-gradient(90deg, #FFD700, #FFA500)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    backgroundClip: "text",
+  },
+  search: {
+    display: "flex",
+    gap: 8,
+    alignItems: "center",
+    background: "rgba(255, 255, 255, 0.1)",
+    padding: "6px 10px",
+    borderRadius: 10,
+    width: 280,
+  },
+  navRight: {
+    display: "flex",
+    gap: 12,
+    flexShrink: 0,
+  },
+  iconBtn: {
+    background: "transparent",
+    border: "none",
+    color: "white",
+    cursor: "pointer",
+    fontSize: 18,
+  },
+  themeToggle: {
+    background: "transparent",
+    border: "none",
+    color: "white",
+    cursor: "pointer",
+    fontSize: 18,
+  },
+  layout: {
+    display: "flex",
+    gap: 16,
+    flex: 1,
+    width: "100%",
+    overflowX: "hidden",
+  },
+  sidebar: {
+    width: 220,
+    padding: 16,
+    borderRadius: 12,
+    background: "#04243f",
+    color: "white",
+    flexShrink: 0,
+    display: "flex",
+    flexDirection: "column",
+  },
+  sideItem: {
+    padding: 10,
+    borderRadius: 10,
+    display: "flex",
+    gap: 8,
+    cursor: "pointer",
+    marginBottom: 8,
+    alignItems: "center",
+  },
+  count: {
+    marginLeft: "auto",
+    background: "rgba(255, 255, 255, 0.2)",
+    padding: "2px 6px",
+    borderRadius: 8,
+    fontSize: 12,
+    fontWeight: 600,
+  },
+  createTeamBtn: {
+    width: "100%",
+    padding: 10,
+    borderRadius: 10,
+    border: "none",
+    background: "linear-gradient(90deg, #22c55e, #16a34a)",
+    color: "white",
+    fontWeight: 700,
+    cursor: "pointer",
+    display: "flex",
+    gap: "8px",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  content: {
+    flex: 1,
+    padding: 20,
+    overflow: "auto",
+  },
+  darkTheme: {
+    backgroundColor: "#0A173B",
+    color: "white",
+  },
+
   signOutButton: {
     display: "flex",
     alignItems: "center",

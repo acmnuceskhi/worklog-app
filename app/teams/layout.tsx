@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Lobster_Two } from "next/font/google";
 import { FaUsers, FaUserTie, FaBell, FaSearch, FaPlus } from "react-icons/fa";
 import { useRouter, usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -21,6 +22,7 @@ export default function TeamsLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { data: session } = useSession();
   const [contentTheme, setContentTheme] = useState<"light" | "dark">("light");
   const [mounted, setMounted] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -32,12 +34,20 @@ export default function TeamsLayout({
     { from: "Alice", team: "Design Masters" },
     { from: "Bob", team: "Dev Team" },
   ]);
+
+  // Dynamic sidebar state
+  const [userStats, setUserStats] = useState({
+    memberTeamsCount: 0,
+    leadTeamsCount: 0,
+    organizationsCount: 0,
+  });
+  const [sidebarLoading, setSidebarLoading] = useState(true);
+
   const isLeadPage = pathname.includes("/lead");
   const isMemberPage = pathname.includes("/member");
   const activeNav = isLeadPage ? "lead" : isMemberPage ? "member" : null;
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     try {
       const saved = localStorage.getItem("contentTheme");
@@ -54,6 +64,62 @@ export default function TeamsLayout({
       } catch {}
     }
   }, [contentTheme, mounted]);
+
+  // Fetch user role statistics for dynamic sidebar
+  useEffect(() => {
+    const fetchUserStats = async () => {
+      if (!session?.user?.id) {
+        setSidebarLoading(false);
+        return;
+      }
+
+      try {
+        setSidebarLoading(true);
+
+        // Fetch all user stats in parallel for better performance
+        const [memberTeamsRes, leadTeamsRes, organizationsRes] =
+          await Promise.allSettled([
+            fetch("/api/teams/member"),
+            fetch("/api/teams/owned"),
+            fetch("/api/organizations"),
+          ]);
+
+        // Safely extract counts with error handling
+        const getCount = async (result: PromiseSettledResult<Response>) => {
+          if (result.status === "fulfilled" && result.value.ok) {
+            try {
+              const response = await result.value.json();
+              // API returns { data: items } format
+              const data = response.data || response;
+              return Array.isArray(data) ? data.length : 0;
+            } catch {
+              return 0;
+            }
+          }
+          return 0;
+        };
+
+        const [memberTeamsCount, leadTeamsCount, organizationsCount] =
+          await Promise.all([
+            getCount(memberTeamsRes),
+            getCount(leadTeamsRes),
+            getCount(organizationsRes),
+          ]);
+
+        setUserStats({
+          memberTeamsCount,
+          leadTeamsCount,
+          organizationsCount,
+        });
+      } catch (error) {
+        console.error("Failed to fetch user stats:", error);
+      } finally {
+        setSidebarLoading(false);
+      }
+    };
+
+    fetchUserStats();
+  }, [session?.user?.id]);
 
   const handleSendInvite = () => {
     if (inviteEmail.trim()) {
@@ -172,6 +238,14 @@ export default function TeamsLayout({
     sideItemActive: {
       background: "linear-gradient(90deg, #3b82f6, #06b6d4)",
     },
+    count: {
+      marginLeft: "auto",
+      background: "rgba(255, 255, 255, 0.2)",
+      padding: "2px 6px",
+      borderRadius: 8,
+      fontSize: 12,
+      fontWeight: 600,
+    },
     createTeamBtn: {
       width: "100%",
       padding: 10,
@@ -260,16 +334,7 @@ export default function TeamsLayout({
 
       <div style={styles.layout}>
         <aside style={styles.sidebar}>
-          <button
-            onClick={() => router.push("/teams/lead")}
-            style={{
-              ...styles.createTeamBtn,
-              marginBottom: 12,
-            }}
-          >
-            <FaPlus /> Create Team
-          </button>
-
+          {/* Dynamic sidebar items based on user roles */}
           <div
             style={{
               ...styles.sideItem,
@@ -278,6 +343,9 @@ export default function TeamsLayout({
             onClick={() => router.push("/teams/member")}
           >
             <FaUsers /> Member Teams
+            <span style={styles.count} aria-hidden="true">
+              {userStats.memberTeamsCount}
+            </span>
           </div>
           <div
             style={{
@@ -287,7 +355,43 @@ export default function TeamsLayout({
             onClick={() => router.push("/teams/lead")}
           >
             <FaUserTie /> Lead Teams
+            <span style={styles.count} aria-hidden="true">
+              {userStats.leadTeamsCount}
+            </span>
           </div>
+          <div
+            style={styles.sideItem}
+            onClick={() => router.push("/teams/organisations")}
+          >
+            <FaUsers /> My Organisations
+            <span style={styles.count} aria-hidden="true">
+              {userStats.organizationsCount}
+            </span>
+          </div>
+
+          {/* Show loading state */}
+          {sidebarLoading && (
+            <div
+              style={{
+                ...styles.sideItem,
+                opacity: 0.6,
+              }}
+              aria-live="polite"
+            >
+              <FaUsers /> Loading...
+            </div>
+          )}
+
+          <button
+            onClick={() => router.push("/home")}
+            style={{
+              ...styles.createTeamBtn,
+              marginTop: "auto",
+              background: "linear-gradient(90deg, #22c55e, #16a34a)",
+            }}
+          >
+            <FaPlus /> Back to Dashboard
+          </button>
         </aside>
 
         <main style={styles.content}>{children}</main>

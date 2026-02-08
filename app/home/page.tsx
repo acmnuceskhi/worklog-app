@@ -16,12 +16,8 @@ import { useRouter } from "next/navigation";
 export default function DashboardPage() {
   const router = useRouter();
   const { data: session } = useSession();
-  const invitations = [
-    { id: 1, team: "Frontend Team", from: "Ayesha Khan" },
-    { id: 2, team: "Backend Squad", from: "Hamza Ali" },
-    { id: 3, team: "Marketing Team", from: "Ali Raza" },
-  ];
 
+  // State declarations
   const [query, setQuery] = useState("");
   const [contentTheme, setContentTheme] = useState<"light" | "dark">("light");
   const [mounted, setMounted] = useState(false);
@@ -32,8 +28,19 @@ export default function DashboardPage() {
   const [inviteEmails, setInviteEmails] = useState<string[]>([]);
   const [inviteInput, setInviteInput] = useState("");
 
+  // Dynamic sidebar state
+  const [userStats, setUserStats] = useState({
+    memberTeamsCount: 0,
+    leadTeamsCount: 0,
+    organizationsCount: 0,
+  });
+  const [sidebarLoading, setSidebarLoading] = useState(true);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [invitations, setInvitations] = useState<
+    { from: string; team: string }[]
+  >([]);
+
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     try {
       const saved = localStorage.getItem("contentTheme");
@@ -50,6 +57,68 @@ export default function DashboardPage() {
       } catch {}
     }
   }, [contentTheme, mounted]);
+
+  // Fetch user role statistics for dynamic sidebar
+  useEffect(() => {
+    const fetchUserStats = async () => {
+      if (!session?.user?.id) {
+        setSidebarLoading(false);
+        return;
+      }
+
+      try {
+        setSidebarLoading(true);
+
+        // Fetch all user stats in parallel for better performance
+        const [memberTeamsRes, leadTeamsRes, organizationsRes] =
+          await Promise.allSettled([
+            fetch("/api/teams/member"),
+            fetch("/api/teams/owned"),
+            fetch("/api/organizations"),
+          ]);
+
+        // Safely extract counts with error handling
+        const getCount = async (result: PromiseSettledResult<Response>) => {
+          if (result.status === "fulfilled" && result.value.ok) {
+            try {
+              const response = await result.value.json();
+              // API returns { data: items } format
+              const data = response.data || response;
+              return Array.isArray(data) ? data.length : 0;
+            } catch {
+              return 0;
+            }
+          }
+          return 0;
+        };
+
+        const [memberTeamsCount, leadTeamsCount, organizationsCount] =
+          await Promise.all([
+            getCount(memberTeamsRes),
+            getCount(leadTeamsRes),
+            getCount(organizationsRes),
+          ]);
+
+        setUserStats({
+          memberTeamsCount,
+          leadTeamsCount,
+          organizationsCount,
+        });
+      } catch (error) {
+        console.error("Failed to fetch user stats:", error);
+        // Set default values on error
+        setUserStats({
+          memberTeamsCount: 0,
+          leadTeamsCount: 0,
+          organizationsCount: 0,
+        });
+      } finally {
+        setSidebarLoading(false);
+      }
+    };
+
+    fetchUserStats();
+  }, [session?.user?.id]);
 
   const teamsData = [
     {
@@ -164,16 +233,86 @@ export default function DashboardPage() {
 
       <div className="layout">
         <aside className="sidebar">
-          <div className="side-item active">
+          {/* Dynamic sidebar items based on user roles */}
+          <div
+            className="side-item"
+            onClick={() => router.push("/teams/member")}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                router.push("/teams/member");
+              }
+            }}
+            tabIndex={0}
+            role="button"
+            aria-label={`Member Teams (${userStats.memberTeamsCount})`}
+            style={{ cursor: "pointer" }}
+          >
             <FaUsers /> Member Teams
+            <span className="count" aria-hidden="true">
+              {userStats.memberTeamsCount}
+            </span>
           </div>
-          <div className="side-item">
+
+          <div
+            className="side-item"
+            onClick={() => router.push("/teams/lead")}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                router.push("/teams/lead");
+              }
+            }}
+            tabIndex={0}
+            role="button"
+            aria-label={`Lead Teams (${userStats.leadTeamsCount})`}
+            style={{ cursor: "pointer" }}
+          >
             <FaUserTie /> Lead Teams
+            <span className="count" aria-hidden="true">
+              {userStats.leadTeamsCount}
+            </span>
           </div>
-          {/* NEW BUTTON */}
-          <div className="side-item">
+
+          <div
+            className="side-item"
+            onClick={() => router.push("/teams/organisations")}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                router.push("/teams/organisations");
+              }
+            }}
+            tabIndex={0}
+            role="button"
+            aria-label={`My Organisations (${userStats.organizationsCount})`}
+            style={{ cursor: "pointer" }}
+          >
             <FaUsers /> My Organisations
+            <span className="count" aria-hidden="true">
+              {userStats.organizationsCount}
+            </span>
           </div>
+
+          {/* Show loading state or empty state */}
+          {sidebarLoading && (
+            <div
+              className="side-item"
+              style={{ opacity: 0.6 }}
+              aria-live="polite"
+            >
+              <FaUsers /> Loading...
+            </div>
+          )}
+
+          {!sidebarLoading &&
+            userStats.memberTeamsCount === 0 &&
+            userStats.leadTeamsCount === 0 &&
+            userStats.organizationsCount === 0 && (
+              <div className="side-item" style={{ opacity: 0.6 }}>
+                <FaUsers /> No teams yet
+              </div>
+            )}
 
           <button
             className="create-team-btn"
@@ -257,8 +396,8 @@ export default function DashboardPage() {
 
         <aside className="invites">
           <h3>Invitations</h3>
-          {invitations.map((i) => (
-            <div key={i.id} className="invite">
+          {invitations.map((i, index) => (
+            <div key={`${i.from}-${i.team}-${index}`} className="invite">
               <p className="muted">Invited by {i.from}</p>
               <strong>{i.team}</strong>
               <div className="actions">

@@ -57,6 +57,40 @@ body {
   color: var(--muted);
 }
 
+/* Sidebar count badges */
+.side-item .count {
+  margin-left: auto;
+  background: var(--primary);
+  color: var(--text-inverse);
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  min-width: 18px;
+  text-align: center;
+}
+
+.side-item:hover .count,
+.side-item:focus .count {
+  background: var(--accent);
+}
+
+/* Sidebar accessibility improvements */
+.side-item[role="button"] {
+  transition: background-color 0.2s ease;
+}
+
+.side-item[role="button"]:hover,
+.side-item[role="button"]:focus {
+  background-color: var(--glass);
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.side-item[role="button"]:focus:not(:focus-visible) {
+  outline: none;
+}
+
 html,
 body {
   overflow-x: hidden;

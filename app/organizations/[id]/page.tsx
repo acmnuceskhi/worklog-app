@@ -30,7 +30,10 @@ import {
   FaClipboardList,
   FaStar,
   FaCoins,
+  FaEdit,
+  FaUserTie,
 } from "react-icons/fa";
+import { RatingModal } from "@/components/rating-modal";
 
 interface TeamMember {
   id: string;
@@ -118,6 +121,19 @@ export default function OrganizationDashboardPage({
   const [isCreatingTeam, setIsCreatingTeam] = useState(false);
   const [createTeamError, setCreateTeamError] = useState<string | null>(null);
 
+  // Rating modal state
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [selectedWorklog, setSelectedWorklog] = useState<{
+    id: string;
+    title: string;
+    progressStatus: string;
+    existingRating?: {
+      id: string;
+      value: number;
+      comment: string | null;
+    } | null;
+  } | null>(null);
+
   const fetchOrganization = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -198,6 +214,35 @@ export default function OrganizationDashboardPage({
     });
   };
 
+  const handleOpenRating = (worklog: {
+    id: string;
+    title: string;
+    progressStatus: string;
+    ratings: Rating[];
+  }) => {
+    // Find if current user (org owner) has already rated
+    // Since this dashboard is only visible to org owner, we can check for existing rating
+    const existingRating =
+      worklog.ratings.length > 0 ? worklog.ratings[0] : null;
+    setSelectedWorklog({
+      id: worklog.id,
+      title: worklog.title,
+      progressStatus: worklog.progressStatus,
+      existingRating: existingRating
+        ? {
+            id: existingRating.id,
+            value: existingRating.value,
+            comment: existingRating.comment,
+          }
+        : null,
+    });
+    setShowRatingModal(true);
+  };
+
+  const canRateWorklog = (status: string) => {
+    return status === "REVIEWED" || status === "GRADED";
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -237,322 +282,399 @@ export default function OrganizationDashboardPage({
   if (!organization) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      {/* Top Navigation */}
+      <nav className="flex items-center justify-between p-4 bg-slate-800/50 backdrop-blur-sm border-b border-slate-700">
+        <div className="flex items-center gap-4">
+          <h1 className="text-xl font-bold text-white">Worklog</h1>
+          <div className="flex items-center gap-2 text-sm text-slate-300">
+            <button
+              onClick={() => router.push("/teams/member")}
+              className="flex items-center gap-1 px-3 py-1 rounded hover:bg-slate-700 transition-colors"
+            >
+              <FaUsers className="h-4 w-4" />
+              Member Teams
+            </button>
+            <button
+              onClick={() => router.push("/teams/lead")}
+              className="flex items-center gap-1 px-3 py-1 rounded hover:bg-slate-700 transition-colors"
+            >
+              <FaUserTie className="h-4 w-4" />
+              Lead Teams
+            </button>
+            <button
               onClick={() => router.push("/teams/organisations")}
-              className="text-slate-400 hover:text-white"
-              aria-label="Back to organizations"
+              className="flex items-center gap-1 px-3 py-1 rounded bg-slate-700 text-white"
             >
-              <FaArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500">
-              <FaBuilding className="h-8 w-8 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-white">
-                {organization.name}
-              </h1>
-              {organization.description && (
-                <p className="text-slate-400 mt-1">
-                  {organization.description}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Button
-              onClick={() => setShowCreateTeam(true)}
-              className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
-            >
-              <FaPlus className="mr-2" /> Create Team
-            </Button>
-            <Button
-              variant="outline"
-              className="border-slate-600 text-slate-300"
-            >
-              <FaCog className="mr-2" /> Settings
-            </Button>
+              <FaBuilding className="h-4 w-4" />
+              My Organisations
+            </button>
           </div>
         </div>
+        <button
+          onClick={() => router.push("/home")}
+          className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg font-medium transition-colors"
+        >
+          Back to Dashboard
+        </button>
+      </nav>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="border-slate-700 bg-slate-800/60">
-            <CardContent className="p-4 text-center">
-              <FaUsers className="h-6 w-6 text-blue-400 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-white">
-                {organization.stats.totalTeams}
-              </p>
-              <p className="text-sm text-slate-400">Teams</p>
-            </CardContent>
-          </Card>
-          <Card className="border-slate-700 bg-slate-800/60">
-            <CardContent className="p-4 text-center">
-              <FaUsers className="h-6 w-6 text-green-400 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-white">
-                {organization.stats.totalMembers}
-              </p>
-              <p className="text-sm text-slate-400">Members</p>
-            </CardContent>
-          </Card>
-          <Card className="border-slate-700 bg-slate-800/60">
-            <CardContent className="p-4 text-center">
-              <FaClipboardList className="h-6 w-6 text-purple-400 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-white">
-                {organization.stats.totalWorklogs}
-              </p>
-              <p className="text-sm text-slate-400">Worklogs</p>
-            </CardContent>
-          </Card>
-          <Card className="border-slate-700 bg-slate-800/60">
-            <CardContent className="p-4 text-center">
-              <FaCoins className="h-6 w-6 text-yellow-400 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-white">
-                {organization.credits}
-              </p>
-              <p className="text-sm text-slate-400">Credits</p>
-            </CardContent>
-          </Card>
-        </div>
+      {/* Main Content */}
+      <div className="p-4 md:p-8">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => router.push("/teams/organisations")}
+                className="text-slate-400 hover:text-white"
+                aria-label="Back to organizations"
+              >
+                <FaArrowLeft className="h-5 w-5" />
+              </Button>
+              <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500">
+                <FaBuilding className="h-8 w-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-white">
+                  {organization.name}
+                </h1>
+                {organization.description && (
+                  <p className="text-slate-400 mt-1">
+                    {organization.description}
+                  </p>
+                )}
+              </div>
+            </div>
 
-        {/* Teams Grid */}
-        <Card className="border-slate-700 bg-slate-800/60">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <FaUsers className="text-blue-400" /> Teams
-            </CardTitle>
-            <CardDescription className="text-slate-400">
-              Manage teams within this organization
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {organization.teams.length === 0 ? (
-              <div className="text-center py-8">
-                <FaUsers className="h-12 w-12 text-slate-600 mx-auto mb-3" />
-                <p className="text-slate-400 mb-4">No teams yet</p>
-                <Button onClick={() => setShowCreateTeam(true)}>
-                  <FaPlus className="mr-2" /> Create Your First Team
-                </Button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {organization.teams.map((team) => (
-                  <Link
-                    key={team.id}
-                    href={`/teams/lead/${team.id}`}
-                    className="block group"
-                  >
-                    <Card className="border-slate-600 bg-slate-700/50 hover:bg-slate-700/80 transition-all cursor-pointer group-focus:ring-2 group-focus:ring-blue-500">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/20">
-                            <FaUsers className="h-5 w-5 text-blue-400" />
-                          </div>
-                          <span className="text-xs text-slate-500 bg-slate-600/50 px-2 py-1 rounded">
-                            {team._count.members} members
-                          </span>
-                        </div>
-                        <h3 className="text-lg font-semibold text-white mb-1">
-                          {team.name}
-                        </h3>
-                        {team.description && (
-                          <p className="text-sm text-slate-400 line-clamp-2 mb-3">
-                            {team.description}
-                          </p>
-                        )}
-                        <div className="flex items-center justify-between text-xs text-slate-500">
-                          <span>{team._count.worklogs} worklogs</span>
-                          <span>{team.credits} credits</span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Recent Worklogs */}
-        <Card className="border-slate-700 bg-slate-800/60">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <FaClipboardList className="text-purple-400" /> Recent Worklogs
-            </CardTitle>
-            <CardDescription className="text-slate-400">
-              Latest activity across all teams
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {organization.teams.every((t) => t.worklogs.length === 0) ? (
-              <div className="text-center py-8">
-                <FaClipboardList className="h-12 w-12 text-slate-600 mx-auto mb-3" />
-                <p className="text-slate-400">No worklogs yet</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {organization.teams
-                  .flatMap((team) =>
-                    team.worklogs.map((worklog) => ({
-                      ...worklog,
-                      teamName: team.name,
-                      teamId: team.id,
-                    })),
-                  )
-                  .sort(
-                    (a, b) =>
-                      new Date(b.createdAt).getTime() -
-                      new Date(a.createdAt).getTime(),
-                  )
-                  .slice(0, 10)
-                  .map((worklog) => (
-                    <div
-                      key={worklog.id}
-                      className="flex items-center gap-4 p-3 rounded-lg bg-slate-700/30 hover:bg-slate-700/50 transition-colors"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-medium text-white truncate">
-                            {worklog.title}
-                          </h4>
-                          <span
-                            className={`text-xs px-2 py-0.5 rounded ${getStatusColor(
-                              worklog.progressStatus,
-                            )}`}
-                          >
-                            {worklog.progressStatus.replace("_", " ")}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3 text-sm text-slate-400">
-                          <span>{worklog.user.name || "Unknown"}</span>
-                          <span>•</span>
-                          <span>{worklog.teamName}</span>
-                          <span>•</span>
-                          <span>{formatDate(worklog.createdAt)}</span>
-                        </div>
-                      </div>
-                      {worklog.ratings.length > 0 && (
-                        <div className="flex items-center gap-1 text-yellow-400">
-                          <FaStar className="h-4 w-4" />
-                          <span className="font-medium">
-                            {(
-                              worklog.ratings.reduce(
-                                (sum, r) => sum + r.value,
-                                0,
-                              ) / worklog.ratings.length
-                            ).toFixed(1)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Organization Info */}
-        <Card className="border-slate-700 bg-slate-800/60">
-          <CardHeader>
-            <CardTitle className="text-white text-sm">
-              Organization Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-slate-400 space-y-2">
-            <div className="flex justify-between">
-              <span>Owner</span>
-              <span className="text-white">
-                {organization.owner.name || organization.owner.email}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>Created</span>
-              <span className="text-white">
-                {formatDate(organization.createdAt)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>Organization ID</span>
-              <span className="text-slate-500 font-mono text-xs">
-                {organization.id}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Create Team Modal */}
-      <Dialog open={showCreateTeam} onOpenChange={setShowCreateTeam}>
-        <DialogContent className="bg-slate-800 border-slate-700">
-          <DialogHeader>
-            <DialogTitle className="text-white">Create New Team</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {createTeamError && (
-              <div className="p-3 rounded-lg bg-red-500/20 border border-red-500/50 text-red-400 text-sm">
-                {createTeamError}
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="teamName" className="text-slate-200">
-                Team Name <span className="text-red-400">*</span>
-              </Label>
-              <Input
-                id="teamName"
-                placeholder="Enter team name"
-                value={newTeamName}
-                onChange={(e) => setNewTeamName(e.target.value)}
-                className="bg-slate-700/50 border-slate-600 text-white"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="teamDescription" className="text-slate-200">
-                Description <span className="text-slate-500">(optional)</span>
-              </Label>
-              <Textarea
-                id="teamDescription"
-                placeholder="Describe the team..."
-                value={newTeamDescription}
-                onChange={(e) => setNewTeamDescription(e.target.value)}
-                className="bg-slate-700/50 border-slate-600 text-white resize-none"
-                rows={3}
-              />
-            </div>
-            <div className="flex gap-3">
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={() => setShowCreateTeam(true)}
+                className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+              >
+                <FaPlus className="mr-2" /> Create Team
+              </Button>
               <Button
                 variant="outline"
-                className="flex-1 border-slate-600"
-                onClick={() => setShowCreateTeam(false)}
-                disabled={isCreatingTeam}
+                className="border-slate-600 text-slate-300"
               >
-                Cancel
-              </Button>
-              <Button
-                className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500"
-                onClick={handleCreateTeam}
-                disabled={!newTeamName.trim() || isCreatingTeam}
-              >
-                {isCreatingTeam ? (
-                  <>
-                    <FaSpinner className="mr-2 animate-spin" /> Creating...
-                  </>
-                ) : (
-                  <>
-                    <FaPlus className="mr-2" /> Create Team
-                  </>
-                )}
+                <FaCog className="mr-2" /> Settings
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card className="border-slate-700 bg-slate-800/60">
+              <CardContent className="p-4 text-center">
+                <FaUsers className="h-6 w-6 text-blue-400 mx-auto mb-2" />
+                <p className="text-2xl font-bold text-white">
+                  {organization.stats.totalTeams}
+                </p>
+                <p className="text-sm text-slate-400">Teams</p>
+              </CardContent>
+            </Card>
+            <Card className="border-slate-700 bg-slate-800/60">
+              <CardContent className="p-4 text-center">
+                <FaUsers className="h-6 w-6 text-green-400 mx-auto mb-2" />
+                <p className="text-2xl font-bold text-white">
+                  {organization.stats.totalMembers}
+                </p>
+                <p className="text-sm text-slate-400">Members</p>
+              </CardContent>
+            </Card>
+            <Card className="border-slate-700 bg-slate-800/60">
+              <CardContent className="p-4 text-center">
+                <FaClipboardList className="h-6 w-6 text-purple-400 mx-auto mb-2" />
+                <p className="text-2xl font-bold text-white">
+                  {organization.stats.totalWorklogs}
+                </p>
+                <p className="text-sm text-slate-400">Worklogs</p>
+              </CardContent>
+            </Card>
+            <Card className="border-slate-700 bg-slate-800/60">
+              <CardContent className="p-4 text-center">
+                <FaCoins className="h-6 w-6 text-yellow-400 mx-auto mb-2" />
+                <p className="text-2xl font-bold text-white">
+                  {organization.credits}
+                </p>
+                <p className="text-sm text-slate-400">Credits</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Teams Grid */}
+          <Card className="border-slate-700 bg-slate-800/60">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <FaUsers className="text-blue-400" /> Teams
+              </CardTitle>
+              <CardDescription className="text-slate-400">
+                Manage teams within this organization
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {organization.teams.length === 0 ? (
+                <div className="text-center py-8">
+                  <FaUsers className="h-12 w-12 text-slate-600 mx-auto mb-3" />
+                  <p className="text-slate-400 mb-4">No teams yet</p>
+                  <Button onClick={() => setShowCreateTeam(true)}>
+                    <FaPlus className="mr-2" /> Create Your First Team
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {organization.teams.map((team) => (
+                    <Link
+                      key={team.id}
+                      href={`/teams/lead/${team.id}`}
+                      className="block group"
+                    >
+                      <Card className="border-slate-600 bg-slate-700/50 hover:bg-slate-700/80 transition-all cursor-pointer group-focus:ring-2 group-focus:ring-blue-500">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/20">
+                              <FaUsers className="h-5 w-5 text-blue-400" />
+                            </div>
+                            <span className="text-xs text-slate-500 bg-slate-600/50 px-2 py-1 rounded">
+                              {team._count.members} members
+                            </span>
+                          </div>
+                          <h3 className="text-lg font-semibold text-white mb-1">
+                            {team.name}
+                          </h3>
+                          {team.description && (
+                            <p className="text-sm text-slate-400 line-clamp-2 mb-3">
+                              {team.description}
+                            </p>
+                          )}
+                          <div className="flex items-center justify-between text-xs text-slate-500">
+                            <span>{team._count.worklogs} worklogs</span>
+                            <span>{team.credits} credits</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Recent Worklogs */}
+          <Card className="border-slate-700 bg-slate-800/60">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <FaClipboardList className="text-purple-400" /> Recent Worklogs
+              </CardTitle>
+              <CardDescription className="text-slate-400">
+                Latest activity across all teams
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {organization.teams.every((t) => t.worklogs.length === 0) ? (
+                <div className="text-center py-8">
+                  <FaClipboardList className="h-12 w-12 text-slate-600 mx-auto mb-3" />
+                  <p className="text-slate-400">No worklogs yet</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {organization.teams
+                    .flatMap((team) =>
+                      team.worklogs.map((worklog) => ({
+                        ...worklog,
+                        teamName: team.name,
+                        teamId: team.id,
+                      })),
+                    )
+                    .sort(
+                      (a, b) =>
+                        new Date(b.createdAt).getTime() -
+                        new Date(a.createdAt).getTime(),
+                    )
+                    .slice(0, 10)
+                    .map((worklog) => (
+                      <div
+                        key={worklog.id}
+                        className="flex items-center gap-4 p-3 rounded-lg bg-slate-700/30 hover:bg-slate-700/50 transition-colors"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-medium text-white truncate">
+                              {worklog.title}
+                            </h4>
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded ${getStatusColor(
+                                worklog.progressStatus,
+                              )}`}
+                            >
+                              {worklog.progressStatus.replace("_", " ")}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 text-sm text-slate-400">
+                            <span>{worklog.user.name || "Unknown"}</span>
+                            <span>•</span>
+                            <span>{worklog.teamName}</span>
+                            <span>•</span>
+                            <span>{formatDate(worklog.createdAt)}</span>
+                          </div>
+                        </div>
+                        {worklog.ratings.length > 0 && (
+                          <div className="flex items-center gap-1 text-yellow-400">
+                            <FaStar className="h-4 w-4" />
+                            <span className="font-medium">
+                              {(
+                                worklog.ratings.reduce(
+                                  (sum, r) => sum + r.value,
+                                  0,
+                                ) / worklog.ratings.length
+                              ).toFixed(1)}
+                            </span>
+                          </div>
+                        )}
+                        {/* Rate button for REVIEWED/GRADED worklogs */}
+                        {canRateWorklog(worklog.progressStatus) && (
+                          <Button
+                            size="sm"
+                            variant={
+                              worklog.ratings.length > 0 ? "outline" : "default"
+                            }
+                            className={
+                              worklog.ratings.length > 0
+                                ? "border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/20"
+                                : "bg-gradient-to-r from-yellow-500 to-amber-500 text-black"
+                            }
+                            onClick={() => handleOpenRating(worklog)}
+                          >
+                            {worklog.ratings.length > 0 ? (
+                              <>
+                                <FaEdit className="mr-1 h-3 w-3" /> Edit
+                              </>
+                            ) : (
+                              <>
+                                <FaStar className="mr-1 h-3 w-3" /> Rate
+                              </>
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Organization Info */}
+          <Card className="border-slate-700 bg-slate-800/60">
+            <CardHeader>
+              <CardTitle className="text-white text-sm">
+                Organization Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-slate-400 space-y-2">
+              <div className="flex justify-between">
+                <span>Owner</span>
+                <span className="text-white">
+                  {organization.owner.name || organization.owner.email}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Created</span>
+                <span className="text-white">
+                  {formatDate(organization.createdAt)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Organization ID</span>
+                <span className="text-slate-500 font-mono text-xs">
+                  {organization.id}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Create Team Modal */}
+        <Dialog open={showCreateTeam} onOpenChange={setShowCreateTeam}>
+          <DialogContent className="bg-slate-800 border-slate-700">
+            <DialogHeader>
+              <DialogTitle className="text-white">Create New Team</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {createTeamError && (
+                <div className="p-3 rounded-lg bg-red-500/20 border border-red-500/50 text-red-400 text-sm">
+                  {createTeamError}
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label htmlFor="teamName" className="text-slate-200">
+                  Team Name <span className="text-red-400">*</span>
+                </Label>
+                <Input
+                  id="teamName"
+                  placeholder="Enter team name"
+                  value={newTeamName}
+                  onChange={(e) => setNewTeamName(e.target.value)}
+                  className="bg-slate-700/50 border-slate-600 text-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="teamDescription" className="text-slate-200">
+                  Description <span className="text-slate-500">(optional)</span>
+                </Label>
+                <Textarea
+                  id="teamDescription"
+                  placeholder="Describe the team..."
+                  value={newTeamDescription}
+                  onChange={(e) => setNewTeamDescription(e.target.value)}
+                  className="bg-slate-700/50 border-slate-600 text-white resize-none"
+                  rows={3}
+                />
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1 border-slate-600"
+                  onClick={() => setShowCreateTeam(false)}
+                  disabled={isCreatingTeam}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500"
+                  onClick={handleCreateTeam}
+                  disabled={!newTeamName.trim() || isCreatingTeam}
+                >
+                  {isCreatingTeam ? (
+                    <>
+                      <FaSpinner className="mr-2 animate-spin" /> Creating...
+                    </>
+                  ) : (
+                    <>
+                      <FaPlus className="mr-2" /> Create Team
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Rating Modal */}
+        {selectedWorklog && (
+          <RatingModal
+            open={showRatingModal}
+            onOpenChange={setShowRatingModal}
+            worklogId={selectedWorklog.id}
+            worklogTitle={selectedWorklog.title}
+            worklogStatus={selectedWorklog.progressStatus}
+            existingRating={selectedWorklog.existingRating}
+            onSuccess={fetchOrganization}
+          />
+        )}
+      </div>
     </div>
   );
 }
