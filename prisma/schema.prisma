@@ -84,6 +84,7 @@ model Team {
   updatedAt      DateTime      @updatedAt
 
   @@map("teams")
+  @@index([organizationId])
 }
 
 model TeamMember {
@@ -130,11 +131,32 @@ model Worklog {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
-  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  team    Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  ratings Rating[]
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team        Team               @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  ratings     Rating[]
+  attachments WorklogAttachment[]
 
   @@map("worklogs")
+  @@index([teamId])
+  @@index([userId])
+  @@index([progressStatus])
+  @@index([createdAt])
+  @@index([deadline])
+}
+
+model WorklogAttachment {
+  id        String   @id @default(cuid())
+  worklogId String   @map("worklog_id")
+  url       String
+  fileName  String
+  mimeType  String
+  size      Int
+  kind      String
+  createdAt DateTime @default(now())
+
+  worklog Worklog @relation(fields: [worklogId], references: [id], onDelete: Cascade)
+
+  @@map("worklog_attachments")
 }
 
 model Rating {

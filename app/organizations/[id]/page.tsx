@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use, useCallback } from "react";
+import { useEffect, useState, use, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,14 @@ import {
   FaUserTie,
 } from "react-icons/fa";
 import { RatingModal } from "@/components/rating-modal";
+import {
+  TeamFilters,
+  type TeamFilterState,
+} from "@/components/filters/team-filters";
+import {
+  WorklogFilters,
+  type WorklogFilterState,
+} from "@/components/filters/worklog-filters";
 
 interface TeamMember {
   id: string;
@@ -61,6 +69,25 @@ interface Worklog {
   description: string;
   progressStatus: string;
   createdAt: string;
+  user: {
+    id: string;
+    name: string | null;
+    image: string | null;
+  };
+  ratings: Rating[];
+}
+
+interface WorklogListItem {
+  id: string;
+  title: string;
+  description: string;
+  progressStatus: string;
+  createdAt: string;
+  deadline?: string | null;
+  team: {
+    id: string;
+    name: string;
+  };
   user: {
     id: string;
     name: string | null;
@@ -103,6 +130,33 @@ interface Organization {
   };
 }
 
+const DEFAULT_WORKLOG_FILTERS: WorklogFilterState = {
+  search: "",
+  status: "",
+  teamId: "",
+  dateFrom: "",
+  dateTo: "",
+  sortBy: "date",
+  sortDir: "desc",
+};
+
+const DEFAULT_TEAM_FILTERS: TeamFilterState = {
+  search: "",
+  sortBy: "name",
+  sortDir: "asc",
+};
+
+function useDebouncedValue<T>(value: T, delay: number) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 export default function OrganizationDashboardPage({
   params,
 }: {
@@ -134,6 +188,20 @@ export default function OrganizationDashboardPage({
     } | null;
   } | null>(null);
 
+  const [worklogFilters, setWorklogFilters] = useState<WorklogFilterState>(
+    DEFAULT_WORKLOG_FILTERS,
+  );
+  const [teamFilters, setTeamFilters] =
+    useState<TeamFilterState>(DEFAULT_TEAM_FILTERS);
+  const [worklogs, setWorklogs] = useState<WorklogListItem[]>([]);
+  const [worklogsLoading, setWorklogsLoading] = useState(false);
+  const [worklogsError, setWorklogsError] = useState<string | null>(null);
+  const [worklogPage, setWorklogPage] = useState(1);
+  const [worklogTotal, setWorklogTotal] = useState(0);
+  const worklogPageSize = 10;
+
+  const debouncedWorklogFilters = useDebouncedValue(worklogFilters, 300);
+
   const fetchOrganization = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -154,9 +222,77 @@ export default function OrganizationDashboardPage({
     }
   }, [organizationId]);
 
+  const fetchWorklogs = useCallback(async () => {
+    if (!organizationId) {
+      return;
+    }
+
+    try {
+      setWorklogsLoading(true);
+      setWorklogsError(null);
+
+      const params = new URLSearchParams();
+      if (debouncedWorklogFilters.search.trim()) {
+        params.set("search", debouncedWorklogFilters.search.trim());
+      }
+      if (debouncedWorklogFilters.status) {
+        params.set("status", debouncedWorklogFilters.status);
+      }
+      if (debouncedWorklogFilters.teamId) {
+        params.set("teamId", debouncedWorklogFilters.teamId);
+      }
+      if (debouncedWorklogFilters.dateFrom) {
+        params.set("dateFrom", debouncedWorklogFilters.dateFrom);
+      }
+      if (debouncedWorklogFilters.dateTo) {
+        params.set("dateTo", debouncedWorklogFilters.dateTo);
+      }
+
+      params.set("sortBy", debouncedWorklogFilters.sortBy);
+      params.set("sortDir", debouncedWorklogFilters.sortDir);
+      params.set("page", String(worklogPage));
+      params.set("pageSize", String(worklogPageSize));
+
+      const response = await fetch(
+        `/api/organizations/${organizationId}/worklogs?${params.toString()}`,
+      );
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to load worklogs");
+      }
+
+      setWorklogs(result.data || []);
+      setWorklogTotal(result.meta?.total ?? 0);
+    } catch (err) {
+      setWorklogsError(
+        err instanceof Error ? err.message : "An error occurred",
+      );
+      setWorklogs([]);
+      setWorklogTotal(0);
+    } finally {
+      setWorklogsLoading(false);
+    }
+  }, [organizationId, debouncedWorklogFilters, worklogPage, worklogPageSize]);
+
+  const totalWorklogPages = Math.max(
+    1,
+    Math.ceil(worklogTotal / worklogPageSize),
+  );
+
   useEffect(() => {
     fetchOrganization();
   }, [organizationId, fetchOrganization]);
+
+  useEffect(() => {
+    fetchWorklogs();
+  }, [fetchWorklogs]);
+
+  useEffect(() => {
+    if (worklogPage > totalWorklogPages) {
+      setWorklogPage(totalWorklogPages);
+    }
+  }, [worklogPage, totalWorklogPages]);
 
   const handleCreateTeam = async () => {
     if (!newTeamName.trim()) return;
@@ -213,6 +349,58 @@ export default function OrganizationDashboardPage({
       day: "numeric",
     });
   };
+
+  const handleWorklogFiltersChange = useCallback((next: WorklogFilterState) => {
+    setWorklogFilters(next);
+    setWorklogPage(1);
+  }, []);
+
+  const handleTeamFiltersChange = useCallback((next: TeamFilterState) => {
+    setTeamFilters(next);
+  }, []);
+
+  const resetWorklogFilters = useCallback(() => {
+    setWorklogFilters(DEFAULT_WORKLOG_FILTERS);
+    setWorklogPage(1);
+  }, []);
+
+  const resetTeamFilters = useCallback(() => {
+    setTeamFilters(DEFAULT_TEAM_FILTERS);
+  }, []);
+
+  const filteredTeams = useMemo(() => {
+    if (!organization) {
+      return [];
+    }
+
+    const search = teamFilters.search.trim().toLowerCase();
+    const filtered = organization.teams.filter((team) => {
+      if (!search) {
+        return true;
+      }
+      const haystack = [team.name, team.description, team.project]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(search);
+    });
+
+    const sorted = [...filtered].sort((a, b) => {
+      const direction = teamFilters.sortDir === "asc" ? 1 : -1;
+      if (teamFilters.sortBy === "members") {
+        return (a._count.members - b._count.members) * direction;
+      }
+      if (teamFilters.sortBy === "worklogs") {
+        return (a._count.worklogs - b._count.worklogs) * direction;
+      }
+      if (teamFilters.sortBy === "credits") {
+        return (a.credits - b.credits) * direction;
+      }
+      return a.name.localeCompare(b.name) * direction;
+    });
+
+    return sorted;
+  }, [organization, teamFilters]);
 
   const handleOpenRating = (worklog: {
     id: string;
@@ -416,17 +604,26 @@ export default function OrganizationDashboardPage({
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {organization.teams.length === 0 ? (
+              <div className="mb-4">
+                <TeamFilters
+                  value={teamFilters}
+                  onChange={handleTeamFiltersChange}
+                  onReset={resetTeamFilters}
+                />
+              </div>
+              {filteredTeams.length === 0 ? (
                 <div className="text-center py-8">
                   <FaUsers className="h-12 w-12 text-slate-600 mx-auto mb-3" />
-                  <p className="text-slate-400 mb-4">No teams yet</p>
+                  <p className="text-slate-400 mb-4">
+                    No teams match these filters
+                  </p>
                   <Button onClick={() => setShowCreateTeam(true)}>
                     <FaPlus className="mr-2" /> Create Your First Team
                   </Button>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {organization.teams.map((team) => (
+                  {filteredTeams.map((team) => (
                     <Link
                       key={team.id}
                       href={`/teams/lead/${team.id}`}
@@ -470,97 +667,134 @@ export default function OrganizationDashboardPage({
                 <FaClipboardList className="text-purple-400" /> Recent Worklogs
               </CardTitle>
               <CardDescription className="text-slate-400">
-                Latest activity across all teams
+                Filter and review worklogs across teams
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {organization.teams.every((t) => t.worklogs.length === 0) ? (
+              <div className="mb-4">
+                <WorklogFilters
+                  value={worklogFilters}
+                  onChange={handleWorklogFiltersChange}
+                  onReset={resetWorklogFilters}
+                  teamOptions={organization.teams.map((team) => ({
+                    id: team.id,
+                    name: team.name,
+                  }))}
+                />
+              </div>
+
+              {worklogsLoading ? (
+                <div className="text-center py-8 text-slate-400">
+                  Loading worklogs...
+                </div>
+              ) : worklogsError ? (
+                <div className="text-center py-8 text-red-400">
+                  {worklogsError}
+                </div>
+              ) : worklogs.length === 0 ? (
                 <div className="text-center py-8">
                   <FaClipboardList className="h-12 w-12 text-slate-600 mx-auto mb-3" />
-                  <p className="text-slate-400">No worklogs yet</p>
+                  <p className="text-slate-400">No worklogs match filters</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {organization.teams
-                    .flatMap((team) =>
-                      team.worklogs.map((worklog) => ({
-                        ...worklog,
-                        teamName: team.name,
-                        teamId: team.id,
-                      })),
-                    )
-                    .sort(
-                      (a, b) =>
-                        new Date(b.createdAt).getTime() -
-                        new Date(a.createdAt).getTime(),
-                    )
-                    .slice(0, 10)
-                    .map((worklog) => (
-                      <div
-                        key={worklog.id}
-                        className="flex items-center gap-4 p-3 rounded-lg bg-slate-700/30 hover:bg-slate-700/50 transition-colors"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-medium text-white truncate">
-                              {worklog.title}
-                            </h4>
-                            <span
-                              className={`text-xs px-2 py-0.5 rounded ${getStatusColor(
-                                worklog.progressStatus,
-                              )}`}
-                            >
-                              {worklog.progressStatus.replace("_", " ")}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3 text-sm text-slate-400">
-                            <span>{worklog.user.name || "Unknown"}</span>
-                            <span>•</span>
-                            <span>{worklog.teamName}</span>
-                            <span>•</span>
-                            <span>{formatDate(worklog.createdAt)}</span>
-                          </div>
-                        </div>
-                        {worklog.ratings.length > 0 && (
-                          <div className="flex items-center gap-1 text-yellow-400">
-                            <FaStar className="h-4 w-4" />
-                            <span className="font-medium">
-                              {(
-                                worklog.ratings.reduce(
-                                  (sum, r) => sum + r.value,
-                                  0,
-                                ) / worklog.ratings.length
-                              ).toFixed(1)}
-                            </span>
-                          </div>
-                        )}
-                        {/* Rate button for REVIEWED/GRADED worklogs */}
-                        {canRateWorklog(worklog.progressStatus) && (
-                          <Button
-                            size="sm"
-                            variant={
-                              worklog.ratings.length > 0 ? "outline" : "default"
-                            }
-                            className={
-                              worklog.ratings.length > 0
-                                ? "border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/20"
-                                : "bg-gradient-to-r from-yellow-500 to-amber-500 text-black"
-                            }
-                            onClick={() => handleOpenRating(worklog)}
+                  {worklogs.map((worklog) => (
+                    <div
+                      key={worklog.id}
+                      className="flex items-center gap-4 p-3 rounded-lg bg-slate-700/30 hover:bg-slate-700/50 transition-colors"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-medium text-white truncate">
+                            {worklog.title}
+                          </h4>
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded ${getStatusColor(
+                              worklog.progressStatus,
+                            )}`}
                           >
-                            {worklog.ratings.length > 0 ? (
-                              <>
-                                <FaEdit className="mr-1 h-3 w-3" /> Edit
-                              </>
-                            ) : (
-                              <>
-                                <FaStar className="mr-1 h-3 w-3" /> Rate
-                              </>
-                            )}
-                          </Button>
-                        )}
+                            {worklog.progressStatus.replace("_", " ")}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-sm text-slate-400">
+                          <span>{worklog.user.name || "Unknown"}</span>
+                          <span>•</span>
+                          <span>{worklog.team.name}</span>
+                          <span>•</span>
+                          <span>{formatDate(worklog.createdAt)}</span>
+                        </div>
                       </div>
-                    ))}
+                      {worklog.ratings.length > 0 && (
+                        <div className="flex items-center gap-1 text-yellow-400">
+                          <FaStar className="h-4 w-4" />
+                          <span className="font-medium">
+                            {(
+                              worklog.ratings.reduce(
+                                (sum, r) => sum + r.value,
+                                0,
+                              ) / worklog.ratings.length
+                            ).toFixed(1)}
+                          </span>
+                        </div>
+                      )}
+                      {canRateWorklog(worklog.progressStatus) && (
+                        <Button
+                          size="sm"
+                          variant={
+                            worklog.ratings.length > 0 ? "outline" : "default"
+                          }
+                          className={
+                            worklog.ratings.length > 0
+                              ? "border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/20"
+                              : "bg-gradient-to-r from-yellow-500 to-amber-500 text-black"
+                          }
+                          onClick={() => handleOpenRating(worklog)}
+                        >
+                          {worklog.ratings.length > 0 ? (
+                            <>
+                              <FaEdit className="mr-1 h-3 w-3" /> Edit
+                            </>
+                          ) : (
+                            <>
+                              <FaStar className="mr-1 h-3 w-3" /> Rate
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between pt-2 text-xs text-slate-400">
+                    <span>
+                      Page {worklogPage} of {totalWorklogPages} • {worklogTotal}{" "}
+                      total
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-slate-600"
+                        onClick={() =>
+                          setWorklogPage((prev) => Math.max(1, prev - 1))
+                        }
+                        disabled={worklogPage <= 1}
+                      >
+                        Prev
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-slate-600"
+                        onClick={() =>
+                          setWorklogPage((prev) =>
+                            Math.min(totalWorklogPages, prev + 1),
+                          )
+                        }
+                        disabled={worklogPage >= totalWorklogPages}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               )}
             </CardContent>

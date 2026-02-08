@@ -69,8 +69,20 @@ export async function POST(request: NextRequest) {
     if (!validation.success) {
       return badRequest(validation.error);
     }
-    const { title, description, teamId, githubLink, deadline } =
-      validation.data;
+    const {
+      title,
+      description,
+      teamId,
+      githubLink,
+      deadline,
+      progressStatus,
+      attachments,
+    } = validation.data;
+
+    const allowedStatuses = new Set(["STARTED", "HALF_DONE", "COMPLETED"]);
+    if (progressStatus && !allowedStatuses.has(progressStatus)) {
+      return badRequest("Invalid progress status for worklog creation");
+    }
 
     // Verify user is a member or owner of the team
     const teamMember = await prisma.teamMember.findFirst({
@@ -101,8 +113,20 @@ export async function POST(request: NextRequest) {
         description,
         githubLink: githubLink || undefined,
         deadline: deadline ? new Date(deadline) : undefined,
+        progressStatus: progressStatus || undefined,
         userId: user.id,
         teamId,
+        attachments: attachments?.length
+          ? {
+              create: attachments.map((attachment) => ({
+                url: attachment.url,
+                fileName: attachment.name,
+                mimeType: attachment.type,
+                size: attachment.size,
+                kind: attachment.type.startsWith("image/") ? "image" : "file",
+              })),
+            }
+          : undefined,
       },
       include: {
         team: {

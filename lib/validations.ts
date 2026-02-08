@@ -122,16 +122,35 @@ export const worklogCreateSchema = z.object({
     .string()
     .min(1, "Title must not be empty")
     .max(200, "Title must be at most 200 characters"),
-  description: z.string().min(1, "Description must not be empty"),
+  description: z
+    .string()
+    .min(1, "Description must not be empty")
+    .refine(
+      (value) => value.replace(/<[^>]*>/g, "").trim().length > 0,
+      "Description must not be empty",
+    ),
   githubLink: z
     .string()
-    .url("Invalid GitHub link URL")
-    .regex(/^https:\/\/(www\.)?github\.com\/.+/, "Must be a valid GitHub URL")
-    .optional(),
+    .optional()
+    .refine(
+      (value) => !value || /^https:\/\/(www\.)?github\.com\/.+/.test(value),
+      "Must be a valid GitHub URL",
+    ),
   deadline: z
     .string()
     .datetime("Invalid deadline format")
     .or(z.date())
+    .optional(),
+  progressStatus: z.enum(["STARTED", "HALF_DONE", "COMPLETED"]).optional(),
+  attachments: z
+    .array(
+      z.object({
+        url: z.string().min(1, "Attachment URL is required"),
+        name: z.string().min(1, "Attachment name is required"),
+        size: z.number().int().nonnegative(),
+        type: z.string().min(1, "Attachment type is required"),
+      }),
+    )
     .optional(),
   teamId: z.string().cuid("Invalid team ID format"),
 });
@@ -143,12 +162,15 @@ export const worklogUpdateSchema = z.object({
     .max(200, "Title must be at most 200 characters")
     .optional(),
   description: z.string().min(1, "Description must not be empty").optional(),
-  githubLink: z
-    .string()
-    .url("Invalid GitHub link URL")
-    .regex(/^https:\/\/(www\.)?github\.com\/.+/, "Must be a valid GitHub URL")
-    .optional()
-    .nullable(),
+  githubLink: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z
+      .string()
+      .url("Invalid GitHub link URL")
+      .regex(/^https:\/\/(www\.)?github\.com\/.+/, "Must be a valid GitHub URL")
+      .optional()
+      .nullable(),
+  ),
   deadline: z
     .string()
     .datetime("Invalid deadline format")
