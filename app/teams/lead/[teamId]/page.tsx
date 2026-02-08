@@ -1,7 +1,7 @@
 "use client";
 
 import React, { use } from "react";
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FaPlus } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +28,14 @@ import {
 import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/ui/date-picker";
 import { GanttChart } from "@/components/GanttChart";
+import { DeadlineStatusBadge } from "@/components/worklog/deadline-status-badge";
+import { DeadlineCountdown } from "@/components/worklog/deadline-countdown";
+import { toast } from "sonner";
+import {
+  formatLocalDate,
+  getDeadlineStatus,
+  toUtcIso,
+} from "@/lib/deadline-utils";
 
 interface Task {
   id: number;
@@ -134,6 +142,21 @@ export default function TeamDetailsPage({
     assignedTo: "",
     deadline: "",
   });
+  const notifiedRef = useRef<Set<number>>(new Set());
+
+  const deadlineWarnings = useMemo(() => {
+    return tasks
+      .map((task) => {
+        const info = getDeadlineStatus({
+          deadline: task.deadline,
+          status: task.status,
+        });
+        return { task, info };
+      })
+      .filter(
+        ({ info }) => info.status === "overdue" || info.status === "due_soon",
+      );
+  }, [tasks]);
 
   // Check if deadline passed
   const isDeadlinePassed = (deadline: string) =>
@@ -162,6 +185,24 @@ export default function TeamDetailsPage({
       setShowModal(false);
     }
   };
+
+  useEffect(() => {
+    deadlineWarnings.slice(0, 3).forEach(({ task, info }) => {
+      if (notifiedRef.current.has(task.id)) {
+        return;
+      }
+      notifiedRef.current.add(task.id);
+      if (info.status === "overdue") {
+        toast.error(`Deadline ${formatLocalDate(new Date(task.deadline))}`, {
+          description: `${task.title} is ${info.label.toLowerCase()}`,
+        });
+      } else {
+        toast.warning(`Deadline ${formatLocalDate(new Date(task.deadline))}`, {
+          description: `${task.title} is ${info.label.toLowerCase()}`,
+        });
+      }
+    });
+  }, [deadlineWarnings]);
 
   // Ranking logic
   const rankedUsers = [...teamData].sort((a, b) => b.rating - a.rating);
@@ -294,9 +335,16 @@ export default function TeamDetailsPage({
                     <span
                       className={`text-xs font-semibold ${isPastDeadline ? "text-red-400" : "text-gray-400"}`}
                     >
-                      {task.deadline}
+                      {formatLocalDate(new Date(task.deadline))}
                       {isPastDeadline && " ⚠️"}
                     </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <DeadlineStatusBadge
+                      deadline={task.deadline}
+                      status={task.status}
+                    />
+                    <DeadlineCountdown deadline={task.deadline} />
                   </div>
                   <p className="text-sm text-gray-300 mb-3">
                     Assigned to:{" "}
@@ -438,7 +486,7 @@ export default function TeamDetailsPage({
                 onChange={(date) =>
                   setNewTask({
                     ...newTask,
-                    deadline: date ? date.toISOString().split("T")[0] : "",
+                    deadline: date ? toUtcIso(date) : "",
                   })
                 }
                 placeholder="Select deadline"

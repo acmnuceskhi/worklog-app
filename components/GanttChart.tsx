@@ -2,6 +2,10 @@
 
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DeadlineCountdown } from "@/components/worklog/deadline-countdown";
+import { DeadlineStatusBadge } from "@/components/worklog/deadline-status-badge";
+import { formatLocalDate } from "@/lib/deadline-utils";
+import styles from "./GanttChart.module.css";
 
 interface TaskData {
   id: number;
@@ -57,12 +61,12 @@ export function GanttChart({ tasks }: GanttChartProps) {
     );
   };
 
-  // Get status color
-  const getStatusColor = (task: TaskData) => {
-    if (task.status === "Completed") return "#22c55e";
-    if (task.progress >= 75) return "#f59e0b";
-    if (task.progress >= 50) return "#3b82f6";
-    return "#6b7280";
+  // Get status color class
+  const getStatusColorClass = (task: TaskData) => {
+    if (task.status === "Completed") return styles.completed;
+    if (task.progress >= 75) return styles.highProgress;
+    if (task.progress >= 50) return styles.mediumProgress;
+    return styles.lowProgress;
   };
 
   // Stats
@@ -125,7 +129,7 @@ export function GanttChart({ tasks }: GanttChartProps) {
           {tasks.length > 0 ? (
             tasks.map((task) => {
               const daysLeft = getDaysLeft(task.deadline);
-              const color = getStatusColor(task);
+              const colorClass = getStatusColorClass(task);
 
               return (
                 <div
@@ -139,6 +143,13 @@ export function GanttChart({ tasks }: GanttChartProps) {
                         {task.title}
                       </p>
                       <p className="text-xs text-gray-400">{task.assignedTo}</p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <DeadlineStatusBadge
+                          deadline={task.deadline}
+                          status={task.status}
+                        />
+                        <DeadlineCountdown deadline={task.deadline} />
+                      </div>
                     </div>
                     {daysLeft < 0 && task.status !== "Completed" ? (
                       <span className="text-xs text-red-400 font-semibold flex-shrink-0">
@@ -156,14 +167,10 @@ export function GanttChart({ tasks }: GanttChartProps) {
                   </div>
 
                   {/* Status Bar */}
-                  <div className="relative h-7 bg-slate-900/50 rounded overflow-hidden border border-slate-600/30">
+                  <div className={styles.statusBar}>
                     <div
-                      className="h-full flex items-center justify-center rounded transition-all"
-                      style={{
-                        width: `${task.progress}%`,
-                        backgroundColor: color,
-                        opacity: 0.75,
-                      }}
+                      className={`${styles.statusBarFill} ${colorClass}`}
+                      style={{ width: `${task.progress}%` }}
                     >
                       {task.progress >= 30 && (
                         <span className="text-xs font-bold text-white">
@@ -172,7 +179,7 @@ export function GanttChart({ tasks }: GanttChartProps) {
                       )}
                     </div>
                     {task.progress < 30 && (
-                      <span className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-gray-300">
+                      <span className={styles.statusBarText}>
                         {task.progress}%
                       </span>
                     )}
@@ -183,7 +190,7 @@ export function GanttChart({ tasks }: GanttChartProps) {
                     <span className="bg-slate-900 px-2 py-1 rounded text-gray-300">
                       {task.status}
                     </span>
-                    <span>{formatDate(new Date(task.deadline))}</span>
+                    <span>{formatLocalDate(new Date(task.deadline))}</span>
                   </div>
                 </div>
               );
@@ -198,32 +205,22 @@ export function GanttChart({ tasks }: GanttChartProps) {
 
       {/* Legend */}
       <div className="flex flex-wrap gap-3 text-xs text-gray-400 px-2">
-        <div className="flex items-center gap-2">
-          <div
-            className="w-3 h-3 rounded"
-            style={{ backgroundColor: "#22c55e" }}
-          ></div>
+        <div className={styles.legendItem}>
+          <div className={`${styles.legendColor} ${styles.completed}`}></div>
           <span>Completed</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div
-            className="w-3 h-3 rounded"
-            style={{ backgroundColor: "#f59e0b" }}
-          ></div>
+        <div className={styles.legendItem}>
+          <div className={`${styles.legendColor} ${styles.highProgress}`}></div>
           <span>75%+ Progress</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className={styles.legendItem}>
           <div
-            className="w-3 h-3 rounded"
-            style={{ backgroundColor: "#3b82f6" }}
+            className={`${styles.legendColor} ${styles.mediumProgress}`}
           ></div>
           <span>50%+ Progress</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div
-            className="w-3 h-3 rounded"
-            style={{ backgroundColor: "#6b7280" }}
-          ></div>
+        <div className={styles.legendItem}>
+          <div className={`${styles.legendColor} ${styles.lowProgress}`}></div>
           <span>In Progress</span>
         </div>
       </div>

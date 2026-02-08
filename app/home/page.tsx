@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import {
   FaUsers,
@@ -18,6 +18,11 @@ import {
 import { signOut, useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
+import { DeadlineStatusBadge } from "@/components/worklog/deadline-status-badge";
+import { DeadlineCountdown } from "@/components/worklog/deadline-countdown";
+import { toast } from "sonner";
+import { formatLocalDate, getDeadlineStatus } from "@/lib/deadline-utils";
+import styles from "./home.module.css";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -47,6 +52,15 @@ export default function DashboardPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [deadlineWorklogs, setDeadlineWorklogs] = useState<
+    Array<{
+      id: string;
+      title: string;
+      deadline: string;
+      progressStatus?: string | null;
+    }>
+  >([]);
+  const deadlineNotifiedRef = useRef<Set<string>>(new Set());
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [invitations, setInvitations] = useState<
     { from: string; team: string }[]
@@ -131,6 +145,78 @@ export default function DashboardPage() {
     };
   }, [fetchSidebarStats]);
 
+  useEffect(() => {
+    let isActive = true;
+    const loadDeadlines = async () => {
+      try {
+        const response = await fetch("/api/worklogs");
+        if (!response.ok) {
+          return;
+        }
+        const payload = await response.json();
+        const worklogs = (payload.data || []) as Array<{
+          id: string;
+          title: string;
+          deadline?: string | null;
+          progressStatus?: string | null;
+        }>;
+
+        const withDeadlines = worklogs
+          .filter((worklog) => worklog.deadline)
+          .map((worklog) => ({
+            id: worklog.id,
+            title: worklog.title,
+            deadline: String(worklog.deadline),
+            progressStatus: worklog.progressStatus ?? null,
+          }))
+          .slice(0, 5);
+
+        if (isActive) {
+          setDeadlineWorklogs(withDeadlines);
+        }
+      } catch {
+        if (isActive) {
+          setDeadlineWorklogs([]);
+        }
+      }
+    };
+
+    loadDeadlines();
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    deadlineWorklogs.forEach((worklog) => {
+      if (deadlineNotifiedRef.current.has(worklog.id)) {
+        return;
+      }
+      const info = getDeadlineStatus({
+        deadline: worklog.deadline,
+        status: worklog.progressStatus,
+      });
+      if (info.status === "overdue" || info.status === "due_soon") {
+        deadlineNotifiedRef.current.add(worklog.id);
+        if (info.status === "overdue") {
+          toast.error(
+            `Deadline ${formatLocalDate(new Date(worklog.deadline))}`,
+            {
+              description: `${worklog.title} is ${info.label.toLowerCase()}`,
+            },
+          );
+        } else {
+          toast.warning(
+            `Deadline ${formatLocalDate(new Date(worklog.deadline))}`,
+            {
+              description: `${worklog.title} is ${info.label.toLowerCase()}`,
+            },
+          );
+        }
+      }
+    });
+  }, [deadlineWorklogs]);
+
   const teamsData = [
     {
       id: "t1",
@@ -210,28 +296,29 @@ export default function DashboardPage() {
   // Prevent hydration mismatch by waiting for client mount
   if (!mounted) {
     return (
-      <div className="page light">
-        <div className="loading">Loading...</div>
+      <div className={styles.page}>
+        <div className={styles.loading}>Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className={`page ${contentTheme}`}>
-      <nav className="navbar">
-        <div className="nav-left">
+    <div className={`${styles.page} ${contentTheme}`}>
+      <nav className="h-16 px-4 flex justify-between items-center rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 text-white">
+        <div className="flex gap-4 items-center">
           <button
-            className="sidebar-toggle"
+            className="bg-transparent border border-white/20 text-white rounded-lg px-2.5 py-1.5 cursor-pointer hidden md:inline-flex items-center gap-1.5"
             onClick={() => setIsSidebarOpen((prev) => !prev)}
             aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
             aria-expanded={isSidebarOpen}
           >
             <FaBars />
           </button>
-          <h1 className="logo">Worklog</h1>
-          <div className="search">
+          <h1 className="text-2xl font-bold">Worklog</h1>
+          <div className="flex gap-2 items-center bg-white/10 px-2.5 py-1.5 rounded-lg">
             <FaSearch />
             <input
+              className="bg-transparent border-none outline-none text-white placeholder-white/70"
               placeholder="Search teams..."
               value={query}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -241,15 +328,14 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="nav-right">
-          <button className="icon-btn">
+        <div className="flex gap-3">
+          <button className="bg-transparent border border-white/20 text-white rounded-lg px-2.5 py-1.5 cursor-pointer hover:bg-white/10 transition-colors">
             <FaBell />
           </button>
           <button
-            className="icon-btn"
+            className="bg-transparent border border-white/20 text-white rounded-lg px-2.5 py-1.5 cursor-pointer hover:bg-white/10 transition-colors relative"
             onClick={() => router.push("/profile")}
             title="View Profile"
-            style={{ position: "relative" }}
           >
             {session?.user?.image ? (
               <Image
@@ -257,26 +343,10 @@ export default function DashboardPage() {
                 alt="Profile"
                 width={32}
                 height={32}
-                style={{
-                  borderRadius: "50%",
-                  objectFit: "cover",
-                }}
+                className="rounded-full object-cover"
               />
             ) : (
-              <div
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "50%",
-                  backgroundColor: "rgba(96, 165, 250, 0.3)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "0.9rem",
-                  fontWeight: "700",
-                  color: "white",
-                }}
-              >
+              <div className="w-8 h-8 rounded-full bg-blue-400/30 flex items-center justify-center text-sm font-bold text-white">
                 {session?.user?.name?.charAt(0).toUpperCase() ||
                   session?.user?.email?.charAt(0).toUpperCase() ||
                   "U"}
@@ -284,7 +354,7 @@ export default function DashboardPage() {
             )}
           </button>
           <button
-            className="theme-toggle"
+            className="bg-transparent border border-white/20 text-white rounded-lg px-2.5 py-1.5 cursor-pointer hover:bg-white/10 transition-colors"
             onClick={() =>
               setContentTheme((t) => (t === "light" ? "dark" : "light"))
             }
@@ -292,7 +362,7 @@ export default function DashboardPage() {
             {contentTheme === "light" ? "🌙" : "☀️"}
           </button>
           <button
-            className="logout"
+            className="bg-transparent border border-white/20 text-white rounded-lg px-2.5 py-1.5 cursor-pointer hover:bg-white/10 transition-colors"
             onClick={() => signOut({ callbackUrl: "/" })}
           >
             Logout
@@ -300,11 +370,11 @@ export default function DashboardPage() {
         </div>
       </nav>
 
-      <div className="layout">
+      <div className="flex gap-4 flex-1 mt-3 w-full">
         <AnimatePresence>
           {isMobile && isSidebarOpen && (
             <motion.div
-              className="sidebar-overlay"
+              className="fixed inset-0 bg-slate-900/60 z-90"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -315,9 +385,9 @@ export default function DashboardPage() {
         </AnimatePresence>
 
         <motion.aside
-          className={`sidebar ${isMobile ? "mobile" : ""} ${
-            isSidebarCollapsed ? "collapsed" : ""
-          }`}
+          className={`${styles.sidebar} ${isMobile ? styles.mobile : ""} ${
+            isSidebarCollapsed ? styles.collapsed : ""
+          } w-56 p-4 rounded-xl flex flex-col gap-3 relative z-100`}
           aria-label="Main navigation"
           aria-expanded={isSidebarOpen}
           initial={false}
@@ -327,13 +397,13 @@ export default function DashboardPage() {
           }}
           transition={{ type: "spring", stiffness: 260, damping: 26 }}
         >
-          <div className="sidebar-header">
-            <span className="sidebar-title">
+          <div className="flex items-center justify-between font-semibold text-sm">
+            <span className="uppercase tracking-wider text-xs text-white/70">
               {showSidebarLabels ? "Navigation" : "Nav"}
             </span>
             {!isMobile && (
               <button
-                className="sidebar-collapse"
+                className="bg-white/8 border-none text-white rounded-lg p-1.5 cursor-pointer hover:bg-white/12 transition-colors"
                 onClick={() => setIsSidebarCollapsed((prev) => !prev)}
                 aria-label={
                   isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
@@ -344,7 +414,7 @@ export default function DashboardPage() {
             )}
           </div>
 
-          <div className="sidebar-items">
+          <div className="flex flex-col gap-1.5">
             {sidebarItems.map((item) => {
               const isActive = pathname?.startsWith(item.href);
               const ariaLabel = item.count
@@ -354,7 +424,11 @@ export default function DashboardPage() {
               return (
                 <div
                   key={item.id}
-                  className={`side-item ${isActive ? "active" : ""}`}
+                  className={`p-2.5 rounded-xl flex gap-2 cursor-pointer mb-2 items-center ${
+                    isActive
+                      ? "bg-gradient-to-r from-blue-500 to-cyan-500"
+                      : "hover:bg-white/5"
+                  }`}
                   onClick={() => handleNavigate(item.href)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
@@ -367,11 +441,13 @@ export default function DashboardPage() {
                   aria-current={isActive ? "page" : undefined}
                   aria-label={ariaLabel}
                 >
-                  <span className="side-icon">{item.icon}</span>
+                  <span className="inline-flex items-center justify-center w-5">
+                    {item.icon}
+                  </span>
                   {showSidebarLabels && (
-                    <span className="side-label">{item.label}</span>
+                    <span className="whitespace-nowrap">{item.label}</span>
                   )}
-                  <span className="count" aria-live="polite">
+                  <span className={styles.count} aria-live="polite">
                     {item.count}
                   </span>
                 </div>
@@ -379,7 +455,7 @@ export default function DashboardPage() {
             })}
 
             {sidebarLoading && (
-              <div className="side-item" style={{ opacity: 0.6 }}>
+              <div className="p-2.5 rounded-xl flex gap-2 opacity-60">
                 <FaUsers /> {showSidebarLabels ? "Loading..." : "..."}
               </div>
             )}
@@ -388,31 +464,35 @@ export default function DashboardPage() {
               sidebarStats.memberTeamsCount === 0 &&
               sidebarStats.leadTeamsCount === 0 &&
               sidebarStats.organizationsCount === 0 && (
-                <div className="side-item" style={{ opacity: 0.6 }}>
+                <div className="p-2.5 rounded-xl flex gap-2 opacity-60">
                   <FaUsers /> {showSidebarLabels ? "No teams yet" : "0"}
                 </div>
               )}
           </div>
 
           <button
-            className="create-team-btn"
+            className="mt-auto bg-gradient-to-r from-green-500 to-green-600 border-none p-2.5 rounded-xl text-white flex gap-2 items-center justify-center cursor-pointer hover:from-green-600 hover:to-green-700 transition-colors"
             onClick={() => setShowCreateTeam(true)}
           >
             <FaPlus /> {showSidebarLabels ? "Create Team" : "Create"}
           </button>
         </motion.aside>
 
-        <main className="content">
-          <section className="card hero">
+        <main className="flex-1 flex flex-col gap-4 overflow-hidden">
+          <section
+            className={`${styles.card} flex justify-between items-center`}
+          >
             <div>
               <h2>Welcome back 👋</h2>
-              <p className="muted">
+              <p className={styles.muted}>
                 Quick access to your teams, tasks, and recent activity.
               </p>
-              <button className="cta">View My Teams</button>
+              <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                View My Teams
+              </button>
             </div>
 
-            <div className="stats">
+            <div className="flex gap-4 text-center">
               <div>
                 <strong>{teams.length}</strong>
                 <span>Visible Teams</span>
@@ -428,32 +508,35 @@ export default function DashboardPage() {
             </div>
           </section>
 
-          <section className="card">
+          <section className={styles.card}>
             <h3>Featured Teams</h3>
-            <div className="grid">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {teamsData.map((t) => (
-                <div key={t.id} className="team">
-                  <div className="team-top">
-                    <div className="avatar">
+                <div key={t.id} className={`${styles.team} p-3 rounded-xl`}>
+                  <div className="flex gap-2.5 items-center">
+                    <div className={styles.avatar}>
                       {t.name
                         .split(" ")
                         .map((n) => n[0])
                         .slice(0, 2)
                         .join("")}
                     </div>
-                    <div>
-                      <strong>{t.name}</strong>
-                      <div className="muted">
+                    <div className={styles.teamInfo}>
+                      <h4 className={styles.teamName}>{t.name}</h4>
+                      <p className={styles.teamDesc}>
                         {t.members} members • {t.role}
-                      </div>
+                      </p>
                     </div>
                   </div>
 
-                  <div className="bar">
-                    <div className="fill" style={{ width: `${t.progress}%` }} />
+                  <div className="h-2 bg-black/10 rounded-full overflow-hidden mt-2.5">
+                    <div
+                      className={styles.fill}
+                      style={{ width: `${t.progress}%` }}
+                    />
                   </div>
 
-                  <div className="progress">
+                  <div className="flex justify-between mt-1.5">
                     <span>Completion</span>
                     <strong>{t.progress}%</strong>
                   </div>
@@ -461,17 +544,58 @@ export default function DashboardPage() {
               ))}
             </div>
           </section>
+
+          <section className={styles.card}>
+            <h3>Upcoming Deadlines</h3>
+            {deadlineWorklogs.length === 0 ? (
+              <p className={styles.muted}>No upcoming deadlines yet.</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {deadlineWorklogs.map((worklog) => (
+                  <div
+                    key={worklog.id}
+                    className={`${styles.team} p-3 rounded-xl`}
+                  >
+                    <div className="flex gap-2.5 items-center">
+                      <div>
+                        <strong>{worklog.title}</strong>
+                        <div className={styles.muted}>
+                          {formatLocalDate(new Date(worklog.deadline))}
+                        </div>
+                      </div>
+                      <DeadlineStatusBadge
+                        deadline={worklog.deadline}
+                        status={worklog.progressStatus}
+                      />
+                    </div>
+                    <div className="mt-2">
+                      <DeadlineCountdown deadline={worklog.deadline} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
         </main>
 
-        <aside className="invites">
+        <aside
+          className={`${styles.invites} w-72 p-4 rounded-xl flex-shrink-0`}
+        >
           <h3>Invitations</h3>
           {invitations.map((i, index) => (
-            <div key={`${i.from}-${i.team}-${index}`} className="invite">
-              <p className="muted">Invited by {i.from}</p>
+            <div
+              key={`${i.from}-${i.team}-${index}`}
+              className={`${styles.invite} p-2.5 rounded-xl mt-2.5`}
+            >
+              <p className={styles.muted}>Invited by {i.from}</p>
               <strong>{i.team}</strong>
-              <div className="actions">
-                <button className="accept">Accept</button>
-                <button className="decline">Decline</button>
+              <div className="flex gap-2 mt-2">
+                <button className="bg-green-500 border-none py-1.5 px-2 rounded-lg flex-1">
+                  Accept
+                </button>
+                <button className="bg-red-500 border-none py-1.5 px-2 rounded-lg flex-1 text-white">
+                  Decline
+                </button>
               </div>
             </div>
           ))}
@@ -479,16 +603,19 @@ export default function DashboardPage() {
       </div>
 
       {showCreateTeam && (
-        <div className="modal-backdrop">
-          <div className="modal">
+        <div className="fixed inset-0 bg-black/55 flex items-start justify-center pt-20 z-200">
+          <div
+            className={`${styles.modal} bg-slate-800 p-6 rounded-2xl w-96 flex flex-col gap-3 text-white relative`}
+          >
             <button
-              className="modal-close"
+              className="absolute top-3 right-3 border-none bg-transparent text-white text-xl cursor-pointer"
               onClick={() => setShowCreateTeam(false)}
             >
               <FaTimes />
             </button>
             <h3>Create Team</h3>
             <input
+              className="p-3 rounded-xl border-none outline-none bg-white/6 text-white"
               placeholder="Team Name"
               value={teamName}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -496,13 +623,14 @@ export default function DashboardPage() {
               }
             />
             <textarea
+              className="p-3 rounded-xl border-none outline-none bg-white/6 text-white min-h-16"
               placeholder="Team Description"
               value={teamDesc}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                 setTeamDesc(e.target.value)
               }
             />
-            <div className="email-chips">
+            <div className={styles.emailChips}>
               {inviteEmails.map((email) => (
                 <span key={email}>
                   {email}
@@ -527,9 +655,15 @@ export default function DashboardPage() {
                 }}
               />
             </div>
-            <div className="modal-actions">
-              <button onClick={() => setShowCreateTeam(false)}>Cancel</button>
+            <div className="flex justify-end gap-2.5">
               <button
+                className="bg-white/10 text-white border-none py-1.5 px-3 rounded-lg"
+                onClick={() => setShowCreateTeam(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="bg-gradient-to-r from-green-500 to-green-600 text-white border-none py-1.5 px-3 rounded-lg font-semibold"
                 onClick={() => {
                   alert(
                     `Team Created!\nName: ${teamName}\nDescription: ${teamDesc}\nEmails: ${inviteEmails.join(

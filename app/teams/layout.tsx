@@ -24,6 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import styles from "./layout.module.css";
 
 const lobsterTwo = Lobster_Two({ weight: "400", subsets: ["latin"] });
 
@@ -46,6 +47,7 @@ export default function TeamsLayout({
     { from: "Alice", team: "Design Masters" },
     { from: "Bob", team: "Dev Team" },
   ]);
+  const [query, setQuery] = useState("");
 
   // Dynamic sidebar state
   const [sidebarStats, setSidebarStats] = useState({
@@ -208,284 +210,67 @@ export default function TeamsLayout({
     [router, isMobile],
   );
 
-  const styles: Record<string, React.CSSProperties> = {
-    page: {
-      minHeight: "100vh",
-      width: "100vw",
-      padding: 12,
-      display: "flex",
-      flexDirection: "column",
-      background:
-        contentTheme === "dark"
-          ? "#021629"
-          : "linear-gradient(135deg, #fbc2eb, #a6c1ee)",
-      color: contentTheme === "dark" ? "#f8fafc" : "#020617",
-    },
-    navbar: {
-      height: 64,
-      padding: "0 16px",
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      gap: 16,
-      borderRadius: 12,
-      background: "linear-gradient(90deg, #04243f, #06325a)",
-      color: "white",
-    },
-    navLeft: {
-      display: "flex",
-      gap: 16,
-      alignItems: "center",
-      flexShrink: 0,
-    },
-    sidebarToggle: {
-      background: "transparent",
-      border: "1px solid rgba(255, 255, 255, 0.2)",
-      color: "white",
-      borderRadius: 10,
-      padding: "6px 10px",
-      cursor: "pointer",
-      display: "none",
-    },
-    logo: {
-      fontSize: "1.8rem",
-      whiteSpace: "nowrap",
-      margin: 0,
-    },
-    search: {
-      display: "flex",
-      gap: 8,
-      alignItems: "center",
-      background: "rgba(255, 255, 255, 0.1)",
-      padding: "6px 10px",
-      borderRadius: 10,
-      width: 280,
-    },
-    navRight: {
-      display: "flex",
-      gap: 12,
-      flexShrink: 0,
-    },
-    iconBtn: {
-      background: "transparent",
-      border: "none",
-      color: "white",
-      cursor: "pointer",
-      fontSize: 18,
-    },
-    themeToggle: {
-      background: "transparent",
-      border: "none",
-      color: "white",
-      cursor: "pointer",
-      fontSize: 18,
-    },
-    logout: {
-      background: "#ff6b6b",
-      color: "#fff",
-      border: "2px solid #ff6b6b",
-      padding: "8px 12px",
-      borderRadius: 8,
-      fontWeight: 700,
-      cursor: "pointer",
-    },
-    layout: {
-      display: "flex",
-      gap: 16,
-      flex: 1,
-      marginTop: 12,
-      width: "100%",
-      overflowX: "hidden",
-    },
-    sidebarOverlay: {
-      position: "fixed",
-      inset: 0,
-      background: "rgba(2, 6, 23, 0.6)",
-      zIndex: 90,
-    },
-    sidebar: {
-      width: 220,
-      padding: 16,
-      borderRadius: 12,
-      background: "#04243f",
-      color: "white",
-      flexShrink: 0,
-      display: "flex",
-      flexDirection: "column",
-      gap: 12,
-      position: "relative",
-      zIndex: 100,
-    },
-    sidebarMobile: {
-      position: "fixed",
-      top: 88,
-      left: 12,
-      bottom: 12,
-      height: "auto",
-      boxShadow: "0 24px 80px rgba(2, 6, 23, 0.4)",
-    },
-    sidebarHeader: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      fontWeight: 600,
-      fontSize: "0.95rem",
-    },
-    sidebarTitle: {
-      textTransform: "uppercase",
-      letterSpacing: "0.08em",
-      fontSize: "0.7rem",
-      color: "rgba(255, 255, 255, 0.7)",
-    },
-    sidebarCollapse: {
-      background: "rgba(255, 255, 255, 0.08)",
-      border: "none",
-      color: "white",
-      borderRadius: 8,
-      padding: "6px 8px",
-      cursor: "pointer",
-    },
-    sidebarItems: {
-      display: "flex",
-      flexDirection: "column",
-      gap: 6,
-    },
-    sideItem: {
-      padding: 10,
-      borderRadius: 10,
-      display: "flex",
-      gap: 8,
-      cursor: "pointer",
-      marginBottom: 8,
-      alignItems: "center",
-    },
-    sideIcon: {
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      width: 20,
-    },
-    sideLabel: {
-      whiteSpace: "nowrap",
-    },
-    sideItemActive: {
-      background: "linear-gradient(90deg, #3b82f6, #06b6d4)",
-    },
-    countCollapsed: {
-      marginLeft: 0,
-    },
-    count: {
-      marginLeft: "auto",
-      background: "rgba(255, 255, 255, 0.2)",
-      padding: "2px 6px",
-      borderRadius: 8,
-      fontSize: 12,
-      fontWeight: 600,
-    },
-    createTeamBtn: {
-      width: "100%",
-      padding: 10,
-      borderRadius: 10,
-      border: "none",
-      background: "linear-gradient(90deg, #22c55e, #16a34a)",
-      color: "white",
-      fontWeight: 700,
-      cursor: "pointer",
-      display: "flex",
-      gap: 8,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    content: {
-      flex: 1,
-      display: "flex",
-      flexDirection: "column",
-      gap: 16,
-      overflow: "auto",
-      padding: 8,
-    },
-    invites: {
-      width: 300,
-      padding: 16,
-      borderRadius: 12,
-      background: "#04243f",
-      color: "#FFD700",
-      flexShrink: 0,
-      display: "flex",
-      flexDirection: "column",
-      overflow: "hidden",
-    },
-  };
-
   // Prevent hydration mismatch by waiting for client mount
   if (!mounted) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          width: "100vw",
-          padding: 12,
-          display: "flex",
-          flexDirection: "column",
-          background: "#021629",
-          color: "#f8fafc",
-        }}
-        className="light"
-      >
-        <div style={{ textAlign: "center", padding: "2rem" }}>Loading...</div>
+      <div className="min-h-screen w-screen p-3 flex flex-col bg-blue-950 text-slate-50 light">
+        <div className="text-center py-8">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div style={styles.page} className={contentTheme}>
-      <nav style={styles.navbar}>
-        <div style={styles.navLeft}>
+    <div className={`${styles.page} ${contentTheme}`}>
+      <nav className="h-16 px-4 flex justify-between items-center rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 text-white">
+        <div className="flex gap-4 items-center">
           <button
-            style={{
-              ...styles.sidebarToggle,
-              display: isMobile ? "inline-flex" : "none",
-              alignItems: "center",
-              gap: 6,
-            }}
+            className="bg-transparent border border-white/20 text-white rounded-lg px-2.5 py-1.5 cursor-pointer hidden md:inline-flex items-center gap-1.5"
             onClick={() => setIsSidebarOpen((prev) => !prev)}
             aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
             aria-expanded={isSidebarOpen}
           >
             <FaBars />
           </button>
-          <h1 style={styles.logo} className={lobsterTwo.className}>
+          <h1 className={`text-2xl font-bold ${lobsterTwo.className}`}>
             Worklog
           </h1>
-          <div style={styles.search}>
+          <div className="flex gap-2 items-center bg-white/10 px-2.5 py-1.5 rounded-lg w-70">
             <FaSearch />
-            <input placeholder="Search teams..." />
+            <input
+              className="bg-transparent border-none outline-none text-white placeholder-white/70 w-full"
+              placeholder="Search teams..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
           </div>
         </div>
 
-        <div style={styles.navRight}>
-          <button style={styles.iconBtn}>
+        <div className="flex gap-3">
+          <button className="bg-transparent border border-white/20 text-white rounded-lg px-2.5 py-1.5 cursor-pointer hover:bg-white/10 transition-colors">
             <FaBell />
           </button>
           <button
-            style={styles.themeToggle}
+            className="bg-transparent border border-white/20 text-white rounded-lg px-2.5 py-1.5 cursor-pointer hover:bg-white/10 transition-colors"
             onClick={() =>
-              setContentTheme(contentTheme === "dark" ? "light" : "dark")
+              setContentTheme((t) => (t === "light" ? "dark" : "light"))
             }
           >
             {contentTheme === "light" ? "🌙" : "☀️"}
           </button>
-          <button style={styles.logout} onClick={() => router.push("/")}>
+          <button
+            className="bg-red-500 hover:bg-red-600 text-white border-2 border-red-500 px-3 py-2 rounded-lg font-bold cursor-pointer transition-colors"
+            onClick={() => router.push("/")}
+          >
             Logout
           </button>
         </div>
       </nav>
 
-      <div style={styles.layout}>
+      <div className="flex gap-4 flex-1 mt-3 w-full overflow-x-hidden">
         <AnimatePresence>
           {isMobile && isSidebarOpen && (
             <motion.div
-              style={styles.sidebarOverlay}
+              className="fixed inset-0 bg-slate-900/60 z-90"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -496,11 +281,9 @@ export default function TeamsLayout({
         </AnimatePresence>
 
         <motion.aside
-          style={{
-            ...styles.sidebar,
-            width: sidebarWidth,
-            ...(isMobile ? styles.sidebarMobile : {}),
-          }}
+          className={`${styles.sidebar} ${isMobile ? styles.mobile : ""} ${
+            isSidebarCollapsed ? styles.collapsed : ""
+          } w-56 p-4 rounded-xl flex flex-col gap-3 relative z-100`}
           aria-label="Main navigation"
           aria-expanded={isSidebarOpen}
           initial={false}
@@ -510,13 +293,13 @@ export default function TeamsLayout({
           }}
           transition={{ type: "spring", stiffness: 260, damping: 26 }}
         >
-          <div style={styles.sidebarHeader}>
-            <span style={styles.sidebarTitle}>
+          <div className="flex items-center justify-between font-semibold text-sm">
+            <span className="uppercase tracking-wide text-xs text-white/70">
               {showSidebarLabels ? "Navigation" : "Nav"}
             </span>
             {!isMobile && (
               <button
-                style={styles.sidebarCollapse}
+                className="bg-white/8 border-none text-white rounded-lg px-2 py-1.5 cursor-pointer hover:bg-white/12 transition-colors"
                 onClick={() => setIsSidebarCollapsed((prev) => !prev)}
                 aria-label={
                   isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
@@ -527,7 +310,7 @@ export default function TeamsLayout({
             )}
           </div>
 
-          <div style={styles.sidebarItems}>
+          <div className="flex flex-col gap-1.5">
             {sidebarItems.map((item) => {
               const isActive = pathname.startsWith(item.href);
               const ariaLabel = item.count
@@ -537,10 +320,11 @@ export default function TeamsLayout({
               return (
                 <div
                   key={item.id}
-                  style={{
-                    ...styles.sideItem,
-                    ...(isActive ? styles.sideItemActive : {}),
-                  }}
+                  className={`${
+                    styles.sideItem
+                  } p-2.5 rounded-xl flex gap-2 cursor-pointer mb-2 items-center ${
+                    isActive ? styles.active : "hover:bg-white/5"
+                  }`}
                   onClick={() => handleNavigate(item.href)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
@@ -553,15 +337,14 @@ export default function TeamsLayout({
                   aria-current={isActive ? "page" : undefined}
                   aria-label={ariaLabel}
                 >
-                  <span style={styles.sideIcon}>{item.icon}</span>
+                  <span className="inline-flex items-center justify-center w-5">
+                    {item.icon}
+                  </span>
                   {showSidebarLabels && (
-                    <span style={styles.sideLabel}>{item.label}</span>
+                    <span className="whitespace-nowrap">{item.label}</span>
                   )}
                   <span
-                    style={{
-                      ...styles.count,
-                      ...(showSidebarLabels ? {} : styles.countCollapsed),
-                    }}
+                    className={`${styles.count} ml-auto`}
                     aria-live="polite"
                   >
                     {item.count}
@@ -571,182 +354,92 @@ export default function TeamsLayout({
             })}
 
             {sidebarLoading && (
-              <div style={{ ...styles.sideItem, opacity: 0.6 }}>
-                <FaUsers /> {showSidebarLabels ? "Loading..." : "..."}
+              <div
+                className={`${styles.sideItem} p-2.5 rounded-xl flex gap-2 cursor-pointer mb-2 items-center opacity-60`}
+              >
+                <span className="inline-flex items-center justify-center w-5">
+                  <FaUsers />
+                </span>{" "}
+                {showSidebarLabels ? "Loading..." : "..."}
               </div>
             )}
           </div>
 
           <button
             onClick={() => router.push("/home")}
-            style={{
-              ...styles.createTeamBtn,
-              marginTop: "auto",
-              background: "linear-gradient(90deg, #22c55e, #16a34a)",
-            }}
+            className={`${styles.createTeamBtn} mt-auto bg-gradient-to-r from-green-500 to-green-600`}
           >
-            <FaPlus /> {showSidebarLabels ? "Back to Dashboard" : "Back"}
+            <span className="inline-flex items-center justify-center w-5">
+              <FaPlus />
+            </span>{" "}
+            {showSidebarLabels ? "Back to Dashboard" : "Back"}
           </button>
         </motion.aside>
 
-        <main style={styles.content}>{children}</main>
+        <main className={`${styles.content} flex-1 overflow-hidden`}>
+          {children}
+        </main>
 
-        <aside style={styles.invites}>
+        <aside className={`${styles.invites} flex flex-col`}>
           {isLeadPage ? (
-            <div
-              style={{
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              <h3 style={{ marginTop: 0 }}>Send Invites</h3>
+            <div className="h-full flex flex-col">
+              <h3 className="mt-0">Send Invites</h3>
               <button
                 onClick={() => setShowInviteModal(true)}
-                style={{
-                  width: "100%",
-                  padding: 10,
-                  borderRadius: 10,
-                  border: "none",
-                  background: "#22c55e",
-                  color: "white",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  marginBottom: 12,
-                  display: "flex",
-                  gap: 8,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
+                className="w-full bg-green-500 text-white font-bold rounded-lg px-3 py-2 cursor-pointer mb-3 flex gap-2 items-center justify-center hover:bg-green-600 transition-colors"
               >
                 <FaPlus /> Invite
               </button>
 
-              <div
-                style={{
-                  flex: 1,
-                  overflowY: "auto",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 8,
-                }}
-              >
+              <div className="flex-1 overflow-y-auto flex flex-col gap-2">
                 {sentInvites.length > 0 ? (
                   sentInvites.map((email, idx) => (
                     <div
                       key={idx}
-                      style={{
-                        background: "#03243a",
-                        border: "1px solid #FFD700",
-                        padding: 8,
-                        borderRadius: 8,
-                        fontSize: 12,
-                      }}
+                      className="bg-blue-950 border border-yellow-400 p-2 rounded-lg text-xs"
                     >
-                      <p
-                        style={{ margin: 0, fontWeight: 600, color: "#FFD700" }}
-                      >
+                      <p className="m-0 font-semibold text-yellow-400">
                         {email}
                       </p>
-                      <p
-                        style={{
-                          margin: "4px 0 0 0",
-                          color: "#b0b9c1",
-                          fontSize: 11,
-                        }}
-                      >
+                      <p className="mt-1 mb-0 text-blue-300 text-xs">
                         Pending...
                       </p>
                     </div>
                   ))
                 ) : (
-                  <p
-                    style={{
-                      color: "#999",
-                      textAlign: "center",
-                      margin: "auto",
-                    }}
-                  >
+                  <p className="text-gray-400 text-center m-auto">
                     No invites sent
                   </p>
                 )}
               </div>
             </div>
           ) : isMemberPage ? (
-            <div
-              style={{
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              <h3 style={{ marginTop: 0 }}>Invitations</h3>
+            <div className="h-full flex flex-col">
+              <h3 className="mt-0">Invitations</h3>
 
-              <div
-                style={{
-                  flex: 1,
-                  overflowY: "auto",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 12,
-                }}
-              >
+              <div className="flex-1 overflow-y-auto flex flex-col gap-3">
                 {receivedInvites.length > 0 ? (
                   receivedInvites.map((invite, idx) => (
                     <div
                       key={idx}
-                      style={{
-                        background: "#03243a",
-                        border: "1px solid #FFD700",
-                        padding: 10,
-                        borderRadius: 8,
-                        borderLeft: "4px solid #FFD700",
-                      }}
+                      className="bg-blue-950 border border-yellow-400 p-2.5 rounded-lg border-l-4 border-l-yellow-400"
                     >
-                      <p
-                        style={{ margin: 0, fontWeight: 600, color: "#FFD700" }}
-                      >
+                      <p className="m-0 font-semibold text-yellow-400">
                         {invite.team}
                       </p>
-                      <p
-                        style={{
-                          margin: "4px 0 8px 0",
-                          color: "#b0b9c1",
-                          fontSize: 12,
-                        }}
-                      >
+                      <p className="my-1 mb-2 text-blue-300 text-xs">
                         From: {invite.from}
                       </p>
-                      <div style={{ display: "flex", gap: 6 }}>
+                      <div className="flex gap-1.5">
                         <button
                           onClick={() => handleAcceptInvite(idx)}
-                          style={{
-                            flex: 1,
-                            background: "#22c55e",
-                            border: "none",
-                            padding: 6,
-                            borderRadius: 8,
-                            color: "white",
-                            fontSize: 12,
-                            fontWeight: 600,
-                            cursor: "pointer",
-                          }}
+                          className="flex-1 bg-green-500 border-none py-1.5 px-2 rounded text-white text-xs font-semibold cursor-pointer hover:bg-green-600 transition-colors"
                         >
                           Accept
                         </button>
                         <button
                           onClick={() => handleDeclineInvite(idx)}
-                          style={{
-                            flex: 1,
-                            background: "#ef4444",
-                            border: "none",
-                            padding: 6,
-                            borderRadius: 8,
-                            color: "white",
-                            fontSize: 12,
-                            fontWeight: 600,
-                            cursor: "pointer",
-                          }}
+                          className="flex-1 bg-red-500 border-none py-1.5 px-2 rounded text-white text-xs font-semibold cursor-pointer hover:bg-red-600 transition-colors"
                         >
                           Decline
                         </button>
@@ -754,13 +447,7 @@ export default function TeamsLayout({
                     </div>
                   ))
                 ) : (
-                  <p
-                    style={{
-                      color: "#999",
-                      textAlign: "center",
-                      margin: "auto",
-                    }}
-                  >
+                  <p className="text-gray-400 text-center m-auto">
                     No invitations
                   </p>
                 )}
@@ -777,69 +464,34 @@ export default function TeamsLayout({
       {/* Send Invite Dialog */}
       {isLeadPage && (
         <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
-          <DialogContent
-            style={{
-              background: "#03243a",
-              borderColor: "rgba(255, 215, 0, 0.3)",
-            }}
-          >
+          <DialogContent className="bg-blue-950 border-yellow-400/30">
             <DialogHeader>
-              <DialogTitle style={{ color: "#FFD700" }}>
+              <DialogTitle className="text-yellow-400">
                 Invite Team Member
               </DialogTitle>
             </DialogHeader>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div className="flex flex-col gap-4">
               <div>
-                <label
-                  style={{
-                    color: "#FFD700",
-                    fontSize: 14,
-                    fontWeight: 600,
-                    display: "block",
-                    marginBottom: 8,
-                  }}
-                >
+                <label className="text-yellow-400 text-sm font-semibold block mb-2">
                   Email Address
                 </label>
                 <Input
                   placeholder="member@example.com"
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
-                  style={{
-                    background: "#04243f",
-                    borderColor: "rgba(255, 215, 0, 0.3)",
-                    color: "#FFD700",
-                  }}
+                  className="bg-blue-950 border-yellow-400/30 text-yellow-400"
                 />
               </div>
-              <div style={{ display: "flex", gap: 8 }}>
+              <div className="flex gap-2">
                 <button
                   onClick={handleSendInvite}
-                  style={{
-                    flex: 1,
-                    background: "#22c55e",
-                    border: "none",
-                    padding: 10,
-                    borderRadius: 8,
-                    color: "white",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
+                  className="flex-1 bg-green-500 border-none py-2.5 px-2.5 rounded text-white font-semibold cursor-pointer hover:bg-green-600 transition-colors"
                 >
                   Send Invite
                 </button>
                 <button
                   onClick={() => setShowInviteModal(false)}
-                  style={{
-                    flex: 1,
-                    background: "#ef4444",
-                    border: "none",
-                    padding: 10,
-                    borderRadius: 8,
-                    color: "white",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
+                  className="flex-1 bg-red-500 border-none py-2.5 px-2.5 rounded text-white font-semibold cursor-pointer hover:bg-red-600 transition-colors"
                 >
                   Cancel
                 </button>

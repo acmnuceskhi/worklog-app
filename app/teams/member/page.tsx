@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import styles from "./member.module.css";
 
 interface MemberTeam {
   id: number;
@@ -36,50 +37,32 @@ export default function MemberTeamsPage() {
   const [acceptedTeams] = useState(memberTeams);
 
   return (
-    <div style={styles.container}>
+    <div className="p-5 min-h-full">
       {acceptedTeams.length > 0 ? (
-        <div style={styles.grid}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {acceptedTeams.map((t) => (
             <div
               key={t.id}
-              style={styles.card}
+              className={`${styles.card} p-4 rounded-xl cursor-pointer hover:shadow-lg transition-shadow`}
               onClick={() => router.push(`/teams/member/${t.id}`)}
             >
-              <h3 style={styles.title}>{t.name}</h3>
-              <p style={styles.muted}>
+              <h3 className={`${styles.title} m-0 mb-2 text-lg font-semibold`}>
+                {t.name}
+              </h3>
+              <p className="m-0 text-gray-300 text-sm">
                 <strong>Leader:</strong> {t.leader}
               </p>
-              <p style={styles.muted}>
+              <p className="m-0 text-gray-300 text-sm">
                 <strong>Society:</strong> {t.society}
               </p>
             </div>
           ))}
         </div>
       ) : (
-        <p style={styles.empty}>
+        <p className="text-white text-lg text-center">
           No teams joined yet. Accept an invitation to get started!
         </p>
       )}
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  container: { padding: 20, minHeight: "100%" },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px,1fr))",
-    gap: 16,
-  },
-  card: {
-    background: "#2a2a2a",
-    color: "#fff",
-    padding: 18,
-    borderRadius: 12,
-    cursor: "pointer",
-    boxShadow: "0 6px 18px rgba(0,0,0,0.4)",
-  },
-  title: { margin: 0, marginBottom: 8, color: "#FFD700" },
-  muted: { margin: 0, color: "#ddd", fontSize: 14 },
-  empty: { color: "#fff", fontSize: 18 },
-};

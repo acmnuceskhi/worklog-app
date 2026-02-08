@@ -1,0 +1,57 @@
+.statusBar {
+  position: relative;
+  height: 28px;
+  background-color: rgba(15, 23, 42, 0.5);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(71, 85, 105, 0.3);
+}
+
+.statusBarFill {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  opacity: 0.75;
+}
+
+.statusBarText {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgb(203, 213, 225);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legendColor {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.completed {
+  background-color: #22c55e;
+}
+
+.highProgress {
+  background-color: #f59e0b;
+}
+
+.mediumProgress {
+  background-color: #3b82f6;
+}
+
+.lowProgress {
+  background-color: #6b7280;
+}

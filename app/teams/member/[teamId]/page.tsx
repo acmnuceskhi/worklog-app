@@ -1,6 +1,6 @@
 "use client";
 
-import React, { use, useEffect, useMemo, useState } from "react";
+import React, { use, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -22,8 +22,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { DatePicker } from "@/components/ui/date-picker";
 import { RichTextEditor } from "@/components/worklog/rich-text-editor";
+import { DeadlineStatusBadge } from "@/components/worklog/deadline-status-badge";
+import { DeadlineCountdown } from "@/components/worklog/deadline-countdown";
+import { toast } from "sonner";
 import { worklogCreateSchema } from "@/lib/validations";
+import {
+  formatLocalDate,
+  getDeadlineStatus,
+  toUtcIso,
+} from "@/lib/deadline-utils";
 
 interface UploadedFile {
   url: string;
@@ -37,6 +52,8 @@ interface WorklogPreview {
   title: string;
   description: string;
   createdAt: string;
+  deadline?: string | null;
+  progressStatus?: string | null;
 }
 
 interface TeamDetails {
@@ -51,6 +68,16 @@ const memberTeamDetails: Record<string, TeamDetails> = {
 };
 
 const githubPattern = /^https:\/\/(www\.)?github\.com\/.+/;
+const AUTO_SAVE_DELAY_MS = 700;
+
+interface WorklogDraft {
+  title: string;
+  description: string;
+  githubLink?: string;
+  progressStatus?: "STARTED" | "HALF_DONE" | "COMPLETED";
+  deadline?: string;
+  updatedAt: number;
+}
 
 type WorklogFormValues = z.infer<typeof worklogCreateSchema>;
 
@@ -76,9 +103,19 @@ export default function ContributionFlashcardPage({
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
   const [recentWorklogs, setRecentWorklogs] = useState<WorklogPreview[]>([]);
+  const [canSetDeadline, setCanSetDeadline] = useState(false);
+  const [draftNotice, setDraftNotice] = useState<string | null>(null);
+  const [editingWorklog, setEditingWorklog] = useState<WorklogPreview | null>(
+    null,
+  );
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const skipAutosaveRef = useRef(true);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const deadlineNotifiedRef = useRef<Set<string>>(new Set());
 
   const {
     register,
@@ -95,6 +132,7 @@ export default function ContributionFlashcardPage({
       title: "",
       description: "",
       githubLink: "",
+      deadline: undefined,
       progressStatus: "STARTED",
       teamId,
     },
@@ -107,6 +145,167 @@ export default function ContributionFlashcardPage({
   useEffect(() => {
     setValue("description", editorValue, { shouldValidate: false });
   }, [editorValue, setValue]);
+
+  useEffect(() => {
+    let isActive = true;
+    const loadPermissions = async () => {
+      try {
+        const [ownedTeamsRes, ownedOrgsRes] = await Promise.all([
+          fetch("/api/teams/owned"),
+          fetch("/api/organizations"),
+        ]);
+
+        const ownedTeamsPayload = ownedTeamsRes.ok
+          ? await ownedTeamsRes.json()
+          : { data: [] };
+        const ownedOrgsPayload = ownedOrgsRes.ok
+          ? await ownedOrgsRes.json()
+          : { data: [] };
+
+        const ownsTeam = (ownedTeamsPayload.data || []).some(
+          (ownedTeam: { id: string }) => ownedTeam.id === teamId,
+        );
+
+        const ownsOrgTeam = (ownedOrgsPayload.data || []).some(
+          (org: { teams?: Array<{ id: string }> }) =>
+            (org.teams || []).some((orgTeam) => orgTeam.id === teamId),
+        );
+
+        if (isActive) {
+          setCanSetDeadline(Boolean(ownsTeam || ownsOrgTeam));
+        }
+      } catch {
+        if (isActive) {
+          setCanSetDeadline(false);
+        }
+      }
+    };
+
+    loadPermissions();
+    return () => {
+      isActive = false;
+    };
+  }, [teamId]);
+
+  useEffect(() => {
+    let isActive = true;
+    const loadWorklogs = async () => {
+      try {
+        const response = await fetch("/api/worklogs");
+        if (!response.ok) {
+          return;
+        }
+        const payload = await response.json();
+        const worklogs = (payload.data || []) as Array<{
+          id: string;
+          title: string;
+          description: string;
+          createdAt: string;
+          deadline?: string | null;
+          progressStatus?: string | null;
+        }>;
+
+        if (isActive) {
+          setRecentWorklogs(
+            worklogs.slice(0, 5).map((worklog) => ({
+              id: worklog.id,
+              title: worklog.title,
+              description: stripHtml(worklog.description),
+              createdAt: new Date(worklog.createdAt).toLocaleString(),
+              deadline: worklog.deadline ?? null,
+              progressStatus: worklog.progressStatus ?? null,
+            })),
+          );
+        }
+      } catch {
+        if (isActive) {
+          setRecentWorklogs([]);
+        }
+      }
+    };
+
+    loadWorklogs();
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const key = `worklog-draft-${teamId}`;
+    const saved = window.localStorage.getItem(key);
+    if (!saved) {
+      skipAutosaveRef.current = false;
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(saved) as WorklogDraft;
+      if (parsed?.title) {
+        setValue("title", parsed.title, { shouldValidate: false });
+      }
+      if (parsed?.description) {
+        setEditorValue(parsed.description);
+      }
+      if (parsed?.githubLink !== undefined) {
+        setValue("githubLink", parsed.githubLink, { shouldValidate: false });
+      }
+      if (parsed?.progressStatus) {
+        setValue("progressStatus", parsed.progressStatus, {
+          shouldValidate: false,
+        });
+      }
+      if (parsed?.deadline) {
+        setValue("deadline", parsed.deadline, { shouldValidate: false });
+      }
+      setDraftNotice("Draft restored from autosave.");
+    } catch {
+      window.localStorage.removeItem(key);
+    } finally {
+      skipAutosaveRef.current = false;
+    }
+  }, [setValue, teamId]);
+
+  useEffect(() => {
+    const subscription = watch((values) => {
+      if (skipAutosaveRef.current) {
+        return;
+      }
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+      }
+      autosaveTimerRef.current = setTimeout(() => {
+        if (typeof window === "undefined") {
+          return;
+        }
+
+        const payload: WorklogDraft = {
+          title: values.title || "",
+          description: editorValue,
+          githubLink: values.githubLink || "",
+          progressStatus: values.progressStatus || "STARTED",
+          deadline: values.deadline ? String(values.deadline) : undefined,
+          updatedAt: Date.now(),
+        };
+
+        window.localStorage.setItem(
+          `worklog-draft-${teamId}`,
+          JSON.stringify(payload),
+        );
+        setDraftNotice("Draft saved.");
+      }, AUTO_SAVE_DELAY_MS);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+      }
+    };
+  }, [editorValue, teamId, watch]);
 
   const githubLink = watch("githubLink");
   useEffect(() => {
@@ -142,12 +341,42 @@ export default function ContributionFlashcardPage({
     };
   }, [previews]);
 
+  const appendFiles = (files: File[]) => {
+    const filtered = files.filter(
+      (file) =>
+        file.type.startsWith("image/") || file.type === "application/pdf",
+    );
+    if (filtered.length === 0) {
+      return;
+    }
+    setPendingFiles((prev) => [...prev, ...filtered]);
+    setUploadedFiles([]);
+  };
+
   const handleFilesSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files) {
       return;
     }
-    setPendingFiles(Array.from(event.target.files));
-    setUploadedFiles([]);
+    appendFiles(Array.from(event.target.files));
+    event.target.value = "";
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragging(false);
+    if (!event.dataTransfer.files?.length) {
+      return;
+    }
+    appendFiles(Array.from(event.dataTransfer.files));
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
   };
 
   const uploadFiles = async () => {
@@ -179,6 +408,7 @@ export default function ContributionFlashcardPage({
   const onSubmit = async (values: WorklogFormValues) => {
     setSubmitError(null);
     setSubmitSuccess(null);
+    setDraftNotice(null);
 
     const cleaned = stripHtml(editorValue);
     if (!cleaned) {
@@ -195,6 +425,7 @@ export default function ContributionFlashcardPage({
         ...values,
         githubLink: values.githubLink || undefined,
         description: editorValue,
+        deadline: canSetDeadline ? values.deadline : undefined,
         attachments,
       };
 
@@ -215,6 +446,8 @@ export default function ContributionFlashcardPage({
         title: string;
         description: string;
         createdAt: string;
+        deadline?: string | null;
+        progressStatus?: string | null;
       };
 
       setRecentWorklogs((prev) => [
@@ -223,6 +456,8 @@ export default function ContributionFlashcardPage({
           title: worklog.title,
           description: stripHtml(worklog.description),
           createdAt: new Date(worklog.createdAt).toLocaleString(),
+          deadline: worklog.deadline ?? null,
+          progressStatus: worklog.progressStatus ?? null,
         },
         ...prev,
       ]);
@@ -235,15 +470,96 @@ export default function ContributionFlashcardPage({
         title: "",
         description: "",
         githubLink: "",
+        deadline: undefined,
         progressStatus: "STARTED",
         teamId,
       });
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem(`worklog-draft-${teamId}`);
+      }
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to create worklog";
       setSubmitError(message);
     }
   };
+
+  const handleDeadlineUpdate = async () => {
+    if (!editingWorklog) {
+      return;
+    }
+    try {
+      const response = await fetch(`/api/worklogs/${editingWorklog.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          deadline: editingWorklog.deadline || null,
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json();
+        throw new Error(payload.error || "Failed to update deadline");
+      }
+
+      const payload = await response.json();
+      const updated = payload.data as {
+        id: string;
+        deadline?: string | null;
+      };
+
+      setRecentWorklogs((prev) =>
+        prev.map((worklog) =>
+          worklog.id === updated.id
+            ? { ...worklog, deadline: updated.deadline ?? null }
+            : worklog,
+        ),
+      );
+      toast.success(
+        updated.deadline
+          ? `New deadline ${formatLocalDate(new Date(updated.deadline))}`
+          : "Deadline cleared",
+        {
+          description: "Deadline updated",
+        },
+      );
+      setEditingWorklog(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Please try again", {
+        description: "Deadline update failed",
+      });
+    }
+  };
+
+  useEffect(() => {
+    recentWorklogs.forEach((worklog) => {
+      if (!worklog.deadline || deadlineNotifiedRef.current.has(worklog.id)) {
+        return;
+      }
+      const info = getDeadlineStatus({
+        deadline: worklog.deadline,
+        status: worklog.progressStatus,
+      });
+      if (info.status === "overdue" || info.status === "due_soon") {
+        deadlineNotifiedRef.current.add(worklog.id);
+        if (info.status === "overdue") {
+          toast.error(
+            `Deadline ${formatLocalDate(new Date(worklog.deadline))}`,
+            {
+              description: `${worklog.title} is ${info.label.toLowerCase()}`,
+            },
+          );
+        } else {
+          toast.warning(
+            `Deadline ${formatLocalDate(new Date(worklog.deadline))}`,
+            {
+              description: `${worklog.title} is ${info.label.toLowerCase()}`,
+            },
+          );
+        }
+      }
+    });
+  }, [recentWorklogs]);
 
   return (
     <div className="flex flex-col gap-6 max-w-5xl mx-auto p-3">
@@ -339,18 +655,77 @@ export default function ContributionFlashcardPage({
                 </Select>
               </div>
 
+              {canSetDeadline && (
+                <div className="flex flex-col gap-2">
+                  <Label className="text-amber-500">
+                    Deadline (leaders only)
+                  </Label>
+                  <DatePicker
+                    value={
+                      watch("deadline")
+                        ? new Date(String(watch("deadline")))
+                        : undefined
+                    }
+                    onChange={(date) =>
+                      setValue("deadline", date ? toUtcIso(date) : undefined, {
+                        shouldValidate: true,
+                      })
+                    }
+                    placeholder="Select deadline"
+                  />
+                  {watch("deadline") && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <DeadlineStatusBadge
+                        deadline={String(watch("deadline"))}
+                      />
+                      <DeadlineCountdown deadline={String(watch("deadline"))} />
+                    </div>
+                  )}
+                  {errors.deadline && (
+                    <p className="text-xs text-red-400">
+                      {errors.deadline.message}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="flex flex-col gap-2">
                 <Label htmlFor="files" className="text-amber-500">
                   Upload Evidence
                 </Label>
-                <Input
-                  id="files"
-                  type="file"
-                  multiple
-                  accept="image/*,application/pdf"
-                  onChange={handleFilesSelected}
-                  className="bg-blue-900 border-amber-500/30 text-amber-100 file:text-amber-500 file:bg-blue-900 file:border file:border-amber-500/40"
-                />
+                <div
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  className={`rounded-md border border-dashed px-4 py-5 text-sm transition-colors ${
+                    isDragging
+                      ? "border-amber-400 bg-amber-500/10 text-amber-200"
+                      : "border-amber-500/30 bg-blue-950/60 text-amber-200/70"
+                  }`}
+                >
+                  <p className="text-center">
+                    Drag and drop files here, or{" "}
+                    <button
+                      type="button"
+                      className="ml-1 text-amber-400 underline"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      browse
+                    </button>
+                  </p>
+                  <p className="text-center text-xs text-amber-200/60 mt-1">
+                    Images and PDFs only. Drafts do not include attachments.
+                  </p>
+                  <Input
+                    ref={fileInputRef}
+                    id="files"
+                    type="file"
+                    multiple
+                    accept="image/*,application/pdf"
+                    onChange={handleFilesSelected}
+                    className="hidden"
+                  />
+                </div>
                 {pendingFiles.length > 0 && (
                   <div className="flex flex-col gap-2">
                     {previews.map((preview) => (
@@ -398,6 +773,9 @@ export default function ContributionFlashcardPage({
               {submitSuccess && (
                 <p className="text-sm text-emerald-400">{submitSuccess}</p>
               )}
+              {draftNotice && (
+                <p className="text-xs text-amber-200/70">{draftNotice}</p>
+              )}
 
               <Button
                 type="submit"
@@ -424,15 +802,45 @@ export default function ContributionFlashcardPage({
                     key={worklog.id}
                     className="rounded-lg border border-amber-500/20 bg-blue-950 p-3"
                   >
-                    <h4 className="text-amber-500 text-sm font-semibold">
-                      {worklog.title}
-                    </h4>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {worklog.createdAt}
-                    </p>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h4 className="text-amber-500 text-sm font-semibold">
+                          {worklog.title}
+                        </h4>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {worklog.createdAt}
+                        </p>
+                      </div>
+                      {worklog.deadline && (
+                        <div className="flex flex-col items-end gap-1">
+                          <DeadlineStatusBadge
+                            deadline={worklog.deadline}
+                            status={worklog.progressStatus}
+                          />
+                          <DeadlineCountdown deadline={worklog.deadline} />
+                        </div>
+                      )}
+                    </div>
                     <p className="text-sm text-gray-200 mt-2">
                       {worklog.description}
                     </p>
+                    {canSetDeadline && (
+                      <div className="mt-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="border-amber-500/50 text-amber-200 hover:bg-amber-500/10"
+                          onClick={() =>
+                            setEditingWorklog({
+                              ...worklog,
+                              deadline: worklog.deadline ?? null,
+                            })
+                          }
+                        >
+                          Edit deadline
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -444,6 +852,70 @@ export default function ContributionFlashcardPage({
           </CardContent>
         </Card>
       </div>
+
+      <Dialog
+        open={Boolean(editingWorklog)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingWorklog(null);
+          }
+        }}
+      >
+        <DialogContent className="bg-blue-950 border-amber-500/30">
+          <DialogHeader>
+            <DialogTitle className="text-amber-500">Edit deadline</DialogTitle>
+          </DialogHeader>
+          {editingWorklog && (
+            <div className="space-y-4">
+              <div>
+                <Label className="text-amber-500">Worklog</Label>
+                <p className="text-sm text-amber-100">{editingWorklog.title}</p>
+              </div>
+              <div>
+                <Label className="text-amber-500">Deadline</Label>
+                <DatePicker
+                  value={
+                    editingWorklog.deadline
+                      ? new Date(editingWorklog.deadline)
+                      : undefined
+                  }
+                  onChange={(date) =>
+                    setEditingWorklog((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            deadline: date ? toUtcIso(date) : null,
+                          }
+                        : prev,
+                    )
+                  }
+                />
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <DeadlineStatusBadge deadline={editingWorklog.deadline} />
+                  <DeadlineCountdown deadline={editingWorklog.deadline} />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-amber-500/50 text-amber-200 hover:bg-amber-500/10"
+                  onClick={() => setEditingWorklog(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  className="bg-amber-500 hover:bg-amber-600 text-black font-semibold"
+                  onClick={handleDeadlineUpdate}
+                >
+                  Save deadline
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

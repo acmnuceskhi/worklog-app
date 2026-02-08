@@ -1,0 +1,14 @@
+/* ==========================================================================
+   Teams Member Page Component Styles
+   Only component-specific styles that can't be achieved with Tailwind utilities
+   ========================================================================== */
+
+.card {
+  background: #2a2a2a;
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+.title {
+  color: #ffd700;
+}
