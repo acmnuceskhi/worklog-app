@@ -563,13 +563,29 @@ export default function ContributionFlashcardPage({
 
   return (
     <div className="flex flex-col gap-6 max-w-5xl mx-auto p-3">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-white">{team.name}</h1>
+          <p className="text-muted">Led by {team.leader}</p>
+        </div>
+        <div className="flex flex-wrap gap-2 text-xs">
+          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
+            {recentWorklogs.length} recent worklogs
+          </span>
+          {canSetDeadline && (
+            <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-amber-200">
+              Deadline control enabled
+            </span>
+          )}
+        </div>
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-gradient-to-br from-blue-900 to-blue-950 border-amber-500/30 flex flex-col">
+        <Card className="border border-white/10 bg-white/5 backdrop-blur-md shadow-lg shadow-black/20 flex flex-col">
           <CardHeader className="pb-4">
-            <CardTitle className="text-center text-amber-500 text-xl">
+            <CardTitle className="text-center text-white text-xl">
               Create Worklog
             </CardTitle>
-            <CardDescription className="text-center text-amber-500 mt-2">
+            <CardDescription className="text-center text-muted mt-2">
               {team.name} • Led by: {team.leader}
             </CardDescription>
           </CardHeader>
@@ -581,14 +597,14 @@ export default function ContributionFlashcardPage({
               <input type="hidden" {...register("teamId")} />
               <input type="hidden" {...register("description")} />
               <div className="flex flex-col gap-2">
-                <Label htmlFor="title" className="text-amber-500">
+                <Label htmlFor="title" className="text-white/80">
                   Title
                 </Label>
                 <Input
                   id="title"
                   {...register("title")}
                   placeholder="Short summary of your work"
-                  className="bg-blue-900 border-amber-500/30 text-amber-100 placeholder:text-amber-200/50"
+                  className="bg-white/5 border-white/20 text-white placeholder:text-white/50"
                 />
                 {errors.title && (
                   <p className="text-xs text-red-400">{errors.title.message}</p>
@@ -596,7 +612,7 @@ export default function ContributionFlashcardPage({
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label className="text-amber-500">Description</Label>
+                <Label className="text-white/80">Description</Label>
                 <RichTextEditor
                   value={editorValue}
                   onChange={setEditorValue}
@@ -611,14 +627,14 @@ export default function ContributionFlashcardPage({
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="githubLink" className="text-amber-500">
+                <Label htmlFor="githubLink" className="text-white/80">
                   GitHub Link (optional)
                 </Label>
                 <Input
                   id="githubLink"
                   {...register("githubLink")}
                   placeholder="https://github.com/owner/repo/pull/123"
-                  className="bg-blue-900 border-amber-500/30 text-amber-100 placeholder:text-amber-200/50"
+                  className="bg-white/5 border-white/20 text-white placeholder:text-white/50"
                 />
                 {errors.githubLink && (
                   <p className="text-xs text-red-400">
@@ -628,7 +644,7 @@ export default function ContributionFlashcardPage({
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label className="text-amber-500">Progress Status</Label>
+                <Label className="text-white/80">Progress Status</Label>
                 <Select
                   value={watch("progressStatus") || "STARTED"}
                   onValueChange={(value) =>
@@ -638,17 +654,17 @@ export default function ContributionFlashcardPage({
                     )
                   }
                 >
-                  <SelectTrigger className="bg-blue-900 border-amber-500/30 text-amber-100">
+                  <SelectTrigger className="bg-white/5 border-white/20 text-white">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
-                  <SelectContent className="bg-blue-950 border-amber-500/30">
-                    <SelectItem value="STARTED" className="text-amber-500">
+                  <SelectContent className="bg-[var(--panel-strong)] border-white/10">
+                    <SelectItem value="STARTED" className="text-white/80">
                       Started
                     </SelectItem>
-                    <SelectItem value="HALF_DONE" className="text-amber-500">
+                    <SelectItem value="HALF_DONE" className="text-white/80">
                       Half done
                     </SelectItem>
-                    <SelectItem value="COMPLETED" className="text-amber-500">
+                    <SelectItem value="COMPLETED" className="text-white/80">
                       Completed
                     </SelectItem>
                   </SelectContent>
@@ -657,7 +673,7 @@ export default function ContributionFlashcardPage({
 
               {canSetDeadline && (
                 <div className="flex flex-col gap-2">
-                  <Label className="text-amber-500">
+                  <Label className="text-white/80">
                     Deadline (leaders only)
                   </Label>
                   <DatePicker
@@ -690,7 +706,7 @@ export default function ContributionFlashcardPage({
               )}
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="files" className="text-amber-500">
+                <Label htmlFor="files" className="text-white/80">
                   Upload Evidence
                 </Label>
                 <div
@@ -699,21 +715,21 @@ export default function ContributionFlashcardPage({
                   onDragLeave={handleDragLeave}
                   className={`rounded-md border border-dashed px-4 py-5 text-sm transition-colors ${
                     isDragging
-                      ? "border-amber-400 bg-amber-500/10 text-amber-200"
-                      : "border-amber-500/30 bg-blue-950/60 text-amber-200/70"
+                      ? "border-amber-400/60 bg-amber-500/10 text-amber-200"
+                      : "border-white/20 bg-white/5 text-white/70"
                   }`}
                 >
                   <p className="text-center">
                     Drag and drop files here, or{" "}
                     <button
                       type="button"
-                      className="ml-1 text-amber-400 underline"
+                      className="ml-1 text-amber-200 underline"
                       onClick={() => fileInputRef.current?.click()}
                     >
                       browse
                     </button>
                   </p>
-                  <p className="text-center text-xs text-amber-200/60 mt-1">
+                  <p className="text-center text-xs text-white/60 mt-1">
                     Images and PDFs only. Drafts do not include attachments.
                   </p>
                   <Input
@@ -731,7 +747,7 @@ export default function ContributionFlashcardPage({
                     {previews.map((preview) => (
                       <div
                         key={preview.file.name}
-                        className="flex items-center justify-between rounded-md border border-amber-500/20 bg-blue-950 px-3 py-2"
+                        className="flex items-center justify-between rounded-md border border-white/10 bg-white/5 px-3 py-2"
                       >
                         <div className="flex items-center gap-3">
                           {preview.file.type.startsWith("image/") ? (
@@ -743,15 +759,15 @@ export default function ContributionFlashcardPage({
                               className="h-10 w-10 rounded object-cover"
                             />
                           ) : (
-                            <div className="h-10 w-10 rounded bg-amber-500/10 flex items-center justify-center text-xs text-amber-400">
+                            <div className="h-10 w-10 rounded bg-white/10 flex items-center justify-center text-xs text-white/70">
                               File
                             </div>
                           )}
                           <div>
-                            <p className="text-sm text-amber-100">
+                            <p className="text-sm text-white">
                               {preview.file.name}
                             </p>
-                            <p className="text-xs text-amber-200/60">
+                            <p className="text-xs text-white/60">
                               {(preview.file.size / 1024).toFixed(1)} KB
                             </p>
                           </div>
@@ -761,7 +777,7 @@ export default function ContributionFlashcardPage({
                   </div>
                 )}
                 {uploadedFiles.length > 0 && (
-                  <p className="text-xs text-amber-200/70">
+                  <p className="text-xs text-white/70">
                     {uploadedFiles.length} file(s) ready to attach.
                   </p>
                 )}
@@ -774,13 +790,13 @@ export default function ContributionFlashcardPage({
                 <p className="text-sm text-emerald-400">{submitSuccess}</p>
               )}
               {draftNotice && (
-                <p className="text-xs text-amber-200/70">{draftNotice}</p>
+                <p className="text-xs text-white/60">{draftNotice}</p>
               )}
 
               <Button
                 type="submit"
                 disabled={isSubmitting || isUploading}
-                className="w-full bg-amber-500 hover:bg-amber-600 text-black font-semibold"
+                className="w-full bg-amber-400 hover:bg-amber-500 text-black font-semibold"
               >
                 {isSubmitting || isUploading
                   ? "Submitting..."
@@ -790,9 +806,9 @@ export default function ContributionFlashcardPage({
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-blue-900 to-blue-950 border-amber-500/30">
+        <Card className="border border-white/10 bg-white/5 backdrop-blur-md shadow-lg shadow-black/20">
           <CardHeader>
-            <CardTitle className="text-amber-500">Recent Worklogs</CardTitle>
+            <CardTitle className="text-white">Recent Worklogs</CardTitle>
           </CardHeader>
           <CardContent>
             {recentWorklogs.length > 0 ? (
@@ -800,14 +816,14 @@ export default function ContributionFlashcardPage({
                 {recentWorklogs.map((worklog) => (
                   <div
                     key={worklog.id}
-                    className="rounded-lg border border-amber-500/20 bg-blue-950 p-3"
+                    className="rounded-lg border border-white/10 bg-white/5 p-3"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h4 className="text-amber-500 text-sm font-semibold">
+                        <h4 className="text-white text-sm font-semibold">
                           {worklog.title}
                         </h4>
-                        <p className="text-xs text-gray-400 mt-1">
+                        <p className="text-xs text-white/60 mt-1">
                           {worklog.createdAt}
                         </p>
                       </div>
@@ -821,7 +837,7 @@ export default function ContributionFlashcardPage({
                         </div>
                       )}
                     </div>
-                    <p className="text-sm text-gray-200 mt-2">
+                    <p className="text-sm text-muted mt-2">
                       {worklog.description}
                     </p>
                     {canSetDeadline && (
@@ -829,7 +845,7 @@ export default function ContributionFlashcardPage({
                         <Button
                           type="button"
                           variant="outline"
-                          className="border-amber-500/50 text-amber-200 hover:bg-amber-500/10"
+                          className="border-white/20 text-white/80 hover:bg-white/10"
                           onClick={() =>
                             setEditingWorklog({
                               ...worklog,
@@ -845,7 +861,7 @@ export default function ContributionFlashcardPage({
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-muted">
                 Submit your first worklog to see it here.
               </p>
             )}
@@ -861,18 +877,18 @@ export default function ContributionFlashcardPage({
           }
         }}
       >
-        <DialogContent className="bg-blue-950 border-amber-500/30">
+        <DialogContent className="bg-[var(--panel-strong)] border-white/10">
           <DialogHeader>
-            <DialogTitle className="text-amber-500">Edit deadline</DialogTitle>
+            <DialogTitle className="text-white">Edit deadline</DialogTitle>
           </DialogHeader>
           {editingWorklog && (
             <div className="space-y-4">
               <div>
-                <Label className="text-amber-500">Worklog</Label>
-                <p className="text-sm text-amber-100">{editingWorklog.title}</p>
+                <Label className="text-white/80">Worklog</Label>
+                <p className="text-sm text-white/70">{editingWorklog.title}</p>
               </div>
               <div>
-                <Label className="text-amber-500">Deadline</Label>
+                <Label className="text-white/80">Deadline</Label>
                 <DatePicker
                   value={
                     editingWorklog.deadline
@@ -899,14 +915,14 @@ export default function ContributionFlashcardPage({
                 <Button
                   type="button"
                   variant="outline"
-                  className="border-amber-500/50 text-amber-200 hover:bg-amber-500/10"
+                  className="border-white/20 text-white/80 hover:bg-white/10"
                   onClick={() => setEditingWorklog(null)}
                 >
                   Cancel
                 </Button>
                 <Button
                   type="button"
-                  className="bg-amber-500 hover:bg-amber-600 text-black font-semibold"
+                  className="bg-amber-400 hover:bg-amber-500 text-black font-semibold"
                   onClick={handleDeadlineUpdate}
                 >
                   Save deadline

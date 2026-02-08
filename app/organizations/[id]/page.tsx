@@ -339,7 +339,7 @@ export default function OrganizationDashboardPage({
       REVIEWED: "bg-purple-500/20 text-purple-400",
       GRADED: "bg-cyan-500/20 text-cyan-400",
     };
-    return colors[status] || "bg-slate-500/20 text-slate-400";
+    return colors[status] || "bg-white/10 text-white/70";
   };
 
   const formatDate = (dateString: string) => {
@@ -436,7 +436,7 @@ export default function OrganizationDashboardPage({
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="text-center">
           <FaSpinner className="h-12 w-12 text-blue-500 animate-spin mx-auto mb-4" />
-          <p className="text-slate-400">Loading organization...</p>
+          <p className="text-muted">Loading organization...</p>
         </div>
       </div>
     );
@@ -445,7 +445,7 @@ export default function OrganizationDashboardPage({
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
-        <Card className="w-full max-w-md border-red-500/50 bg-slate-800/80">
+        <Card className="w-full max-w-md border-red-500/40 bg-white/5 backdrop-blur-md">
           <CardContent className="p-6 text-center">
             <div className="text-red-400 mb-4">
               <FaBuilding className="h-12 w-12 mx-auto mb-2 opacity-50" />
@@ -455,7 +455,7 @@ export default function OrganizationDashboardPage({
               <Button
                 variant="outline"
                 onClick={() => router.push("/teams/organisations")}
-                className="border-slate-600"
+                className="border-white/20 text-white/70 hover:bg-white/10 hover:text-white"
               >
                 <FaArrowLeft className="mr-2" /> Back
               </Button>
@@ -472,27 +472,27 @@ export default function OrganizationDashboardPage({
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Top Navigation */}
-      <nav className="flex items-center justify-between p-4 bg-slate-800/50 backdrop-blur-sm border-b border-slate-700">
+      <nav className="flex items-center justify-between p-4 bg-white/5 backdrop-blur-md border-b border-white/10">
         <div className="flex items-center gap-4">
           <h1 className="text-xl font-bold text-white">Worklog</h1>
-          <div className="flex items-center gap-2 text-sm text-slate-300">
+          <div className="flex items-center gap-2 text-sm text-white/70">
             <button
               onClick={() => router.push("/teams/member")}
-              className="flex items-center gap-1 px-3 py-1 rounded hover:bg-slate-700 transition-colors"
+              className="flex items-center gap-1 px-3 py-1 rounded hover:bg-white/10 transition-colors"
             >
               <FaUsers className="h-4 w-4" />
               Member Teams
             </button>
             <button
               onClick={() => router.push("/teams/lead")}
-              className="flex items-center gap-1 px-3 py-1 rounded hover:bg-slate-700 transition-colors"
+              className="flex items-center gap-1 px-3 py-1 rounded hover:bg-white/10 transition-colors"
             >
               <FaUserTie className="h-4 w-4" />
               Lead Teams
             </button>
             <button
               onClick={() => router.push("/teams/organisations")}
-              className="flex items-center gap-1 px-3 py-1 rounded bg-slate-700 text-white"
+              className="flex items-center gap-1 px-3 py-1 rounded bg-white/10 text-white"
             >
               <FaBuilding className="h-4 w-4" />
               My Organisations
@@ -517,7 +517,7 @@ export default function OrganizationDashboardPage({
                 variant="ghost"
                 size="icon"
                 onClick={() => router.push("/teams/organisations")}
-                className="text-slate-400 hover:text-white"
+                className="text-muted hover:text-white"
                 aria-label="Back to organizations"
               >
                 <FaArrowLeft className="h-5 w-5" />
@@ -530,9 +530,7 @@ export default function OrganizationDashboardPage({
                   {organization.name}
                 </h1>
                 {organization.description && (
-                  <p className="text-slate-400 mt-1">
-                    {organization.description}
-                  </p>
+                  <p className="text-muted mt-1">{organization.description}</p>
                 )}
               </div>
             </div>
@@ -546,7 +544,7 @@ export default function OrganizationDashboardPage({
               </Button>
               <Button
                 variant="outline"
-                className="border-slate-600 text-slate-300"
+                className="border-white/20 text-white/70 hover:text-white"
               >
                 <FaCog className="mr-2" /> Settings
               </Button>
@@ -555,51 +553,51 @@ export default function OrganizationDashboardPage({
 
           {/* Stats Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card className="border-slate-700 bg-slate-800/60">
+            <Card className="border-white/10 bg-white/5">
               <CardContent className="p-4 text-center">
                 <FaUsers className="h-6 w-6 text-blue-400 mx-auto mb-2" />
                 <p className="text-2xl font-bold text-white">
                   {organization.stats.totalTeams}
                 </p>
-                <p className="text-sm text-slate-400">Teams</p>
+                <p className="text-sm text-muted">Teams</p>
               </CardContent>
             </Card>
-            <Card className="border-slate-700 bg-slate-800/60">
+            <Card className="border-white/10 bg-white/5">
               <CardContent className="p-4 text-center">
                 <FaUsers className="h-6 w-6 text-green-400 mx-auto mb-2" />
                 <p className="text-2xl font-bold text-white">
                   {organization.stats.totalMembers}
                 </p>
-                <p className="text-sm text-slate-400">Members</p>
+                <p className="text-sm text-muted">Members</p>
               </CardContent>
             </Card>
-            <Card className="border-slate-700 bg-slate-800/60">
+            <Card className="border-white/10 bg-white/5">
               <CardContent className="p-4 text-center">
                 <FaClipboardList className="h-6 w-6 text-purple-400 mx-auto mb-2" />
                 <p className="text-2xl font-bold text-white">
                   {organization.stats.totalWorklogs}
                 </p>
-                <p className="text-sm text-slate-400">Worklogs</p>
+                <p className="text-sm text-muted">Worklogs</p>
               </CardContent>
             </Card>
-            <Card className="border-slate-700 bg-slate-800/60">
+            <Card className="border-white/10 bg-white/5">
               <CardContent className="p-4 text-center">
                 <FaCoins className="h-6 w-6 text-yellow-400 mx-auto mb-2" />
                 <p className="text-2xl font-bold text-white">
                   {organization.credits}
                 </p>
-                <p className="text-sm text-slate-400">Credits</p>
+                <p className="text-sm text-muted">Credits</p>
               </CardContent>
             </Card>
           </div>
 
           {/* Teams Grid */}
-          <Card className="border-slate-700 bg-slate-800/60">
+          <Card className="border-white/10 bg-white/5">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
                 <FaUsers className="text-blue-400" /> Teams
               </CardTitle>
-              <CardDescription className="text-slate-400">
+              <CardDescription className="text-muted">
                 Manage teams within this organization
               </CardDescription>
             </CardHeader>
@@ -613,8 +611,8 @@ export default function OrganizationDashboardPage({
               </div>
               {filteredTeams.length === 0 ? (
                 <div className="text-center py-8">
-                  <FaUsers className="h-12 w-12 text-slate-600 mx-auto mb-3" />
-                  <p className="text-slate-400 mb-4">
+                  <FaUsers className="h-12 w-12 text-white/40 mx-auto mb-3" />
+                  <p className="text-muted mb-4">
                     No teams match these filters
                   </p>
                   <Button onClick={() => setShowCreateTeam(true)}>
@@ -629,13 +627,13 @@ export default function OrganizationDashboardPage({
                       href={`/teams/lead/${team.id}`}
                       className="block group"
                     >
-                      <Card className="border-slate-600 bg-slate-700/50 hover:bg-slate-700/80 transition-all cursor-pointer group-focus:ring-2 group-focus:ring-blue-500">
+                      <Card className="border-white/10 bg-white/5 hover:bg-white/10 transition-all cursor-pointer group-focus:ring-2 group-focus:ring-blue-500/40">
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between mb-3">
                             <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/20">
                               <FaUsers className="h-5 w-5 text-blue-400" />
                             </div>
-                            <span className="text-xs text-slate-500 bg-slate-600/50 px-2 py-1 rounded">
+                            <span className="text-xs text-white/60 bg-white/10 px-2 py-1 rounded">
                               {team._count.members} members
                             </span>
                           </div>
@@ -643,11 +641,11 @@ export default function OrganizationDashboardPage({
                             {team.name}
                           </h3>
                           {team.description && (
-                            <p className="text-sm text-slate-400 line-clamp-2 mb-3">
+                            <p className="text-sm text-muted line-clamp-2 mb-3">
                               {team.description}
                             </p>
                           )}
-                          <div className="flex items-center justify-between text-xs text-slate-500">
+                          <div className="flex items-center justify-between text-xs text-white/60">
                             <span>{team._count.worklogs} worklogs</span>
                             <span>{team.credits} credits</span>
                           </div>
@@ -661,12 +659,12 @@ export default function OrganizationDashboardPage({
           </Card>
 
           {/* Recent Worklogs */}
-          <Card className="border-slate-700 bg-slate-800/60">
+          <Card className="border-white/10 bg-white/5">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
                 <FaClipboardList className="text-purple-400" /> Recent Worklogs
               </CardTitle>
-              <CardDescription className="text-slate-400">
+              <CardDescription className="text-muted">
                 Filter and review worklogs across teams
               </CardDescription>
             </CardHeader>
@@ -684,7 +682,7 @@ export default function OrganizationDashboardPage({
               </div>
 
               {worklogsLoading ? (
-                <div className="text-center py-8 text-slate-400">
+                <div className="text-center py-8 text-muted">
                   Loading worklogs...
                 </div>
               ) : worklogsError ? (
@@ -693,15 +691,15 @@ export default function OrganizationDashboardPage({
                 </div>
               ) : worklogs.length === 0 ? (
                 <div className="text-center py-8">
-                  <FaClipboardList className="h-12 w-12 text-slate-600 mx-auto mb-3" />
-                  <p className="text-slate-400">No worklogs match filters</p>
+                  <FaClipboardList className="h-12 w-12 text-white/40 mx-auto mb-3" />
+                  <p className="text-muted">No worklogs match filters</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {worklogs.map((worklog) => (
                     <div
                       key={worklog.id}
-                      className="flex items-center gap-4 p-3 rounded-lg bg-slate-700/30 hover:bg-slate-700/50 transition-colors"
+                      className="flex items-center gap-4 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
@@ -716,7 +714,7 @@ export default function OrganizationDashboardPage({
                             {worklog.progressStatus.replace("_", " ")}
                           </span>
                         </div>
-                        <div className="flex items-center gap-3 text-sm text-slate-400">
+                        <div className="flex items-center gap-3 text-sm text-muted">
                           <span>{worklog.user.name || "Unknown"}</span>
                           <span>•</span>
                           <span>{worklog.team.name}</span>
@@ -763,7 +761,7 @@ export default function OrganizationDashboardPage({
                       )}
                     </div>
                   ))}
-                  <div className="flex items-center justify-between pt-2 text-xs text-slate-400">
+                  <div className="flex items-center justify-between pt-2 text-xs text-muted">
                     <span>
                       Page {worklogPage} of {totalWorklogPages} • {worklogTotal}{" "}
                       total
@@ -772,7 +770,7 @@ export default function OrganizationDashboardPage({
                       <Button
                         size="sm"
                         variant="outline"
-                        className="border-slate-600"
+                        className="border-white/20 text-white/70 hover:bg-white/10 hover:text-white"
                         onClick={() =>
                           setWorklogPage((prev) => Math.max(1, prev - 1))
                         }
@@ -783,7 +781,7 @@ export default function OrganizationDashboardPage({
                       <Button
                         size="sm"
                         variant="outline"
-                        className="border-slate-600"
+                        className="border-white/20 text-white/70 hover:bg-white/10 hover:text-white"
                         onClick={() =>
                           setWorklogPage((prev) =>
                             Math.min(totalWorklogPages, prev + 1),
@@ -801,13 +799,13 @@ export default function OrganizationDashboardPage({
           </Card>
 
           {/* Organization Info */}
-          <Card className="border-slate-700 bg-slate-800/60">
+          <Card className="border-white/10 bg-white/5">
             <CardHeader>
               <CardTitle className="text-white text-sm">
                 Organization Details
               </CardTitle>
             </CardHeader>
-            <CardContent className="text-sm text-slate-400 space-y-2">
+            <CardContent className="text-sm text-muted space-y-2">
               <div className="flex justify-between">
                 <span>Owner</span>
                 <span className="text-white">
@@ -822,7 +820,7 @@ export default function OrganizationDashboardPage({
               </div>
               <div className="flex justify-between">
                 <span>Organization ID</span>
-                <span className="text-slate-500 font-mono text-xs">
+                <span className="text-white/50 font-mono text-xs">
                   {organization.id}
                 </span>
               </div>
@@ -832,7 +830,7 @@ export default function OrganizationDashboardPage({
 
         {/* Create Team Modal */}
         <Dialog open={showCreateTeam} onOpenChange={setShowCreateTeam}>
-          <DialogContent className="bg-slate-800 border-slate-700">
+          <DialogContent className="bg-white/5 border-white/10 backdrop-blur-md">
             <DialogHeader>
               <DialogTitle className="text-white">Create New Team</DialogTitle>
             </DialogHeader>
@@ -843,7 +841,7 @@ export default function OrganizationDashboardPage({
                 </div>
               )}
               <div className="space-y-2">
-                <Label htmlFor="teamName" className="text-slate-200">
+                <Label htmlFor="teamName" className="text-white/80">
                   Team Name <span className="text-red-400">*</span>
                 </Label>
                 <Input
@@ -851,26 +849,26 @@ export default function OrganizationDashboardPage({
                   placeholder="Enter team name"
                   value={newTeamName}
                   onChange={(e) => setNewTeamName(e.target.value)}
-                  className="bg-slate-700/50 border-slate-600 text-white"
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/50"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="teamDescription" className="text-slate-200">
-                  Description <span className="text-slate-500">(optional)</span>
+                <Label htmlFor="teamDescription" className="text-white/80">
+                  Description <span className="text-white/50">(optional)</span>
                 </Label>
                 <Textarea
                   id="teamDescription"
                   placeholder="Describe the team..."
                   value={newTeamDescription}
                   onChange={(e) => setNewTeamDescription(e.target.value)}
-                  className="bg-slate-700/50 border-slate-600 text-white resize-none"
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/50 resize-none"
                   rows={3}
                 />
               </div>
               <div className="flex gap-3">
                 <Button
                   variant="outline"
-                  className="flex-1 border-slate-600"
+                  className="flex-1 border-white/20 text-white/70 hover:bg-white/10 hover:text-white"
                   onClick={() => setShowCreateTeam(false)}
                   disabled={isCreatingTeam}
                 >

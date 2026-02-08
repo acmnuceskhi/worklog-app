@@ -66,10 +66,8 @@ export default function LeadTeamsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <FaSpinner className="animate-spin text-4xl text-blue-600" />
-        <span className="ml-3 text-lg text-gray-600">
-          Loading your teams...
-        </span>
+        <FaSpinner className="animate-spin text-4xl text-blue-400" />
+        <span className="ml-3 text-lg text-muted">Loading your teams...</span>
       </div>
     );
   }
@@ -77,9 +75,9 @@ export default function LeadTeamsPage() {
   if (error) {
     return (
       <div className="p-6">
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="pt-6">
-            <p className="text-red-800">{error}</p>
+        <Card className="border-red-500/40 bg-white/5 backdrop-blur-md">
+          <CardContent className="pt-6 text-center">
+            <p className="text-red-300">{error}</p>
             <Button onClick={fetchTeams} className="mt-4">
               Retry
             </Button>
@@ -89,22 +87,44 @@ export default function LeadTeamsPage() {
     );
   }
 
+  const totalMembers = teams.reduce(
+    (sum, team) => sum + (team._count?.members || 0),
+    0,
+  );
+  const totalWorklogs = teams.reduce(
+    (sum, team) => sum + (team._count?.worklogs || 0),
+    0,
+  );
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <FaUsers className="text-blue-600" />
+          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+            <FaUsers className="text-blue-400" />
             My Teams (Team Lead)
           </h1>
-          <p className="text-gray-600 mt-1">
+          <p className="text-muted mt-1">
             Manage teams you own and create new ones
           </p>
+          {teams.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
+                {teams.length} teams
+              </span>
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
+                {totalMembers} members
+              </span>
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
+                {totalWorklogs} worklogs
+              </span>
+            </div>
+          )}
         </div>
         <Button
           onClick={() => setShowWizard(true)}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
           size="lg"
         >
           <FaPlus />
@@ -114,18 +134,18 @@ export default function LeadTeamsPage() {
 
       {/* Teams Grid */}
       {teams.length === 0 ? (
-        <Card>
+        <Card className="bg-white/5 border border-white/10 backdrop-blur-md">
           <CardContent className="pt-12 pb-12 text-center">
-            <FaUsers className="mx-auto text-6xl text-gray-300 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">
+            <FaUsers className="mx-auto text-6xl text-white/40 mb-4" />
+            <h3 className="text-xl font-semibold text-white mb-2">
               No teams yet
             </h3>
-            <p className="text-gray-500 mb-6">
+            <p className="text-muted mb-6">
               Create your first team to start managing worklogs and members
             </p>
             <Button
               onClick={() => setShowWizard(true)}
-              className="flex items-center gap-2 mx-auto"
+              className="flex items-center gap-2 mx-auto bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
             >
               <FaPlus />
               Create Your First Team
@@ -137,27 +157,27 @@ export default function LeadTeamsPage() {
           {teams.map((team) => (
             <Card
               key={team.id}
-              className="hover:shadow-lg transition-shadow cursor-pointer group"
+              className="cursor-pointer group border border-white/10 bg-white/5 backdrop-blur-md shadow-lg shadow-black/20 hover:-translate-y-1 hover:shadow-xl transition-all"
               onClick={() => router.push(`/teams/lead/${team.id}`)}
             >
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 group-hover:text-blue-600 transition-colors">
-                  <FaUsers className="text-blue-600" />
+                <CardTitle className="flex items-center gap-2 text-white group-hover:text-blue-300 transition-colors">
+                  <FaUsers className="text-blue-400" />
                   {team.name}
                 </CardTitle>
                 {team.project && (
-                  <CardDescription className="text-sm">
+                  <CardDescription className="text-sm text-white/70">
                     Project: {team.project}
                   </CardDescription>
                 )}
               </CardHeader>
               <CardContent>
                 {team.description && (
-                  <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                  <p className="text-sm text-muted mb-4 line-clamp-2">
                     {team.description}
                   </p>
                 )}
-                <div className="flex items-center justify-between text-sm text-gray-500">
+                <div className="flex items-center justify-between text-sm text-white/60">
                   <span>
                     {team._count?.members || 0} member
                     {team._count?.members !== 1 ? "s" : ""}
@@ -171,7 +191,7 @@ export default function LeadTeamsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1"
+                    className="flex-1 border-white/20 text-white/80 hover:text-white hover:border-white/40"
                     onClick={(e) => {
                       e.stopPropagation();
                       router.push(`/teams/lead/${team.id}`);
@@ -182,6 +202,7 @@ export default function LeadTeamsPage() {
                   <Button
                     variant="outline"
                     size="sm"
+                    className="border-white/20 text-white/80 hover:text-white hover:border-white/40"
                     onClick={(e) => {
                       e.stopPropagation();
                       // TODO: Open team settings modal

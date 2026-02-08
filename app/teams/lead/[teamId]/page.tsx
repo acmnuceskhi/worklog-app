@@ -206,24 +206,46 @@ export default function TeamDetailsPage({
 
   // Ranking logic
   const rankedUsers = [...teamData].sort((a, b) => b.rating - a.rating);
+  const totalMembers = teamData.length;
+  const totalTasks = tasks.length;
+  const urgentDeadlines = deadlineWarnings.length;
 
   return (
     <div className="p-3 flex flex-col gap-6 max-w-5xl mx-auto">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-white">{team.name}</h1>
+          <p className="text-muted">Led by {team.leader}</p>
+        </div>
+        <div className="flex flex-wrap gap-2 text-xs">
+          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
+            {totalMembers} members
+          </span>
+          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
+            {totalTasks} tasks
+          </span>
+          {urgentDeadlines > 0 && (
+            <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-amber-200">
+              {urgentDeadlines} deadline alerts
+            </span>
+          )}
+        </div>
+      </div>
       {/* Contributions & Tasks Card */}
-      <Card className="bg-gradient-to-br from-blue-900 to-blue-950 border-amber-500/30">
+      <Card className="border border-white/10 bg-white/5 backdrop-blur-md shadow-lg shadow-black/20">
         <CardHeader className="pb-4">
           <div className="flex justify-between items-start">
             <div>
-              <CardTitle className="text-2xl font-bold text-amber-500">
+              <CardTitle className="text-2xl font-bold text-white">
                 {team.name} - Team Contributions
               </CardTitle>
-              <CardDescription className="text-gray-300 mt-1">
+              <CardDescription className="text-muted mt-1">
                 Led by: {team.leader}
               </CardDescription>
             </div>
             <Button
               onClick={() => setShowModal(true)}
-              className="bg-amber-500 hover:bg-amber-600 text-black font-semibold flex items-center gap-2"
+              className="bg-amber-400 hover:bg-amber-500 text-black font-semibold flex items-center gap-2"
             >
               <FaPlus /> Assign Task
             </Button>
@@ -233,17 +255,17 @@ export default function TeamDetailsPage({
           <div className="w-full overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b-2 border-amber-500">
-                  <th className="text-left py-3 px-2 text-amber-500 font-bold">
+                <tr className="border-b border-white/10">
+                  <th className="text-left py-3 px-2 text-white/70 font-semibold">
                     Name
                   </th>
-                  <th className="text-left py-3 px-2 text-amber-500 font-bold">
+                  <th className="text-left py-3 px-2 text-white/70 font-semibold">
                     Contribution
                   </th>
-                  <th className="text-left py-3 px-2 text-amber-500 font-bold">
+                  <th className="text-left py-3 px-2 text-white/70 font-semibold">
                     Assigned Tasks
                   </th>
-                  <th className="text-left py-3 px-2 text-amber-500 font-bold">
+                  <th className="text-left py-3 px-2 text-white/70 font-semibold">
                     Rating
                   </th>
                 </tr>
@@ -256,25 +278,25 @@ export default function TeamDetailsPage({
                   return (
                     <tr
                       key={index}
-                      className="border-b border-amber-500/10 hover:bg-blue-800/50 transition-colors"
+                      className="border-b border-white/10 hover:bg-white/5 transition-colors"
                     >
-                      <td className="py-3 px-2 text-gray-200">{member.name}</td>
-                      <td className="py-3 px-2 text-gray-300">
+                      <td className="py-3 px-2 text-white/80">{member.name}</td>
+                      <td className="py-3 px-2 text-muted">
                         {member.contribution}
                       </td>
                       <td className="py-3 px-2">
                         <div className="flex flex-col gap-1">
                           {memberTasks.length > 0 ? (
                             memberTasks.map((t) => (
-                              <div key={t.id} className="text-xs text-gray-400">
-                                <strong className="text-amber-400">
+                              <div key={t.id} className="text-xs text-white/60">
+                                <strong className="text-amber-200">
                                   {t.title}
                                 </strong>{" "}
                                 - {t.status}
                               </div>
                             ))
                           ) : (
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-white/60">
                               No tasks
                             </span>
                           )}
@@ -295,7 +317,7 @@ export default function TeamDetailsPage({
                               ★
                             </span>
                           ))}
-                          <span className="ml-2 text-amber-500 font-semibold text-sm">
+                          <span className="ml-2 text-amber-200 font-semibold text-sm">
                             {member.rating}/10
                           </span>
                         </div>
@@ -310,11 +332,9 @@ export default function TeamDetailsPage({
       </Card>
 
       {/* Tasks List Card */}
-      <Card className="bg-gradient-to-br from-blue-900 to-blue-950 border-amber-500/30">
+      <Card className="border border-white/10 bg-white/5 backdrop-blur-md shadow-lg shadow-black/20">
         <CardHeader>
-          <CardTitle className="text-amber-500">
-            Active Tasks & Deadlines
-          </CardTitle>
+          <CardTitle className="text-white">Active Tasks & Deadlines</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -324,16 +344,18 @@ export default function TeamDetailsPage({
               return (
                 <div
                   key={task.id}
-                  className={`bg-blue-950/80 p-4 rounded-lg border-2 transition-all ${
+                  className={`p-4 rounded-lg border transition-all ${
                     isPastDeadline
-                      ? "border-red-500 shadow-lg shadow-red-500/30 bg-red-950/40"
-                      : "border-amber-500/30 hover:border-amber-500/60"
+                      ? "border-red-500/50 bg-red-500/10 shadow-lg shadow-red-500/20"
+                      : "border-white/10 bg-white/5 hover:border-amber-400/40"
                   }`}
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <strong className="text-amber-500">{task.title}</strong>
+                    <strong className="text-amber-200">{task.title}</strong>
                     <span
-                      className={`text-xs font-semibold ${isPastDeadline ? "text-red-400" : "text-gray-400"}`}
+                      className={`text-xs font-semibold ${
+                        isPastDeadline ? "text-red-300" : "text-white/60"
+                      }`}
                     >
                       {formatLocalDate(new Date(task.deadline))}
                       {isPastDeadline && " ⚠️"}
@@ -346,21 +368,21 @@ export default function TeamDetailsPage({
                     />
                     <DeadlineCountdown deadline={task.deadline} />
                   </div>
-                  <p className="text-sm text-gray-300 mb-3">
+                  <p className="text-sm text-muted mb-3">
                     Assigned to:{" "}
-                    <strong className="text-amber-400">
+                    <strong className="text-amber-200">
                       {task.assignedTo}
                     </strong>
                   </p>
                   <div className="mb-3">
-                    <div className="text-xs text-gray-400 mb-1">Status:</div>
-                    <div className="px-3 py-1 rounded border border-amber-500 bg-blue-900 text-amber-500 text-xs font-semibold text-center">
+                    <div className="text-xs text-white/60 mb-1">Status:</div>
+                    <div className="px-3 py-1 rounded border border-white/20 bg-white/5 text-amber-200 text-xs font-semibold text-center">
                       {task.status}
                     </div>
                   </div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-white/60">
                     Progress:{" "}
-                    <strong className="text-amber-500">{task.progress}%</strong>
+                    <strong className="text-amber-200">{task.progress}%</strong>
                   </div>
                 </div>
               );
@@ -370,9 +392,9 @@ export default function TeamDetailsPage({
       </Card>
 
       {/* Rankings Card */}
-      <Card className="bg-gradient-to-br from-blue-900 to-blue-950 border-amber-500/30">
+      <Card className="border border-white/10 bg-white/5 backdrop-blur-md shadow-lg shadow-black/20">
         <CardHeader>
-          <CardTitle className="text-center text-xl font-bold text-amber-500">
+          <CardTitle className="text-center text-xl font-bold text-white">
             User Rankings
           </CardTitle>
         </CardHeader>
@@ -380,14 +402,14 @@ export default function TeamDetailsPage({
           <div className="w-full overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b-2 border-amber-500">
-                  <th className="text-left py-3 px-2 text-amber-500 font-bold">
+                <tr className="border-b border-white/10">
+                  <th className="text-left py-3 px-2 text-white/70 font-semibold">
                     #
                   </th>
-                  <th className="text-left py-3 px-2 text-amber-500 font-bold">
+                  <th className="text-left py-3 px-2 text-white/70 font-semibold">
                     Name
                   </th>
-                  <th className="text-left py-3 px-2 text-amber-500 font-bold">
+                  <th className="text-left py-3 px-2 text-white/70 font-semibold">
                     Rating
                   </th>
                 </tr>
@@ -396,14 +418,14 @@ export default function TeamDetailsPage({
                 {rankedUsers.map((user: TeamMember, i: number) => (
                   <tr
                     key={i}
-                    className="border-b border-amber-500/10 hover:bg-blue-800/50 transition-colors"
+                    className="border-b border-white/10 hover:bg-white/5 transition-colors"
                   >
                     <td className="py-3 px-2">
-                      <strong className="text-pink-500">{i + 1}</strong>
+                      <strong className="text-amber-200">{i + 1}</strong>
                     </td>
-                    <td className="py-3 px-2 text-gray-200">{user.name}</td>
+                    <td className="py-3 px-2 text-white/80">{user.name}</td>
                     <td className="py-3 px-2">
-                      <strong className="text-amber-500">
+                      <strong className="text-amber-200">
                         {user.rating}/10
                       </strong>
                     </td>
@@ -416,12 +438,10 @@ export default function TeamDetailsPage({
       </Card>
 
       {/* Gantt Chart - Timeline View */}
-      <Card className="bg-gradient-to-br from-blue-900 to-blue-950 border-amber-500/30">
+      <Card className="border border-white/10 bg-white/5 backdrop-blur-md shadow-lg shadow-black/20">
         <CardHeader>
-          <CardTitle className="text-amber-500">
-            Task Timeline & Progress
-          </CardTitle>
-          <CardDescription className="text-gray-300">
+          <CardTitle className="text-white">Task Timeline & Progress</CardTitle>
+          <CardDescription className="text-muted">
             Complete view of task deadlines, progress, and team member workload
           </CardDescription>
         </CardHeader>
@@ -432,26 +452,26 @@ export default function TeamDetailsPage({
 
       {/* Task Assignment Dialog */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="bg-blue-950 border-amber-500/30">
+        <DialogContent className="bg-[var(--panel-strong)] border-white/10">
           <DialogHeader>
-            <DialogTitle className="text-amber-500">Assign Task</DialogTitle>
+            <DialogTitle className="text-white">Assign Task</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div>
-              <Label className="text-amber-500 mb-2 block">Task Title</Label>
+              <Label className="text-white/80 mb-2 block">Task Title</Label>
               <Input
                 placeholder="Enter task title"
                 value={newTask.title}
                 onChange={(e) =>
                   setNewTask({ ...newTask, title: e.target.value })
                 }
-                className="bg-blue-900 border-amber-500/30 text-amber-500 placeholder:text-amber-500/50"
+                className="bg-white/5 border-white/20 text-white placeholder:text-white/50"
               />
             </div>
 
             <div>
-              <Label className="text-amber-500 mb-2 block">
+              <Label className="text-white/80 mb-2 block">
                 Assign to Member
               </Label>
               <Select
@@ -460,15 +480,15 @@ export default function TeamDetailsPage({
                   setNewTask({ ...newTask, assignedTo: value })
                 }
               >
-                <SelectTrigger className="bg-blue-900 border-amber-500/30 text-amber-500">
+                <SelectTrigger className="bg-white/5 border-white/20 text-white">
                   <SelectValue placeholder="Select member..." />
                 </SelectTrigger>
-                <SelectContent className="bg-blue-950 border-amber-500/30">
+                <SelectContent className="bg-[var(--panel-strong)] border-white/10">
                   {team.members.map((m: TeamMember) => (
                     <SelectItem
                       key={m.name}
                       value={m.name}
-                      className="text-amber-500"
+                      className="text-white/80"
                     >
                       {m.name}
                     </SelectItem>
@@ -478,7 +498,7 @@ export default function TeamDetailsPage({
             </div>
 
             <div>
-              <Label className="text-amber-500 mb-2 block">Deadline</Label>
+              <Label className="text-white/80 mb-2 block">Deadline</Label>
               <DatePicker
                 value={
                   newTask.deadline ? new Date(newTask.deadline) : undefined
@@ -495,7 +515,7 @@ export default function TeamDetailsPage({
 
             <Button
               onClick={handleAssignTask}
-              className="w-full bg-amber-500 hover:bg-amber-600 text-black font-semibold"
+              className="w-full bg-amber-400 hover:bg-amber-500 text-black font-semibold"
             >
               Create Task
             </Button>

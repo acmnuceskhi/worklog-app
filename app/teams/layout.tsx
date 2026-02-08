@@ -24,7 +24,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import styles from "./layout.module.css";
 
 const lobsterTwo = Lobster_Two({ weight: "400", subsets: ["latin"] });
 
@@ -200,6 +199,18 @@ export default function TeamsLayout({
 
   const sidebarWidth = isMobile ? 260 : isSidebarCollapsed ? 72 : 220;
   const showSidebarLabels = !isSidebarCollapsed || isMobile;
+  const pageClassName = `min-h-screen w-screen p-3 flex flex-col ${
+    contentTheme === "light"
+      ? "bg-gradient-to-br from-[#fbc2eb] to-[#a6c1ee] text-[var(--color-text)]"
+      : "bg-[var(--page-bg-dark)] text-white"
+  }`;
+  const sidebarClassName = `p-4 rounded-xl flex flex-col gap-3 relative z-100 bg-[var(--nav-bg)] text-white ${
+    isMobile
+      ? "fixed top-[88px] left-[12px] bottom-[12px] h-auto shadow-[0_24px_80px_rgba(2,6,23,0.4)]"
+      : ""
+  } ${isSidebarCollapsed && !isMobile ? "w-[72px]" : "w-56"}`;
+  const invitesClassName =
+    "w-[300px] p-4 rounded-xl flex-shrink-0 bg-[var(--nav-bg)] text-yellow-300 max-[960px]:w-full";
   const handleNavigate = useCallback(
     (href: string) => {
       router.push(href);
@@ -213,14 +224,14 @@ export default function TeamsLayout({
   // Prevent hydration mismatch by waiting for client mount
   if (!mounted) {
     return (
-      <div className="min-h-screen w-screen p-3 flex flex-col bg-blue-950 text-slate-50 light">
+      <div className="min-h-screen w-screen p-3 flex flex-col bg-[var(--page-bg-dark)] text-white">
         <div className="text-center py-8">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className={`${styles.page} ${contentTheme}`}>
+    <div className={pageClassName}>
       <nav className="h-16 px-4 flex justify-between items-center rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 text-white">
         <div className="flex gap-4 items-center">
           <button
@@ -270,7 +281,7 @@ export default function TeamsLayout({
         <AnimatePresence>
           {isMobile && isSidebarOpen && (
             <motion.div
-              className="fixed inset-0 bg-slate-900/60 z-90"
+              className="fixed inset-0 bg-black/60 z-90"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -281,9 +292,7 @@ export default function TeamsLayout({
         </AnimatePresence>
 
         <motion.aside
-          className={`${styles.sidebar} ${isMobile ? styles.mobile : ""} ${
-            isSidebarCollapsed ? styles.collapsed : ""
-          } w-56 p-4 rounded-xl flex flex-col gap-3 relative z-100`}
+          className={sidebarClassName}
           aria-label="Main navigation"
           aria-expanded={isSidebarOpen}
           initial={false}
@@ -320,10 +329,10 @@ export default function TeamsLayout({
               return (
                 <div
                   key={item.id}
-                  className={`${
-                    styles.sideItem
-                  } p-2.5 rounded-xl flex gap-2 cursor-pointer mb-2 items-center ${
-                    isActive ? styles.active : "hover:bg-white/5"
+                  className={`p-2.5 rounded-xl flex gap-2 cursor-pointer mb-2 items-center transition-colors ${
+                    isActive
+                      ? "bg-gradient-to-r from-blue-500 to-cyan-500"
+                      : "hover:bg-white/5"
                   }`}
                   onClick={() => handleNavigate(item.href)}
                   onKeyDown={(e) => {
@@ -344,7 +353,9 @@ export default function TeamsLayout({
                     <span className="whitespace-nowrap">{item.label}</span>
                   )}
                   <span
-                    className={`${styles.count} ml-auto`}
+                    className={`rounded-lg bg-[var(--color-primary)] px-1.5 py-0.5 text-xs font-semibold text-[var(--color-text-inverse)] ${
+                      showSidebarLabels ? "ml-auto" : "ml-0"
+                    }`}
                     aria-live="polite"
                   >
                     {item.count}
@@ -354,9 +365,7 @@ export default function TeamsLayout({
             })}
 
             {sidebarLoading && (
-              <div
-                className={`${styles.sideItem} p-2.5 rounded-xl flex gap-2 cursor-pointer mb-2 items-center opacity-60`}
-              >
+              <div className="p-2.5 rounded-xl flex gap-2 cursor-pointer mb-2 items-center opacity-60">
                 <span className="inline-flex items-center justify-center w-5">
                   <FaUsers />
                 </span>{" "}
@@ -367,7 +376,7 @@ export default function TeamsLayout({
 
           <button
             onClick={() => router.push("/home")}
-            className={`${styles.createTeamBtn} mt-auto bg-gradient-to-r from-green-500 to-green-600`}
+            className="mt-auto bg-gradient-to-r from-green-500 to-green-600 border-none p-2.5 rounded-xl text-white flex gap-2 items-center justify-center cursor-pointer hover:from-green-600 hover:to-green-700 transition-colors"
           >
             <span className="inline-flex items-center justify-center w-5">
               <FaPlus />
@@ -376,11 +385,11 @@ export default function TeamsLayout({
           </button>
         </motion.aside>
 
-        <main className={`${styles.content} flex-1 overflow-hidden`}>
+        <main className="flex-1 overflow-hidden flex flex-col gap-4">
           {children}
         </main>
 
-        <aside className={`${styles.invites} flex flex-col`}>
+        <aside className={`${invitesClassName} flex flex-col`}>
           {isLeadPage ? (
             <div className="h-full flex flex-col">
               <h3 className="mt-0">Send Invites</h3>
@@ -396,18 +405,18 @@ export default function TeamsLayout({
                   sentInvites.map((email, idx) => (
                     <div
                       key={idx}
-                      className="bg-blue-950 border border-yellow-400 p-2 rounded-lg text-xs"
+                      className="bg-amber-500/10 border border-amber-400/30 p-2 rounded-lg text-xs"
                     >
-                      <p className="m-0 font-semibold text-yellow-400">
+                      <p className="m-0 font-semibold text-amber-200">
                         {email}
                       </p>
-                      <p className="mt-1 mb-0 text-blue-300 text-xs">
+                      <p className="mt-1 mb-0 text-amber-200/70 text-xs">
                         Pending...
                       </p>
                     </div>
                   ))
                 ) : (
-                  <p className="text-gray-400 text-center m-auto">
+                  <p className="text-muted text-center m-auto">
                     No invites sent
                   </p>
                 )}
@@ -422,12 +431,12 @@ export default function TeamsLayout({
                   receivedInvites.map((invite, idx) => (
                     <div
                       key={idx}
-                      className="bg-blue-950 border border-yellow-400 p-2.5 rounded-lg border-l-4 border-l-yellow-400"
+                      className="bg-white/5 border border-white/10 p-2.5 rounded-lg border-l-4 border-l-amber-400/70"
                     >
-                      <p className="m-0 font-semibold text-yellow-400">
+                      <p className="m-0 font-semibold text-amber-200">
                         {invite.team}
                       </p>
-                      <p className="my-1 mb-2 text-blue-300 text-xs">
+                      <p className="my-1 mb-2 text-white/70 text-xs">
                         From: {invite.from}
                       </p>
                       <div className="flex gap-1.5">
@@ -447,7 +456,7 @@ export default function TeamsLayout({
                     </div>
                   ))
                 ) : (
-                  <p className="text-gray-400 text-center m-auto">
+                  <p className="text-muted text-center m-auto">
                     No invitations
                   </p>
                 )}
@@ -464,22 +473,22 @@ export default function TeamsLayout({
       {/* Send Invite Dialog */}
       {isLeadPage && (
         <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
-          <DialogContent className="bg-blue-950 border-yellow-400/30">
+          <DialogContent className="bg-white/5 border-white/10 backdrop-blur-md">
             <DialogHeader>
-              <DialogTitle className="text-yellow-400">
+              <DialogTitle className="text-amber-200">
                 Invite Team Member
               </DialogTitle>
             </DialogHeader>
             <div className="flex flex-col gap-4">
               <div>
-                <label className="text-yellow-400 text-sm font-semibold block mb-2">
+                <label className="text-white/80 text-sm font-semibold block mb-2">
                   Email Address
                 </label>
                 <Input
                   placeholder="member@example.com"
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
-                  className="bg-blue-950 border-yellow-400/30 text-yellow-400"
+                  className="bg-white/5 border-white/20 text-white placeholder:text-white/50"
                 />
               </div>
               <div className="flex gap-2">
@@ -500,39 +509,6 @@ export default function TeamsLayout({
           </DialogContent>
         </Dialog>
       )}
-
-      <style jsx global>{`
-        * {
-          box-sizing: border-box;
-        }
-        html,
-        body {
-          margin: 0;
-          padding: 0;
-          width: 100%;
-          overflow-x: hidden;
-        }
-      `}</style>
-
-      <style jsx>{`
-        .page {
-          min-height: 100vh;
-          width: 100vw;
-          padding: 12px;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .page.light {
-          background: linear-gradient(135deg, #fbc2eb, #a6c1ee);
-          color: #020617;
-        }
-
-        .page.dark {
-          background: #021629;
-          color: #f8fafc;
-        }
-      `}</style>
     </div>
   );
 }

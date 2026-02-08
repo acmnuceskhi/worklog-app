@@ -22,7 +22,6 @@ import { DeadlineStatusBadge } from "@/components/worklog/deadline-status-badge"
 import { DeadlineCountdown } from "@/components/worklog/deadline-countdown";
 import { toast } from "sonner";
 import { formatLocalDate, getDeadlineStatus } from "@/lib/deadline-utils";
-import styles from "./home.module.css";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -279,6 +278,30 @@ export default function DashboardPage() {
 
   const sidebarWidth = isMobile ? 260 : isSidebarCollapsed ? 72 : 220;
   const showSidebarLabels = !isSidebarCollapsed || isMobile;
+  const pageClassName = `min-h-screen w-screen p-3 flex flex-col ${
+    contentTheme === "light"
+      ? "bg-gradient-to-br from-[#fbc2eb] to-[#a6c1ee] text-[var(--color-text)]"
+      : "bg-[var(--page-bg-dark)] text-white"
+  }`;
+  const cardBaseClassName =
+    "rounded-xl border backdrop-blur-md shadow-md transition-all";
+  const cardClassName = `${cardBaseClassName} ${
+    contentTheme === "dark"
+      ? "bg-[var(--card-dark)] border-white/10"
+      : "bg-white/90 border-white/20"
+  } p-5`;
+  const teamCardClassName = `${cardBaseClassName} ${
+    contentTheme === "dark"
+      ? "bg-[var(--nav-bg)] border-white/10"
+      : "bg-white/90 border-white/20"
+  } p-3`;
+  const sidebarClassName = `p-4 rounded-xl flex flex-col gap-3 relative z-100 bg-[var(--nav-bg)] text-white ${
+    isMobile
+      ? "fixed top-[88px] left-[12px] bottom-[12px] h-auto shadow-[0_24px_80px_rgba(2,6,23,0.4)]"
+      : ""
+  }`;
+  const invitesClassName =
+    "w-72 p-4 rounded-xl flex-shrink-0 bg-[var(--nav-bg)] text-yellow-300";
   const handleNavigate = useCallback(
     (href: string) => {
       router.push(href);
@@ -296,14 +319,16 @@ export default function DashboardPage() {
   // Prevent hydration mismatch by waiting for client mount
   if (!mounted) {
     return (
-      <div className={styles.page}>
-        <div className={styles.loading}>Loading...</div>
+      <div className="min-h-screen w-screen p-3 flex flex-col bg-[var(--page-bg-dark)] text-white">
+        <div className="flex items-center justify-center min-h-[200px] text-muted">
+          Loading...
+        </div>
       </div>
     );
   }
 
   return (
-    <div className={`${styles.page} ${contentTheme}`}>
+    <div className={pageClassName}>
       <nav className="h-16 px-4 flex justify-between items-center rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 text-white">
         <div className="flex gap-4 items-center">
           <button
@@ -374,7 +399,7 @@ export default function DashboardPage() {
         <AnimatePresence>
           {isMobile && isSidebarOpen && (
             <motion.div
-              className="fixed inset-0 bg-slate-900/60 z-90"
+              className="fixed inset-0 bg-black/60 z-90"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -385,9 +410,7 @@ export default function DashboardPage() {
         </AnimatePresence>
 
         <motion.aside
-          className={`${styles.sidebar} ${isMobile ? styles.mobile : ""} ${
-            isSidebarCollapsed ? styles.collapsed : ""
-          } w-56 p-4 rounded-xl flex flex-col gap-3 relative z-100`}
+          className={`${sidebarClassName} w-56`}
           aria-label="Main navigation"
           aria-expanded={isSidebarOpen}
           initial={false}
@@ -447,7 +470,10 @@ export default function DashboardPage() {
                   {showSidebarLabels && (
                     <span className="whitespace-nowrap">{item.label}</span>
                   )}
-                  <span className={styles.count} aria-live="polite">
+                  <span
+                    className="ml-auto rounded-lg bg-[var(--color-primary)] px-1.5 py-0.5 text-xs font-semibold text-[var(--color-text-inverse)]"
+                    aria-live="polite"
+                  >
                     {item.count}
                   </span>
                 </div>
@@ -480,11 +506,11 @@ export default function DashboardPage() {
 
         <main className="flex-1 flex flex-col gap-4 overflow-hidden">
           <section
-            className={`${styles.card} flex justify-between items-center`}
+            className={`${cardClassName} flex flex-col gap-4 md:flex-row md:items-center md:justify-between`}
           >
             <div>
-              <h2>Welcome back 👋</h2>
-              <p className={styles.muted}>
+              <h2 className="text-xl font-semibold">Welcome back 👋</h2>
+              <p className="text-muted">
                 Quick access to your teams, tasks, and recent activity.
               </p>
               <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
@@ -492,38 +518,52 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            <div className="flex gap-4 text-center">
-              <div>
-                <strong>{teams.length}</strong>
-                <span>Visible Teams</span>
+            <div className="flex flex-wrap gap-3 text-xs">
+              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white/80">
+                <div className="text-lg font-semibold text-white">
+                  {teams.length}
+                </div>
+                <div className="text-white/60">Visible Teams</div>
               </div>
-              <div>
-                <strong>{sidebarStats.worklogsCount}</strong>
-                <span>My Worklogs</span>
+              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white/80">
+                <div className="text-lg font-semibold text-white">
+                  {sidebarStats.worklogsCount}
+                </div>
+                <div className="text-white/60">My Worklogs</div>
               </div>
-              <div>
-                <strong>{sidebarStats.pendingReviewsCount}</strong>
-                <span>Pending Reviews</span>
+              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white/80">
+                <div className="text-lg font-semibold text-white">
+                  {sidebarStats.pendingReviewsCount}
+                </div>
+                <div className="text-white/60">Pending Reviews</div>
               </div>
             </div>
           </section>
 
-          <section className={styles.card}>
+          <section className={cardClassName}>
             <h3>Featured Teams</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {teamsData.map((t) => (
-                <div key={t.id} className={`${styles.team} p-3 rounded-xl`}>
+                <div key={t.id} className={teamCardClassName}>
                   <div className="flex gap-2.5 items-center">
-                    <div className={styles.avatar}>
+                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-white text-sm font-semibold flex items-center justify-center">
                       {t.name
                         .split(" ")
                         .map((n) => n[0])
                         .slice(0, 2)
                         .join("")}
                     </div>
-                    <div className={styles.teamInfo}>
-                      <h4 className={styles.teamName}>{t.name}</h4>
-                      <p className={styles.teamDesc}>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-base font-semibold mb-1">{t.name}</h4>
+                      <p
+                        className="text-sm text-muted mb-2"
+                        style={{
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        }}
+                      >
                         {t.members} members • {t.role}
                       </p>
                     </div>
@@ -531,7 +571,7 @@ export default function DashboardPage() {
 
                   <div className="h-2 bg-black/10 rounded-full overflow-hidden mt-2.5">
                     <div
-                      className={styles.fill}
+                      className="h-full bg-gradient-to-r from-blue-500 to-cyan-500"
                       style={{ width: `${t.progress}%` }}
                     />
                   </div>
@@ -545,21 +585,18 @@ export default function DashboardPage() {
             </div>
           </section>
 
-          <section className={styles.card}>
+          <section className={cardClassName}>
             <h3>Upcoming Deadlines</h3>
             {deadlineWorklogs.length === 0 ? (
-              <p className={styles.muted}>No upcoming deadlines yet.</p>
+              <p className="text-muted">No upcoming deadlines yet.</p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {deadlineWorklogs.map((worklog) => (
-                  <div
-                    key={worklog.id}
-                    className={`${styles.team} p-3 rounded-xl`}
-                  >
+                  <div key={worklog.id} className={teamCardClassName}>
                     <div className="flex gap-2.5 items-center">
                       <div>
                         <strong>{worklog.title}</strong>
-                        <div className={styles.muted}>
+                        <div className="text-muted">
                           {formatLocalDate(new Date(worklog.deadline))}
                         </div>
                       </div>
@@ -578,16 +615,14 @@ export default function DashboardPage() {
           </section>
         </main>
 
-        <aside
-          className={`${styles.invites} w-72 p-4 rounded-xl flex-shrink-0`}
-        >
+        <aside className={invitesClassName}>
           <h3>Invitations</h3>
           {invitations.map((i, index) => (
             <div
               key={`${i.from}-${i.team}-${index}`}
-              className={`${styles.invite} p-2.5 rounded-xl mt-2.5`}
+              className="bg-white text-black p-2.5 rounded-xl mt-2.5"
             >
-              <p className={styles.muted}>Invited by {i.from}</p>
+              <p className="text-muted">Invited by {i.from}</p>
               <strong>{i.team}</strong>
               <div className="flex gap-2 mt-2">
                 <button className="bg-green-500 border-none py-1.5 px-2 rounded-lg flex-1">
@@ -604,9 +639,7 @@ export default function DashboardPage() {
 
       {showCreateTeam && (
         <div className="fixed inset-0 bg-black/55 flex items-start justify-center pt-20 z-200">
-          <div
-            className={`${styles.modal} bg-slate-800 p-6 rounded-2xl w-96 flex flex-col gap-3 text-white relative`}
-          >
+          <div className="bg-[var(--panel-strong)] p-6 rounded-2xl w-96 flex flex-col gap-3 text-white relative">
             <button
               className="absolute top-3 right-3 border-none bg-transparent text-white text-xl cursor-pointer"
               onClick={() => setShowCreateTeam(false)}
@@ -630,14 +663,18 @@ export default function DashboardPage() {
                 setTeamDesc(e.target.value)
               }
             />
-            <div className={styles.emailChips}>
+            <div className="flex flex-wrap gap-1.5 p-1.5 rounded-lg border border-white/30">
               {inviteEmails.map((email) => (
-                <span key={email}>
+                <span
+                  key={email}
+                  className="bg-green-500 px-2 py-1 rounded-full inline-flex items-center gap-1 text-xs"
+                >
                   {email}
                   <FaTimes onClick={() => removeEmail(email)} />
                 </span>
               ))}
               <input
+                className="bg-transparent border-none outline-none text-white min-w-[180px] flex-1"
                 placeholder="Add invite emails"
                 value={inviteInput}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -683,400 +720,6 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
-
-      <style jsx>{`
-        /* PAGE */
-        .page {
-          min-height: 100vh;
-          width: 100vw;
-          padding: 12px;
-          display: flex;
-          flex-direction: column;
-        }
-        .page.light {
-          background: linear-gradient(135deg, #fbc2eb, #a6c1ee);
-          color: #020617;
-        }
-        .page.dark {
-          background: #021629;
-          color: #f8fafc;
-        }
-
-        /* NAVBAR */
-        .navbar {
-          height: 64px;
-          padding: 0 16px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          border-radius: 12px;
-          background: linear-gradient(90deg, #04243f, #06325a);
-          color: white;
-        }
-        .nav-left {
-          display: flex;
-          gap: 16px;
-          align-items: center;
-        }
-        .sidebar-toggle {
-          background: transparent;
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          color: white;
-          border-radius: 10px;
-          padding: 6px 10px;
-          cursor: pointer;
-          display: none;
-        }
-        .logo {
-          font-size: 1.8rem;
-        }
-        .logo::after {
-          content: "_";
-          margin-left: 6px;
-          animation: blink 1s infinite;
-        }
-        @keyframes blink {
-          50% {
-            opacity: 0;
-          }
-        }
-        .search {
-          display: flex;
-          gap: 8px;
-          align-items: center;
-          background: rgba(255, 255, 255, 0.1);
-          padding: 6px 10px;
-          border-radius: 10px;
-        }
-        .search input {
-          background: transparent;
-          border: none;
-          outline: none;
-          color: white;
-        }
-        .nav-right {
-          display: flex;
-          gap: 12px;
-        }
-
-        /* LAYOUT */
-        .layout {
-          display: flex;
-          gap: 16px;
-          flex: 1;
-          margin-top: 12px;
-          width: 100%;
-        }
-
-        .sidebar-overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(2, 6, 23, 0.6);
-          z-index: 90;
-        }
-
-        /* SIDEBAR */
-        .sidebar {
-          width: 220px;
-          padding: 16px;
-          border-radius: 12px;
-          background: #04243f;
-          color: white;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          position: relative;
-          z-index: 100;
-        }
-        .sidebar.mobile {
-          position: fixed;
-          top: 88px;
-          left: 12px;
-          bottom: 12px;
-          height: auto;
-          box-shadow: 0 24px 80px rgba(2, 6, 23, 0.4);
-        }
-        .sidebar.collapsed .side-label {
-          display: none;
-        }
-        .sidebar.collapsed .count {
-          margin-left: 0;
-        }
-        .sidebar-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          font-weight: 600;
-          font-size: 0.95rem;
-        }
-        .sidebar-title {
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-          font-size: 0.7rem;
-          color: rgba(255, 255, 255, 0.7);
-        }
-        .sidebar-collapse {
-          background: rgba(255, 255, 255, 0.08);
-          border: none;
-          color: white;
-          border-radius: 8px;
-          padding: 6px 8px;
-          cursor: pointer;
-        }
-        .sidebar-items {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
-        .side-item {
-          padding: 10px;
-          border-radius: 10px;
-          display: flex;
-          gap: 8px;
-          cursor: pointer;
-          margin-bottom: 8px;
-          align-items: center;
-        }
-        .side-icon {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 20px;
-        }
-        .side-label {
-          white-space: nowrap;
-        }
-        .side-item.active {
-          background: linear-gradient(90deg, #3b82f6, #06b6d4);
-        }
-        .create-team-btn {
-          margin-top: auto;
-          background: linear-gradient(90deg, #22c55e, #16a34a);
-          border: none;
-          padding: 10px 12px;
-          border-radius: 10px;
-          color: white;
-          display: flex;
-          gap: 8px;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-        }
-
-        /* CONTENT */
-        .content {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          overflow: hidden;
-        }
-        .card {
-          background: white;
-          padding: 16px;
-          border-radius: 12px;
-        }
-        .page.dark .card {
-          background: #03243a;
-        }
-        .hero {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-        .stats {
-          display: flex;
-          gap: 16px;
-          text-align: center;
-        }
-        .grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-          gap: 12px;
-        }
-        .team {
-          padding: 12px;
-          border-radius: 12px;
-          background: #f1f5f9;
-        }
-        .page.dark .team {
-          background: #04243f;
-        }
-        .team-top {
-          display: flex;
-          gap: 10px;
-          align-items: center;
-        }
-        .avatar {
-          width: 48px;
-          height: 48px;
-          border-radius: 10px;
-          background: linear-gradient(135deg, #3b82f6, #06b6d4);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-weight: bold;
-        }
-        .bar {
-          height: 8px;
-          background: rgba(0, 0, 0, 0.1);
-          border-radius: 999px;
-          overflow: hidden;
-          margin-top: 10px;
-        }
-        .fill {
-          height: 100%;
-          background: linear-gradient(90deg, #3b82f6, #06b6d4);
-        }
-        .progress {
-          display: flex;
-          justify-content: space-between;
-          margin-top: 6px;
-        }
-
-        /* INVITES */
-        .invites {
-          width: 300px;
-          padding: 16px;
-          border-radius: 12px;
-          background: #04243f;
-          color: yellow;
-          flex-shrink: 0;
-        }
-
-        @media (max-width: 960px) {
-          .layout {
-            flex-direction: column;
-          }
-          .sidebar-toggle {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-          }
-          .nav-left .search {
-            display: none;
-          }
-          .sidebar {
-            width: 260px;
-          }
-          .invites {
-            width: 100%;
-          }
-        }
-        .invite {
-          background: white;
-          color: black;
-          padding: 10px;
-          border-radius: 10px;
-          margin-top: 10px;
-        }
-        .actions {
-          display: flex;
-          gap: 8px;
-          margin-top: 8px;
-        }
-        .accept {
-          background: #22c55e;
-          border: none;
-          padding: 6px;
-          border-radius: 8px;
-          flex: 1;
-        }
-        .decline {
-          background: #ef4444;
-          border: none;
-          padding: 6px;
-          border-radius: 8px;
-          flex: 1;
-          color: white;
-        }
-
-        /* MODAL */
-        .modal-backdrop {
-          position: fixed;
-          inset: 0;
-          background: rgba(0, 0, 0, 0.55);
-          display: flex;
-          align-items: flex-start;
-          justify-content: center;
-          padding-top: 80px;
-          z-index: 200;
-        }
-        .modal {
-          background: #111c2b;
-          padding: 24px;
-          border-radius: 16px;
-          width: 380px;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          color: #fff;
-          position: relative;
-        }
-        .modal-close {
-          position: absolute;
-          top: 12px;
-          right: 12px;
-          border: none;
-          background: transparent;
-          color: #fff;
-          font-size: 20px;
-          cursor: pointer;
-        }
-        .modal input,
-        .modal textarea {
-          padding: 12px;
-          border-radius: 12px;
-          border: none;
-          outline: none;
-          background: rgba(255, 255, 255, 0.06);
-          color: #fff;
-        }
-        .modal textarea {
-          min-height: 60px;
-        }
-        .email-chips {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 6px;
-          padding: 6px;
-          border-radius: 8px;
-          border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-        .email-chips span {
-          background: #22c55e;
-          padding: 4px 8px;
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
-        .modal-actions {
-          display: flex;
-          justify-content: flex-end;
-          gap: 10px;
-        }
-        .modal-actions button:first-child {
-          background: rgba(255, 255, 255, 0.1);
-          color: #fff;
-        }
-        .modal-actions button:last-child {
-          background: linear-gradient(90deg, #22c55e, #16a34a);
-          color: #fff;
-          font-weight: 600;
-        }
-
-        @media (max-width: 900px) {
-          .layout {
-            flex-direction: column;
-          }
-          .sidebar,
-          .invites {
-            width: 100%;
-          }
-        }
-      `}</style>
     </div>
   );
 }

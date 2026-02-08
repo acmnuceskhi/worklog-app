@@ -78,27 +78,27 @@ export default function CreateOrganizationPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Top Navigation */}
-      <nav className="flex items-center justify-between p-4 bg-slate-800/50 backdrop-blur-sm border-b border-slate-700">
+      <nav className="flex items-center justify-between p-4 bg-white/5 backdrop-blur-sm border-b border-white/10">
         <div className="flex items-center gap-4">
           <h1 className="text-xl font-bold text-white">Worklog</h1>
-          <div className="flex items-center gap-2 text-sm text-slate-300">
+          <div className="flex items-center gap-2 text-sm text-white/70">
             <button
               onClick={() => router.push("/teams/member")}
-              className="flex items-center gap-1 px-3 py-1 rounded hover:bg-slate-700 transition-colors"
+              className="flex items-center gap-1 px-3 py-1 rounded hover:bg-white/10 transition-colors"
             >
               <FaUsers className="h-4 w-4" />
               Member Teams
             </button>
             <button
               onClick={() => router.push("/teams/lead")}
-              className="flex items-center gap-1 px-3 py-1 rounded hover:bg-slate-700 transition-colors"
+              className="flex items-center gap-1 px-3 py-1 rounded hover:bg-white/10 transition-colors"
             >
               <FaUserTie className="h-4 w-4" />
               Lead Teams
             </button>
             <button
               onClick={() => router.push("/teams/organisations")}
-              className="flex items-center gap-1 px-3 py-1 rounded bg-slate-700 text-white"
+              className="flex items-center gap-1 px-3 py-1 rounded bg-white/10 text-white"
             >
               <FaBuilding className="h-4 w-4" />
               My Organisations
@@ -115,7 +115,7 @@ export default function CreateOrganizationPage() {
 
       {/* Main Content */}
       <div className="flex items-center justify-center p-4 min-h-[calc(100vh-80px)]">
-        <Card className="w-full max-w-lg border-slate-700 bg-slate-800/80 backdrop-blur-sm shadow-2xl">
+        <Card className="w-full max-w-lg border-white/10 bg-white/5 backdrop-blur-sm shadow-2xl">
           <CardHeader className="space-y-1">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500">
@@ -125,7 +125,7 @@ export default function CreateOrganizationPage() {
                 <CardTitle className="text-2xl text-white">
                   Create Organization
                 </CardTitle>
-                <CardDescription className="text-slate-400">
+                <CardDescription className="text-muted">
                   Set up a new organization to manage your teams
                 </CardDescription>
               </div>
@@ -148,7 +148,7 @@ export default function CreateOrganizationPage() {
               <div className="space-y-2">
                 <Label
                   htmlFor="name"
-                  className="text-sm font-medium text-slate-200"
+                  className="text-sm font-medium text-white/80"
                 >
                   Organization Name <span className="text-red-400">*</span>
                 </Label>
@@ -158,7 +158,7 @@ export default function CreateOrganizationPage() {
                   placeholder="Enter organization name"
                   aria-describedby={errors.name ? "name-error" : undefined}
                   aria-invalid={!!errors.name}
-                  className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-blue-500/20"
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/50 focus:border-white/30 focus:ring-white/10"
                   {...register("name")}
                 />
                 {errors.name && (
@@ -170,16 +170,16 @@ export default function CreateOrganizationPage() {
                     {errors.name.message}
                   </p>
                 )}
-                <p className="text-xs text-slate-500">Maximum 100 characters</p>
+                <p className="text-xs text-white/50">Maximum 100 characters</p>
               </div>
 
               {/* Description Field */}
               <div className="space-y-2">
                 <Label
                   htmlFor="description"
-                  className="text-sm font-medium text-slate-200"
+                  className="text-sm font-medium text-white/80"
                 >
-                  Description <span className="text-slate-500">(optional)</span>
+                  Description <span className="text-white/50">(optional)</span>
                 </Label>
                 <Textarea
                   id="description"
@@ -189,7 +189,7 @@ export default function CreateOrganizationPage() {
                     errors.description ? "description-error" : undefined
                   }
                   aria-invalid={!!errors.description}
-                  className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-blue-500/20 resize-none"
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/50 focus:border-white/30 focus:ring-white/10 resize-none"
                   {...register("description")}
                 />
                 {errors.description && (
@@ -201,7 +201,7 @@ export default function CreateOrganizationPage() {
                     {errors.description.message}
                   </p>
                 )}
-                <p className="text-xs text-slate-500">Maximum 500 characters</p>
+                <p className="text-xs text-white/50">Maximum 500 characters</p>
               </div>
             </CardContent>
 
@@ -209,7 +209,7 @@ export default function CreateOrganizationPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white"
+                className="flex-1 border-white/20 text-white/70 hover:bg-white/10 hover:text-white"
                 onClick={() => router.back()}
                 disabled={isSubmitting}
               >

@@ -21,7 +21,6 @@ import {
   FaChevronRight,
 } from "react-icons/fa";
 import { AnimatePresence, motion } from "framer-motion";
-import styles from "./profile.module.css";
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
@@ -99,6 +98,16 @@ export default function ProfilePage() {
 
   const sidebarWidth = isMobile ? 260 : isSidebarCollapsed ? 72 : 220;
   const showSidebarLabels = !isSidebarCollapsed || isMobile;
+  const pageClassName = `min-h-screen w-screen p-5 flex flex-col ${
+    contentTheme === "light"
+      ? "bg-gradient-to-br from-[#fbc2eb] to-[#a6c1ee] text-[var(--color-text)]"
+      : "bg-[var(--page-bg-deep)] text-white"
+  }`;
+  const sidebarClassName = `p-4 rounded-xl flex flex-col gap-3 relative z-100 bg-[var(--nav-bg)] text-white ${
+    isMobile
+      ? "fixed top-[88px] left-[12px] bottom-[12px] h-auto shadow-[0_24px_80px_rgba(2,6,23,0.4)]"
+      : ""
+  }`;
   const handleNavigate = useCallback(
     (href: string) => {
       router.push(href);
@@ -172,8 +181,8 @@ export default function ProfilePage() {
 
   if (!mounted || status === "loading") {
     return (
-      <div className={styles.loadingContainer}>
-        <p className={styles.loadingText}>Loading profile...</p>
+      <div className="min-h-screen flex items-center justify-center bg-[var(--page-bg-deep)] text-white">
+        <p className="text-lg">Loading profile...</p>
       </div>
     );
   }
@@ -185,35 +194,37 @@ export default function ProfilePage() {
   const user = session.user;
 
   return (
-    <div
-      className={`${styles.container} ${contentTheme === "dark" ? styles.darkTheme : ""}`}
-    >
-      <nav className={styles.navbar}>
-        <div className={styles.navLeft}>
+    <div className={pageClassName}>
+      <nav className="flex items-center justify-between rounded-xl bg-[var(--page-bg-dark)] p-5 text-white mb-5">
+        <div className="flex items-center gap-4 flex-shrink-0">
           <button
-            className={`${styles.sidebarToggle} ${isMobile ? "inline-flex" : "hidden"} items-center gap-1.5`}
+            className={`bg-transparent border border-white/20 text-white rounded-lg px-2.5 py-1.5 cursor-pointer items-center gap-1.5 ${
+              isMobile ? "inline-flex" : "hidden"
+            }`}
             onClick={() => setIsSidebarOpen((prev) => !prev)}
             aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
             aria-expanded={isSidebarOpen}
           >
             <FaBars />
           </button>
-          <h1 className={styles.logo}>Worklog</h1>
-          <div className={styles.search}>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
+            Worklog
+          </h1>
+          <div className="flex items-center gap-2 bg-white/10 px-2.5 py-1.5 rounded-lg w-[280px]">
             <FaSearch />
             <input
               placeholder="Search teams..."
-              className="bg-transparent border-none text-white placeholder-gray-400 flex-1 outline-none"
+              className="bg-transparent border-none text-white placeholder-white/60 flex-1 outline-none"
             />
           </div>
         </div>
 
-        <div className={styles.navRight}>
-          <button className={styles.iconBtn}>
+        <div className="flex gap-3 flex-shrink-0">
+          <button className="bg-transparent border border-white/20 text-white rounded-lg px-2.5 py-1.5 cursor-pointer hover:bg-white/10 transition-colors">
             <FaBell />
           </button>
           <button
-            className={styles.themeToggle}
+            className="bg-transparent border border-white/20 text-white rounded-lg px-2.5 py-1.5 cursor-pointer hover:bg-white/10 transition-colors"
             onClick={() =>
               setContentTheme(contentTheme === "dark" ? "light" : "dark")
             }
@@ -221,7 +232,7 @@ export default function ProfilePage() {
             {contentTheme === "light" ? "🌙" : "☀️"}
           </button>
           <button
-            className={styles.actionButton}
+            className="flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/20 px-3 py-2 text-sm font-semibold text-red-200 hover:bg-red-500/30 transition-colors"
             onClick={() => signOut({ callbackUrl: "/" })}
           >
             <FaSignOutAlt /> Sign Out
@@ -229,11 +240,11 @@ export default function ProfilePage() {
         </div>
       </nav>
 
-      <div className={styles.layout}>
+      <div className="flex gap-4 flex-1 w-full overflow-x-hidden">
         <AnimatePresence>
           {isMobile && isSidebarOpen && (
             <motion.div
-              className={styles.sidebarOverlay}
+              className="fixed inset-0 bg-black/60 z-90"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -244,7 +255,7 @@ export default function ProfilePage() {
         </AnimatePresence>
 
         <motion.aside
-          className={`${styles.sidebar} ${isMobile ? styles.sidebarMobile : ""}`}
+          className={sidebarClassName}
           style={{ width: sidebarWidth }}
           aria-label="Main navigation"
           aria-expanded={isSidebarOpen}
@@ -255,13 +266,13 @@ export default function ProfilePage() {
           }}
           transition={{ type: "spring", stiffness: 260, damping: 26 }}
         >
-          <div className={styles.sidebarHeader}>
-            <span className={styles.sidebarTitle}>
+          <div className="flex items-center justify-between font-semibold text-sm">
+            <span className="uppercase tracking-wider text-xs text-white/70">
               {showSidebarLabels ? "Navigation" : "Nav"}
             </span>
             {!isMobile && (
               <button
-                className={styles.sidebarCollapse}
+                className="bg-white/8 border-none text-white rounded-lg px-2 py-1.5 cursor-pointer hover:bg-white/12 transition-colors"
                 onClick={() => setIsSidebarCollapsed((prev) => !prev)}
                 aria-label={
                   isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
@@ -272,7 +283,7 @@ export default function ProfilePage() {
             )}
           </div>
 
-          <div className={styles.sidebarItems}>
+          <div className="flex flex-col gap-1.5">
             {sidebarItems.map((item) => {
               const isActive = pathname.startsWith(item.href);
               const ariaLabel = item.count
@@ -282,7 +293,11 @@ export default function ProfilePage() {
               return (
                 <div
                   key={item.id}
-                  className={`${styles.sideItem} ${isActive ? styles.sideItemActive : ""}`}
+                  className={`p-2.5 rounded-xl flex gap-2 cursor-pointer mb-2 items-center transition-colors ${
+                    isActive
+                      ? "bg-gradient-to-r from-blue-500 to-cyan-500"
+                      : "hover:bg-white/5"
+                  }`}
                   onClick={() => handleNavigate(item.href)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
@@ -295,12 +310,16 @@ export default function ProfilePage() {
                   aria-current={isActive ? "page" : undefined}
                   aria-label={ariaLabel}
                 >
-                  <span className={styles.sideIcon}>{item.icon}</span>
+                  <span className="inline-flex items-center justify-center w-5">
+                    {item.icon}
+                  </span>
                   {showSidebarLabels && (
-                    <span className={styles.sideLabel}>{item.label}</span>
+                    <span className="whitespace-nowrap">{item.label}</span>
                   )}
                   <span
-                    className={`${styles.count} ${showSidebarLabels ? "" : styles.countCollapsed}`}
+                    className={`rounded-lg bg-[var(--color-primary)] px-1.5 py-0.5 text-xs font-semibold text-[var(--color-text-inverse)] ${
+                      showSidebarLabels ? "ml-auto" : "ml-0"
+                    }`}
                     aria-live="polite"
                   >
                     {item.count}
@@ -310,98 +329,116 @@ export default function ProfilePage() {
             })}
 
             {sidebarLoading && (
-              <div className={`${styles.sideItem} opacity-60`}>
-                <span className={styles.sideIcon}>
+              <div className="p-2.5 rounded-xl flex gap-2 cursor-pointer mb-2 items-center opacity-60">
+                <span className="inline-flex items-center justify-center w-5">
                   <FaUsers />
-                </span>{" "}
+                </span>
                 {showSidebarLabels ? "Loading..." : "..."}
               </div>
             )}
           </div>
 
           <button
-            className={`${styles.createTeamBtn} mt-auto`}
+            className="mt-auto w-full rounded-xl border-none bg-gradient-to-r from-green-500 to-green-600 px-3 py-2 font-bold text-white flex items-center justify-center gap-2 hover:from-green-600 hover:to-green-700 transition-colors"
             onClick={() => router.push("/home")}
           >
             <FaPlus /> {showSidebarLabels ? "Back to Dashboard" : "Back"}
           </button>
         </motion.aside>
 
-        <main className={styles.content}>
+        <main className="flex-1 overflow-auto p-5">
           {/* Profile Card */}
-          <div className={styles.profileCard}>
+          <div className="max-w-2xl mx-auto rounded-2xl border border-white/10 bg-white/5 p-10 backdrop-blur-md">
             {/* Profile Header */}
-            <div className={styles.profileHeader}>
-              <div className={styles.avatarContainer}>
+            <div className="text-center mb-10 pb-8 border-b border-white/10">
+              <div className="mb-5">
                 {user?.image ? (
                   <Image
                     src={user.image}
                     alt={user.name || "User"}
                     width={120}
                     height={120}
-                    className={styles.avatar}
+                    className="h-[120px] w-[120px] rounded-full border-4 border-blue-300/50 object-cover"
                   />
                 ) : (
-                  <div className={styles.avatarPlaceholder}>
+                  <div className="h-[120px] w-[120px] rounded-full bg-blue-300/30 border-4 border-blue-300/50 inline-flex items-center justify-center text-5xl font-bold text-white">
                     {user?.name?.charAt(0).toUpperCase() ||
                       user?.email?.charAt(0).toUpperCase() ||
                       "U"}
                   </div>
                 )}
               </div>
-              <h2 className={styles.userName}>
+              <h2 className="text-3xl font-bold mt-2.5 mb-1 text-white">
                 {user?.name || "Anonymous User"}
               </h2>
-              <p className={styles.userEmail}>
+              <p className="text-white/60">
                 {user?.email || "No email provided"}
               </p>
+              <div className="mt-4 flex flex-wrap justify-center gap-2 text-xs">
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
+                  {sidebarLoading ? "..." : sidebarStats.memberTeamsCount}{" "}
+                  member teams
+                </span>
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
+                  {sidebarLoading ? "..." : sidebarStats.leadTeamsCount} lead
+                  teams
+                </span>
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
+                  {sidebarLoading ? "..." : sidebarStats.organizationsCount}{" "}
+                  orgs
+                </span>
+              </div>
             </div>
 
             {/* Profile Details */}
-            <div className={styles.detailsSection}>
-              <h3 className={styles.sectionTitle}>Account Information</h3>
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold mb-5 text-white">
+                Account Information
+              </h3>
 
-              <div className={styles.detailItem}>
-                <div className={styles.detailIcon}>
+              <div className="flex items-center gap-4 p-4 bg-white/5 rounded-xl border border-white/10 mb-2.5">
+                <div className="w-10 h-10 rounded-xl bg-blue-400/20 text-blue-400 text-lg flex items-center justify-center">
                   <FaEnvelope />
                 </div>
                 <div>
-                  <p className={styles.detailLabel}>Email</p>
-                  <p className={styles.detailValue}>
+                  <p className="text-white/60 text-sm mb-1">Email</p>
+                  <p className="text-white text-base font-medium">
                     {user?.email || "Not provided"}
                   </p>
                 </div>
               </div>
 
-              <div className={styles.detailItem}>
-                <div className={styles.detailIcon}>
+              <div className="flex items-center gap-4 p-4 bg-white/5 rounded-xl border border-white/10 mb-2.5">
+                <div className="w-10 h-10 rounded-xl bg-blue-400/20 text-blue-400 text-lg flex items-center justify-center">
                   <FaShieldAlt />
                 </div>
                 <div>
-                  <p className={styles.detailLabel}>Name</p>
-                  <p className={styles.detailValue}>
+                  <p className="text-white/60 text-sm mb-1">Name</p>
+                  <p className="text-white text-base font-medium">
                     {user?.name || "Not set"}
                   </p>
                 </div>
               </div>
 
-              <div className={styles.detailItem}>
-                <div className={styles.detailIcon}>
+              <div className="flex items-center gap-4 p-4 bg-white/5 rounded-xl border border-white/10 mb-2.5">
+                <div className="w-10 h-10 rounded-xl bg-blue-400/20 text-blue-400 text-lg flex items-center justify-center">
                   <FaCalendar />
                 </div>
                 <div>
-                  <p className={styles.detailLabel}>Account Status</p>
-                  <p className={styles.detailValue}>
-                    <span className={styles.statusBadge}>Active</span>
+                  <p className="text-white/60 text-sm mb-1">Account Status</p>
+                  <p className="text-white text-base font-medium">
+                    <span className="inline-block rounded-full bg-green-500/20 text-green-400 text-xs font-semibold px-3 py-1">
+                      Active
+                    </span>
                   </p>
                 </div>
               </div>
             </div>
 
             {/* Actions */}
-            <div className={styles.actionsSection}>
+            <div className="flex justify-center gap-2.5">
               <button
-                className={styles.actionButton}
+                className="px-7 py-3 rounded-xl border border-blue-400/30 bg-blue-400/20 text-blue-400 text-base font-semibold hover:bg-blue-400/30 transition"
                 onClick={() => router.push("/home")}
               >
                 Go to Dashboard

@@ -54,7 +54,7 @@ export default function OrganisationsPage() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="text-center">
           <FaSpinner className="h-8 w-8 animate-spin text-blue-400 mx-auto mb-4" />
-          <p className="text-slate-400">Loading organizations...</p>
+          <p className="text-muted">Loading organizations...</p>
         </div>
       </div>
     );
@@ -76,6 +76,12 @@ export default function OrganisationsPage() {
     );
   }
 
+  const totalTeams = organizations.reduce(
+    (sum, org) => sum + org._count.teams,
+    0,
+  );
+  const totalCredits = organizations.reduce((sum, org) => sum + org.credits, 0);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
       <div className="max-w-6xl mx-auto">
@@ -85,12 +91,25 @@ export default function OrganisationsPage() {
             <h1 className="text-3xl font-bold text-white mb-2">
               My Organizations
             </h1>
-            <p className="text-slate-400">
+            <p className="text-muted">
               Manage your organizations and their teams
             </p>
+            {organizations.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
+                  {organizations.length} organizations
+                </span>
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
+                  {totalTeams} teams
+                </span>
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
+                  {totalCredits} credits
+                </span>
+              </div>
+            )}
           </div>
           <Link href="/organizations/create">
-            <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold rounded-lg transition-all duration-200">
+            <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-blue-500/20">
               <FaPlus className="h-4 w-4" />
               Create Organization
             </button>
@@ -99,18 +118,18 @@ export default function OrganisationsPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-6 border border-slate-700">
+          <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10 shadow-lg shadow-black/20">
             <div className="flex items-center gap-3">
               <FaBuilding className="h-8 w-8 text-blue-400" />
               <div>
                 <p className="text-2xl font-bold text-white">
                   {organizations.length}
                 </p>
-                <p className="text-slate-400">Organizations</p>
+                <p className="text-muted">Organizations</p>
               </div>
             </div>
           </div>
-          <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-6 border border-slate-700">
+          <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10 shadow-lg shadow-black/20">
             <div className="flex items-center gap-3">
               <FaUsers className="h-8 w-8 text-green-400" />
               <div>
@@ -120,18 +139,18 @@ export default function OrganisationsPage() {
                     0,
                   )}
                 </p>
-                <p className="text-slate-400">Total Teams</p>
+                <p className="text-muted">Total Teams</p>
               </div>
             </div>
           </div>
-          <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-6 border border-slate-700">
+          <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10 shadow-lg shadow-black/20">
             <div className="flex items-center gap-3">
               <FaPlus className="h-8 w-8 text-purple-400" />
               <div>
                 <p className="text-2xl font-bold text-white">
                   {organizations.reduce((sum, org) => sum + org.credits, 0)}
                 </p>
-                <p className="text-slate-400">Total Credits</p>
+                <p className="text-muted">Total Credits</p>
               </div>
             </div>
           </div>
@@ -140,15 +159,15 @@ export default function OrganisationsPage() {
         {/* Organizations Grid */}
         {organizations.length === 0 ? (
           <div className="text-center py-12">
-            <FaBuilding className="h-16 w-16 text-slate-600 mx-auto mb-4" />
+            <FaBuilding className="h-16 w-16 text-white/40 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-white mb-2">
               No organizations yet
             </h3>
-            <p className="text-slate-400 mb-6">
+            <p className="text-muted mb-6">
               Create your first organization to get started
             </p>
             <Link href="/organizations/create">
-              <button className="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold rounded-lg transition-all duration-200">
+              <button className="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-blue-500/20">
                 Create Organization
               </button>
             </Link>
@@ -157,29 +176,29 @@ export default function OrganisationsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {organizations.map((org) => (
               <Link key={org.id} href={`/organizations/${org.id}`}>
-                <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-6 border border-slate-700 hover:border-slate-600 transition-all duration-200 cursor-pointer group">
+                <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-all duration-200 cursor-pointer group shadow-lg shadow-black/20 hover:-translate-y-1">
                   <div className="flex items-start justify-between mb-4">
                     <div className="p-3 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500">
                       <FaBuilding className="h-6 w-6 text-white" />
                     </div>
-                    <FaArrowRight className="h-5 w-5 text-slate-400 group-hover:text-white transition-colors" />
+                    <FaArrowRight className="h-5 w-5 text-muted group-hover:text-white transition-colors" />
                   </div>
 
                   <h3 className="text-xl font-semibold text-white mb-2">
                     {org.name}
                   </h3>
                   {org.description && (
-                    <p className="text-slate-400 text-sm mb-4 line-clamp-2">
+                    <p className="text-muted text-sm mb-4 line-clamp-2">
                       {org.description}
                     </p>
                   )}
 
                   <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2 text-slate-400">
+                    <div className="flex items-center gap-2 text-muted">
                       <FaUsers className="h-4 w-4" />
                       <span>{org._count.teams} teams</span>
                     </div>
-                    <div className="text-slate-400">{org.credits} credits</div>
+                    <div className="text-muted">{org.credits} credits</div>
                   </div>
                 </div>
               </Link>

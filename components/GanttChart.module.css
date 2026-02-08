@@ -26,12 +26,31 @@
   font-size: 12px;
   font-weight: 600;
   color: rgb(203, 213, 225);
+  z-index: 1;
+}
+
+.statusBarText {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgb(203, 213, 225);
 }
 
 .legendItem {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.legendColor {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
 }
 
 .legendColor {
