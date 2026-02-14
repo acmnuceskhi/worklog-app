@@ -42,7 +42,8 @@ import {
   WorklogFilters,
   type WorklogFilterState,
 } from "@/components/filters/worklog-filters";
-
+import { toast } from "sonner";
+import { OrganizationSettingsDialog } from "@/components/organization-settings-dialog";
 interface TeamMember {
   id: string;
   user: {
@@ -115,7 +116,9 @@ interface Organization {
   name: string;
   description: string | null;
   credits: number;
+  ownerId: string;
   createdAt: string;
+  updatedAt: string;
   owner: {
     id: string;
     name: string | null;
@@ -187,6 +190,8 @@ export default function OrganizationDashboardPage({
       comment: string | null;
     } | null;
   } | null>(null);
+
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
 
   const [worklogFilters, setWorklogFilters] = useState<WorklogFilterState>(
     DEFAULT_WORKLOG_FILTERS,
@@ -328,6 +333,39 @@ export default function OrganizationDashboardPage({
       );
     } finally {
       setIsCreatingTeam(false);
+    }
+  };
+
+  const handleDeleteWorklog = async (
+    worklogId: string,
+    worklogTitle: string,
+  ) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${worklogTitle}"? This action cannot be undone.`,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`/api/worklogs/${worklogId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to delete worklog");
+      }
+
+      // Refresh worklogs
+      await fetchWorklogs();
+      toast.success(`Successfully deleted "${worklogTitle}"`);
+    } catch (error) {
+      console.error("Error deleting worklog:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "An error occurred while deleting the worklog",
+      );
     }
   };
 
@@ -545,6 +583,7 @@ export default function OrganizationDashboardPage({
               <Button
                 variant="outline"
                 className="border-white/20 text-white/70 hover:text-white"
+                onClick={() => setShowSettingsDialog(true)}
               >
                 <FaCog className="mr-2" /> Settings
               </Button>
@@ -759,6 +798,16 @@ export default function OrganizationDashboardPage({
                           )}
                         </Button>
                       )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-red-400/30 text-red-300 hover:bg-red-500/20"
+                        onClick={() =>
+                          handleDeleteWorklog(worklog.id, worklog.title)
+                        }
+                      >
+                        Delete
+                      </Button>
                     </div>
                   ))}
                   <div className="flex items-center justify-between pt-2 text-xs text-muted">
@@ -903,6 +952,15 @@ export default function OrganizationDashboardPage({
             worklogTitle={selectedWorklog.title}
             worklogStatus={selectedWorklog.progressStatus}
             existingRating={selectedWorklog.existingRating}
+            onSuccess={fetchOrganization}
+          />
+        )}
+
+        {organization && (
+          <OrganizationSettingsDialog
+            organization={organization}
+            open={showSettingsDialog}
+            onOpenChange={setShowSettingsDialog}
             onSuccess={fetchOrganization}
           />
         )}

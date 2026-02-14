@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,13 +24,13 @@ import {
   FaUsers,
   FaUserTie,
 } from "react-icons/fa";
+import { useCreateOrganization } from "@/lib/hooks";
 
 type OrganizationFormData = z.infer<typeof organizationCreateSchema>;
 
 export default function CreateOrganizationPage() {
   const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
+  const createOrganization = useCreateOrganization();
 
   const {
     register,
@@ -46,33 +45,12 @@ export default function CreateOrganizationPage() {
   });
 
   const onSubmit = async (data: OrganizationFormData) => {
-    try {
-      setIsSubmitting(true);
-      setServerError(null);
-
-      const response = await fetch("/api/organizations", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to create organization");
-      }
-
-      // Success - redirect to organizations list
-      router.push("/teams/organisations");
-    } catch (error) {
-      setServerError(
-        error instanceof Error ? error.message : "An unexpected error occurred",
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
+    createOrganization.mutate(data, {
+      onSuccess: () => {
+        // Navigate to organizations list on success
+        router.push("/teams/organisations");
+      },
+    });
   };
 
   return (
@@ -135,12 +113,16 @@ export default function CreateOrganizationPage() {
           <form onSubmit={handleSubmit(onSubmit)}>
             <CardContent className="space-y-6">
               {/* Server Error Display */}
-              {serverError && (
+              {createOrganization.error && (
                 <div
                   role="alert"
                   className="p-4 rounded-lg bg-red-500/20 border border-red-500/50 text-red-400"
                 >
-                  <p className="text-sm font-medium">{serverError}</p>
+                  <p className="text-sm font-medium">
+                    {createOrganization.error instanceof Error
+                      ? createOrganization.error.message
+                      : "Failed to create organization"}
+                  </p>
                 </div>
               )}
 
@@ -211,17 +193,17 @@ export default function CreateOrganizationPage() {
                 variant="outline"
                 className="flex-1 border-white/20 text-white/70 hover:bg-white/10 hover:text-white"
                 onClick={() => router.back()}
-                disabled={isSubmitting}
+                disabled={createOrganization.isPending}
               >
                 <FaArrowLeft className="mr-2 h-4 w-4" />
                 Cancel
               </Button>
               <Button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={createOrganization.isPending}
                 className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold"
               >
-                {isSubmitting ? (
+                {createOrganization.isPending ? (
                   <>
                     <FaSpinner className="mr-2 h-4 w-4 animate-spin" />
                     Creating...

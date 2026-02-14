@@ -30,7 +30,15 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { GanttChart } from "@/components/GanttChart";
 import { DeadlineStatusBadge } from "@/components/worklog/deadline-status-badge";
 import { DeadlineCountdown } from "@/components/worklog/deadline-countdown";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { ErrorBoundary } from "@/components/error-boundary";
+import {
+  useTeam,
+  useTeamWorklogs,
+  useRemoveTeamMember,
+  useDeleteWorklog,
+} from "@/lib/hooks";
 import {
   formatLocalDate,
   getDeadlineStatus,
@@ -47,69 +55,131 @@ interface Task {
 }
 
 interface TeamMember {
+  id: string;
   name: string;
   contribution: string;
   rating: number;
 }
 
 interface TeamData {
+  id: string;
   name: string;
-  leader: string;
-  members: TeamMember[];
+  description?: string;
+  ownerId: string;
+  owner: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    image?: string | null;
+  };
+  organization?: {
+    id: string;
+    name: string;
+  };
+  members: Array<{
+    id: string;
+    userId?: string;
+    email: string;
+    status: "ACCEPTED";
+    user?: {
+      id: string;
+      name: string | null;
+      email: string | null;
+      image?: string | null;
+    };
+  }>;
+  _count?: {
+    worklogs: number;
+  };
 }
 
-const teamDetails: Record<string, TeamData> = {
-  "1": {
-    name: "Alpha Squad",
-    leader: "Alice",
-    members: [
-      { name: "Ali", contribution: "Backend APIs", rating: 8 },
-      { name: "Sara", contribution: "UI / UX Design", rating: 9 },
-      { name: "Ahmed", contribution: "Database Design", rating: 7 },
-      { name: "Zara", contribution: "Testing & QA", rating: 6 },
-    ],
-  },
-  "2": {
-    name: "Design Gurus",
-    leader: "Bob",
-    members: [
-      { name: "John", contribution: "Graphic Design", rating: 9 },
-      { name: "Emma", contribution: "Web Design", rating: 8 },
-      { name: "Tom", contribution: "Prototyping", rating: 7 },
-    ],
-  },
-  "3": {
-    name: "Product Masters",
-    leader: "Charlie",
-    members: [
-      { name: "Lisa", contribution: "Product Strategy", rating: 9 },
-      { name: "Mark", contribution: "Market Research", rating: 8 },
-    ],
-  },
-  "4": {
-    name: "Dev Ninjas",
-    leader: "David",
-    members: [
-      { name: "Chris", contribution: "Full Stack Dev", rating: 9 },
-      { name: "Nina", contribution: "DevOps", rating: 8 },
-      { name: "Sam", contribution: "Security", rating: 7 },
-    ],
-  },
-};
+function TeamLoadingSkeleton() {
+  return (
+    <div className="animate-pulse space-y-4 p-6">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <Skeleton className="h-8 w-48 mb-2" />
+          <Skeleton className="h-4 w-32" />
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-6 w-20" />
+          <Skeleton className="h-6 w-16" />
+        </div>
+      </div>
+
+      <Card className="border border-white/10 bg-white/5 backdrop-blur-md">
+        <CardHeader>
+          <Skeleton className="h-6 w-64 mb-2" />
+          <Skeleton className="h-4 w-48" />
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {[...Array(4)].map((_, i) => (
+              <div
+                key={i}
+                className="flex justify-between items-center p-3 border-b border-white/10"
+              >
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-16" />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border border-white/10 bg-white/5 backdrop-blur-md">
+        <CardHeader>
+          <Skeleton className="h-6 w-48" />
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {[...Array(3)].map((_, i) => (
+              <div
+                key={i}
+                className="p-4 rounded-lg border border-white/10 bg-white/5"
+              >
+                <Skeleton className="h-4 w-32 mb-2" />
+                <Skeleton className="h-3 w-24 mb-2" />
+                <Skeleton className="h-3 w-40 mb-2" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 export default function TeamDetailsPage({
   params,
 }: {
   params: Promise<{ teamId: string }>;
 }) {
-  const { teamId } = use(params);
-  const team = teamDetails[teamId] || {
-    name: "Unknown",
-    leader: "N/A",
-    members: [],
-  };
+  return (
+    <ErrorBoundary>
+      <TeamDetailsPageContent params={params} />
+    </ErrorBoundary>
+  );
+}
 
-  const [teamData, setTeamData] = useState(team.members);
+function TeamDetailsPageContent({
+  params,
+}: {
+  params: Promise<{ teamId: string }>;
+}) {
+  const { teamId } = use(params);
+
+  // Use custom hooks for data fetching
+  const { data: team, isLoading, error, refetch } = useTeam(teamId);
+  const { data: worklogs = [], isLoading: worklogsLoading } =
+    useTeamWorklogs(teamId);
+  const removeMemberMutation = useRemoveTeamMember(teamId);
+  const deleteWorklogMutation = useDeleteWorklog(teamId);
+
+  // Initialize all state hooks at the top
   const [tasks, setTasks] = useState<Task[]>([
     {
       id: 1,
@@ -158,14 +228,84 @@ export default function TeamDetailsPage({
       );
   }, [tasks]);
 
+  useEffect(() => {
+    deadlineWarnings.slice(0, 3).forEach(({ task, info }) => {
+      if (notifiedRef.current.has(task.id)) {
+        return;
+      }
+      notifiedRef.current.add(task.id);
+      if (info.status === "overdue") {
+        toast.error(`Deadline ${formatLocalDate(new Date(task.deadline))}`, {
+          description: `${task.title} is ${info.label.toLowerCase()}`,
+        });
+      } else {
+        toast.warning(`Deadline ${formatLocalDate(new Date(task.deadline))}`, {
+          description: `${task.title} is ${info.label.toLowerCase()}`,
+        });
+      }
+    });
+  }, [deadlineWarnings]);
+
+  // Loading state with skeleton
+  if (isLoading) {
+    return (
+      <div className="p-6">
+        <TeamLoadingSkeleton />
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-red-600 text-center">
+          <h2 className="text-xl font-semibold mb-2">Error Loading Team</h2>
+          <p>{error instanceof Error ? error.message : "An error occurred"}</p>
+          <button
+            onClick={() => refetch()}
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // No team found
+  if (!team) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Team Not Found</h2>
+          <p>The requested team could not be found.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Update teamData when team data changes
+  const teamMembers = team.members.map((member: TeamData["members"][0]) => ({
+    id: member.id,
+    name: member.user?.name || member.email,
+    email: member.email,
+    contribution: "Team Member", // Default contribution
+    rating: 5, // Default rating
+  }));
+
+  // Loading state with skeleton
+
   // Check if deadline passed
   const isDeadlinePassed = (deadline: string) =>
     new Date(deadline) < new Date();
 
-  const setRating = (index: number, value: number) => {
-    const updated = [...teamData];
-    updated[index].rating = Math.max(0, value);
-    setTeamData(updated);
+  const handleRemoveMember = (memberId: string, memberName: string) => {
+    removeMemberMutation.mutate({ memberId, memberName });
+  };
+
+  const handleDeleteWorklog = (worklogId: string, worklogTitle: string) => {
+    deleteWorklogMutation.mutate({ worklogId, worklogTitle });
   };
 
   const handleAssignTask = () => {
@@ -186,28 +326,8 @@ export default function TeamDetailsPage({
     }
   };
 
-  useEffect(() => {
-    deadlineWarnings.slice(0, 3).forEach(({ task, info }) => {
-      if (notifiedRef.current.has(task.id)) {
-        return;
-      }
-      notifiedRef.current.add(task.id);
-      if (info.status === "overdue") {
-        toast.error(`Deadline ${formatLocalDate(new Date(task.deadline))}`, {
-          description: `${task.title} is ${info.label.toLowerCase()}`,
-        });
-      } else {
-        toast.warning(`Deadline ${formatLocalDate(new Date(task.deadline))}`, {
-          description: `${task.title} is ${info.label.toLowerCase()}`,
-        });
-      }
-    });
-  }, [deadlineWarnings]);
-
   // Ranking logic
-  const rankedUsers = [...teamData].sort((a, b) => b.rating - a.rating);
-  const totalMembers = teamData.length;
-  const totalTasks = tasks.length;
+  const rankedUsers = [...teamMembers].sort((a, b) => b.rating - a.rating);
   const urgentDeadlines = deadlineWarnings.length;
 
   return (
@@ -215,14 +335,16 @@ export default function TeamDetailsPage({
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-white">{team.name}</h1>
-          <p className="text-muted">Led by {team.leader}</p>
+          <p className="text-muted">
+            Led by {team.owner.name || team.owner.email}
+          </p>
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
           <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
-            {totalMembers} members
+            {team.members.length} members
           </span>
           <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
-            {totalTasks} tasks
+            {team._count?.worklogs || 0} worklogs
           </span>
           {urgentDeadlines > 0 && (
             <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-amber-200">
@@ -240,7 +362,8 @@ export default function TeamDetailsPage({
                 {team.name} - Team Contributions
               </CardTitle>
               <CardDescription className="text-muted mt-1">
-                Led by: {team.leader}
+                Led by: {team.owner.name || team.owner.email}
+                {team.organization && ` • ${team.organization.name}`}
               </CardDescription>
             </div>
             <Button
@@ -266,12 +389,12 @@ export default function TeamDetailsPage({
                     Assigned Tasks
                   </th>
                   <th className="text-left py-3 px-2 text-white/70 font-semibold">
-                    Rating
+                    Actions
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {teamData.map((member: TeamMember, index: number) => {
+                {teamMembers.map((member: TeamMember, index: number) => {
                   const memberTasks = tasks.filter(
                     (t) => t.assignedTo === member.name,
                   );
@@ -303,24 +426,17 @@ export default function TeamDetailsPage({
                         </div>
                       </td>
                       <td className="py-3 px-2">
-                        <div className="flex items-center gap-0.5">
-                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => (
-                            <span
-                              key={star}
-                              className="cursor-pointer text-sm transition-transform hover:scale-110"
-                              style={{
-                                color:
-                                  star <= member.rating ? "#FFD700" : "#555",
-                              }}
-                              onClick={() => setRating(index, star)}
-                            >
-                              ★
-                            </span>
-                          ))}
-                          <span className="ml-2 text-amber-200 font-semibold text-sm">
-                            {member.rating}/10
-                          </span>
-                        </div>
+                        <button
+                          onClick={() =>
+                            handleRemoveMember(member.id, member.name)
+                          }
+                          disabled={removeMemberMutation.isPending}
+                          className="px-3 py-1 text-red-400 hover:bg-red-500/10 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {removeMemberMutation.isPending
+                            ? "Removing..."
+                            : "Remove"}
+                        </button>
                       </td>
                     </tr>
                   );
@@ -437,6 +553,93 @@ export default function TeamDetailsPage({
         </CardContent>
       </Card>
 
+      {/* Worklog Management Card */}
+      <Card className="border border-white/10 bg-white/5 backdrop-blur-md shadow-lg shadow-black/20">
+        <CardHeader>
+          <CardTitle className="text-white">Team Worklogs</CardTitle>
+          <CardDescription className="text-muted">
+            Manage and review all worklogs submitted by team members
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {worklogsLoading ? (
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="p-3 border border-white/10 rounded">
+                  <Skeleton className="h-4 w-32 mb-2" />
+                  <Skeleton className="h-3 w-48 mb-1" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+              ))}
+            </div>
+          ) : worklogs && worklogs.length > 0 ? (
+            <div className="space-y-3">
+              {worklogs.map((worklog) => (
+                <div
+                  key={worklog.id}
+                  className="rounded-lg border border-white/10 bg-white/5 p-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h4 className="text-white text-sm font-semibold">
+                        {worklog.title}
+                      </h4>
+                      <p className="text-xs text-white/60 mt-1">
+                        By {worklog.user?.name || worklog.user?.email} •{" "}
+                        {new Date(worklog.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    {worklog.deadline && (
+                      <div className="flex flex-col items-end gap-1">
+                        <DeadlineStatusBadge
+                          deadline={worklog.deadline}
+                          status={worklog.progressStatus}
+                        />
+                        <DeadlineCountdown deadline={worklog.deadline} />
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted mt-2">
+                    {(() => {
+                      const strippedDescription =
+                        worklog.description?.replace(/<[^>]*>/g, "") || "";
+                      const truncatedDescription =
+                        strippedDescription.substring(0, 150);
+                      return (
+                        <>
+                          {truncatedDescription}
+                          {strippedDescription.length > 150 && "..."}
+                        </>
+                      );
+                    })()}
+                  </p>
+                  <div className="mt-3 flex gap-2">
+                    <span className="px-2 py-1 text-xs rounded border border-white/20 bg-white/5 text-white/70">
+                      {worklog.progressStatus?.replace("_", " ")}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="border-red-400/30 text-red-300 hover:bg-red-500/20 ml-auto"
+                      onClick={() =>
+                        handleDeleteWorklog(worklog.id, worklog.title)
+                      }
+                      disabled={deleteWorklogMutation.isPending}
+                    >
+                      {deleteWorklogMutation.isPending
+                        ? "Deleting..."
+                        : "Delete"}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted">No worklogs submitted yet.</p>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Gantt Chart - Timeline View */}
       <Card className="border border-white/10 bg-white/5 backdrop-blur-md shadow-lg shadow-black/20">
         <CardHeader>
@@ -484,13 +687,13 @@ export default function TeamDetailsPage({
                   <SelectValue placeholder="Select member..." />
                 </SelectTrigger>
                 <SelectContent className="bg-[var(--panel-strong)] border-white/10">
-                  {team.members.map((m: TeamMember) => (
+                  {team.members.map((member: TeamData["members"][0]) => (
                     <SelectItem
-                      key={m.name}
-                      value={m.name}
+                      key={member.id}
+                      value={member.user?.name || member.email}
                       className="text-white/80"
                     >
-                      {m.name}
+                      {member.user?.name || member.email}
                     </SelectItem>
                   ))}
                 </SelectContent>

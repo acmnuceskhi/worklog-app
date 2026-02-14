@@ -61,8 +61,7 @@ export const organizationUpdateSchema = z.object({
   name: z
     .string()
     .min(1, "Organization name must not be empty")
-    .max(100, "Organization name must be at most 100 characters")
-    .optional(),
+    .max(100, "Organization name must be at most 100 characters"),
   description: z
     .string()
     .max(500, "Description must be at most 500 characters")

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Image from "next/image";
 import {
   FaUsers,
@@ -9,7 +9,6 @@ import {
   FaSearch,
   FaPlus,
   FaTimes,
-  FaClipboardList,
   FaCheckCircle,
   FaBars,
   FaChevronLeft,
@@ -22,16 +21,36 @@ import { DeadlineStatusBadge } from "@/components/worklog/deadline-status-badge"
 import { DeadlineCountdown } from "@/components/worklog/deadline-countdown";
 import { toast } from "sonner";
 import { formatLocalDate, getDeadlineStatus } from "@/lib/deadline-utils";
+import {
+  useSidebarStats,
+  useWorklogs,
+  useMemberTeams,
+  useOwnedTeams,
+} from "@/lib/hooks";
 
 export default function DashboardPage() {
   const router = useRouter();
   const pathname = usePathname();
   const { data: session } = useSession();
 
+  // TanStack Query hooks for data fetching
+  const { data: sidebarStatsData, isLoading: sidebarLoading } =
+    useSidebarStats();
+  const { data: allWorklogs = [] } = useWorklogs();
+  const { data: memberTeams = [] } = useMemberTeams();
+  const { data: ownedTeams = [] } = useOwnedTeams();
+
   // State declarations
   const [query, setQuery] = useState("");
-  const [contentTheme, setContentTheme] = useState<"light" | "dark">("light");
-  const [mounted, setMounted] = useState(false);
+  const [contentTheme, setContentTheme] = useState<"light" | "dark">(() => {
+    if (typeof window === "undefined") return "light";
+    try {
+      const saved = localStorage.getItem("contentTheme");
+      if (saved === "light" || saved === "dark") return saved;
+    } catch {}
+    return "light";
+  });
+  const mounted = true; // Always true after hydration
 
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [teamName, setTeamName] = useState("");
@@ -39,50 +58,27 @@ export default function DashboardPage() {
   const [inviteEmails, setInviteEmails] = useState<string[]>([]);
   const [inviteInput, setInviteInput] = useState("");
 
-  // Dynamic sidebar state
-  const [sidebarStats, setSidebarStats] = useState({
-    memberTeamsCount: 0,
-    leadTeamsCount: 0,
-    organizationsCount: 0,
-    worklogsCount: 0,
-    pendingReviewsCount: 0,
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    // Initialize based on window size, but only once
+    if (typeof window === "undefined") return true;
+    return window.innerWidth > 960;
   });
-  const [sidebarLoading, setSidebarLoading] = useState(true);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [deadlineWorklogs, setDeadlineWorklogs] = useState<
-    Array<{
-      id: string;
-      title: string;
-      deadline: string;
-      progressStatus?: string | null;
-    }>
-  >([]);
   const deadlineNotifiedRef = useRef<Set<string>>(new Set());
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [invitations, setInvitations] = useState<
     { from: string; team: string }[]
   >([]);
 
+  // Persist theme changes to localStorage
   useEffect(() => {
-    setMounted(true);
     try {
-      const saved = localStorage.getItem("contentTheme");
-      if (saved === "light" || saved === "dark") {
-        setContentTheme(saved);
-      }
+      localStorage.setItem("contentTheme", contentTheme);
     } catch {}
-  }, []);
+  }, [contentTheme]);
 
-  useEffect(() => {
-    if (mounted) {
-      try {
-        localStorage.setItem("contentTheme", contentTheme);
-      } catch {}
-    }
-  }, [contentTheme, mounted]);
-
+  // Detect mobile breakpoint changes
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 960px)");
     const update = () => setIsMobile(mediaQuery.matches);
@@ -91,101 +87,18 @@ export default function DashboardPage() {
     return () => mediaQuery.removeEventListener("change", update);
   }, []);
 
-  useEffect(() => {
-    setIsSidebarOpen(!isMobile);
-    if (isMobile) {
-      setIsSidebarCollapsed(false);
-    }
-  }, [isMobile]);
+  // Compute deadline worklogs from fetched worklogs
+  const deadlineWorklogs = allWorklogs
+    .filter((w) => w.deadline)
+    .map((worklog) => ({
+      id: worklog.id,
+      title: worklog.title,
+      deadline: String(worklog.deadline),
+      progressStatus: worklog.progressStatus ?? null,
+    }))
+    .slice(0, 5);
 
-  const fetchSidebarStats = useCallback(async () => {
-    if (!session?.user?.id) {
-      setSidebarLoading(false);
-      return;
-    }
-
-    try {
-      setSidebarLoading(true);
-      const response = await fetch("/api/sidebar/stats");
-      if (!response.ok) {
-        throw new Error("Failed to load sidebar stats");
-      }
-
-      const payload = await response.json();
-      const data = payload.data || payload;
-      setSidebarStats({
-        memberTeamsCount: data.memberTeamsCount ?? 0,
-        leadTeamsCount: data.leadTeamsCount ?? 0,
-        organizationsCount: data.organizationsCount ?? 0,
-        worklogsCount: data.worklogsCount ?? 0,
-        pendingReviewsCount: data.pendingReviewsCount ?? 0,
-      });
-    } catch (error) {
-      console.error("Failed to fetch sidebar stats:", error);
-    } finally {
-      setSidebarLoading(false);
-    }
-  }, [session?.user?.id]);
-
-  useEffect(() => {
-    fetchSidebarStats();
-
-    const interval = setInterval(fetchSidebarStats, 30000);
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        fetchSidebarStats();
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibility);
-
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-  }, [fetchSidebarStats]);
-
-  useEffect(() => {
-    let isActive = true;
-    const loadDeadlines = async () => {
-      try {
-        const response = await fetch("/api/worklogs");
-        if (!response.ok) {
-          return;
-        }
-        const payload = await response.json();
-        const worklogs = (payload.data || []) as Array<{
-          id: string;
-          title: string;
-          deadline?: string | null;
-          progressStatus?: string | null;
-        }>;
-
-        const withDeadlines = worklogs
-          .filter((worklog) => worklog.deadline)
-          .map((worklog) => ({
-            id: worklog.id,
-            title: worklog.title,
-            deadline: String(worklog.deadline),
-            progressStatus: worklog.progressStatus ?? null,
-          }))
-          .slice(0, 5);
-
-        if (isActive) {
-          setDeadlineWorklogs(withDeadlines);
-        }
-      } catch {
-        if (isActive) {
-          setDeadlineWorklogs([]);
-        }
-      }
-    };
-
-    loadDeadlines();
-    return () => {
-      isActive = false;
-    };
-  }, []);
-
+  // Show deadline notifications
   useEffect(() => {
     deadlineWorklogs.forEach((worklog) => {
       if (deadlineNotifiedRef.current.has(worklog.id)) {
@@ -216,26 +129,27 @@ export default function DashboardPage() {
     });
   }, [deadlineWorklogs]);
 
-  const teamsData = [
-    {
-      id: "t1",
-      name: "Frontend Team",
-      members: 8,
-      progress: 72,
-      role: "member",
-    },
-    { id: "t2", name: "Backend Squad", members: 5, progress: 46, role: "lead" },
-    {
-      id: "t3",
-      name: "Marketing Team",
-      members: 4,
-      progress: 88,
-      role: "member",
-    },
-  ];
+  // Helper function for progress status mapping
+  const getProgressInfo = (status: string | null) => {
+    const progressMap = {
+      STARTED: { width: "25%", label: "25%" },
+      HALF_DONE: { width: "50%", label: "50%" },
+      COMPLETED: { width: "75%", label: "75%" },
+      REVIEWED: { width: "90%", label: "90%" },
+      GRADED: { width: "100%", label: "100%" },
+    };
+    return (
+      progressMap[status as keyof typeof progressMap] || {
+        width: "0%",
+        label: "0%",
+      }
+    );
+  };
 
-  const teams = teamsData.filter((t) =>
-    t.name.toLowerCase().includes(query.toLowerCase()),
+  // Combine member and owned teams for display (memoized for performance)
+  const teams = useMemo(
+    () => [...(memberTeams || []), ...(ownedTeams || [])],
+    [memberTeams, ownedTeams],
   );
 
   const sidebarItems = [
@@ -244,37 +158,39 @@ export default function DashboardPage() {
       label: "Member Teams",
       href: "/teams/member",
       icon: <FaUsers />,
-      count: sidebarStats.memberTeamsCount,
+      count: sidebarStatsData?.activeMembershipsCount ?? 0,
     },
     {
       id: "lead",
       label: "Lead Teams",
       href: "/teams/lead",
       icon: <FaUserTie />,
-      count: sidebarStats.leadTeamsCount,
+      count: sidebarStatsData?.ownedOrganizationsCount ?? 0,
     },
     {
       id: "orgs",
       label: "My Organisations",
       href: "/teams/organisations",
       icon: <FaUsers />,
-      count: sidebarStats.organizationsCount,
-    },
-    {
-      id: "worklogs",
-      label: "My Worklogs",
-      href: "/teams/member",
-      icon: <FaClipboardList />,
-      count: sidebarStats.worklogsCount,
+      count: sidebarStatsData?.ownedOrganizationsCount ?? 0,
     },
     {
       id: "pending",
       label: "Pending Reviews",
       href: "/teams/lead",
       icon: <FaCheckCircle />,
-      count: sidebarStats.pendingReviewsCount,
+      count: sidebarStatsData?.pendingReviewsCount ?? 0,
     },
-  ];
+    {
+      id: "debug",
+      label: "Debug Teams",
+      href: "/debug",
+      icon: <FaBell />,
+      count: null,
+    },
+  ].filter(
+    (item) => item.id !== "debug" || process.env.NODE_ENV === "development",
+  );
 
   const sidebarWidth = isMobile ? 260 : isSidebarCollapsed ? 72 : 220;
   const showSidebarLabels = !isSidebarCollapsed || isMobile;
@@ -487,9 +403,8 @@ export default function DashboardPage() {
             )}
 
             {!sidebarLoading &&
-              sidebarStats.memberTeamsCount === 0 &&
-              sidebarStats.leadTeamsCount === 0 &&
-              sidebarStats.organizationsCount === 0 && (
+              sidebarStatsData?.activeMembershipsCount === 0 &&
+              sidebarStatsData?.ownedOrganizationsCount === 0 && (
                 <div className="p-2.5 rounded-xl flex gap-2 opacity-60">
                   <FaUsers /> {showSidebarLabels ? "No teams yet" : "0"}
                 </div>
@@ -527,13 +442,7 @@ export default function DashboardPage() {
               </div>
               <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white/80">
                 <div className="text-lg font-semibold text-white">
-                  {sidebarStats.worklogsCount}
-                </div>
-                <div className="text-white/60">My Worklogs</div>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white/80">
-                <div className="text-lg font-semibold text-white">
-                  {sidebarStats.pendingReviewsCount}
+                  {sidebarStatsData?.pendingReviewsCount ?? 0}
                 </div>
                 <div className="text-white/60">Pending Reviews</div>
               </div>
@@ -542,47 +451,110 @@ export default function DashboardPage() {
 
           <section className={cardClassName}>
             <h3>Featured Teams</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {teamsData.map((t) => (
-                <div key={t.id} className={teamCardClassName}>
-                  <div className="flex gap-2.5 items-center">
-                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-white text-sm font-semibold flex items-center justify-center">
-                      {t.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .slice(0, 2)
-                        .join("")}
+            {teams.length === 0 ? (
+              <p className="text-muted">
+                No teams yet. Create your first team to get started!
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {teams.slice(0, 6).map((team) => (
+                  <div key={team.id} className={teamCardClassName}>
+                    <div className="flex gap-2.5 items-center">
+                      <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-white text-sm font-semibold flex items-center justify-center">
+                        {team.name
+                          .split(" ")
+                          .map((n: string) => n[0])
+                          .slice(0, 2)
+                          .join("")}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-base font-semibold mb-1">
+                          {team.name}
+                        </h4>
+                        <p
+                          className="text-sm text-muted mb-2"
+                          style={{
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {team.description || team.project || "No description"}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-base font-semibold mb-1">{t.name}</h4>
-                      <p
-                        className="text-sm text-muted mb-2"
+
+                    <div className="flex justify-between items-center mt-2.5">
+                      <span className="text-sm text-muted">
+                        {team._count?.members || 0} members
+                      </span>
+                      <span className="text-sm text-muted">
+                        {team._count?.worklogs || 0} worklogs
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className={cardClassName}>
+            <h3>Recent Worklogs</h3>
+            {allWorklogs.length === 0 ? (
+              <p className="text-muted">
+                No worklogs yet. Start by creating your first worklog!
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {allWorklogs.slice(0, 6).map((worklog) => (
+                  <div key={worklog.id} className={teamCardClassName}>
+                    <div className="flex gap-2.5 items-center">
+                      <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-white text-sm font-semibold flex items-center justify-center">
+                        {worklog.title
+                          .split(" ")
+                          .map((n: string) => n[0])
+                          .slice(0, 2)
+                          .join("")}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-base font-semibold mb-1">
+                          {worklog.title}
+                        </h4>
+                        <p
+                          className="text-sm text-muted mb-2"
+                          style={{
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {worklog.progressStatus?.replace("_", " ") ||
+                            "Not started"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="h-2 bg-black/10 rounded-full overflow-hidden mt-2.5">
+                      <div
+                        className="h-full bg-gradient-to-r from-blue-500 to-cyan-500"
                         style={{
-                          display: "-webkit-box",
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
+                          width: getProgressInfo(worklog.progressStatus).width,
                         }}
-                      >
-                        {t.members} members • {t.role}
-                      </p>
+                      />
+                    </div>
+
+                    <div className="flex justify-between mt-1.5">
+                      <span>Progress</span>
+                      <strong>
+                        {getProgressInfo(worklog.progressStatus).label}
+                      </strong>
                     </div>
                   </div>
-
-                  <div className="h-2 bg-black/10 rounded-full overflow-hidden mt-2.5">
-                    <div
-                      className="h-full bg-gradient-to-r from-blue-500 to-cyan-500"
-                      style={{ width: `${t.progress}%` }}
-                    />
-                  </div>
-
-                  <div className="flex justify-between mt-1.5">
-                    <span>Completion</span>
-                    <strong>{t.progress}%</strong>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </section>
 
           <section className={cardClassName}>

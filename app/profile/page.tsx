@@ -4,6 +4,7 @@ import { useSession, signOut } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
+import { useSidebarStats } from "@/lib/hooks";
 import {
   FaSignOutAlt,
   FaEnvelope,
@@ -28,16 +29,18 @@ export default function ProfilePage() {
   const pathname = usePathname();
   const mounted = typeof window !== "undefined";
 
-  // Dynamic sidebar state
-  const [sidebarStats, setSidebarStats] = useState({
-    memberTeamsCount: 0,
-    leadTeamsCount: 0,
-    organizationsCount: 0,
-    worklogsCount: 0,
-    pendingReviewsCount: 0,
+  // TanStack Query hook for sidebar stats
+  const { data: sidebarStatsData, isLoading: sidebarLoading } =
+    useSidebarStats();
+
+  const [contentTheme, setContentTheme] = useState<"light" | "dark">(() => {
+    if (typeof window === "undefined") return "light";
+    try {
+      const saved = localStorage.getItem("contentTheme");
+      if (saved === "light" || saved === "dark") return saved;
+    } catch {}
+    return "light";
   });
-  const [sidebarLoading, setSidebarLoading] = useState(true);
-  const [contentTheme, setContentTheme] = useState<"light" | "dark">("light");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -48,15 +51,12 @@ export default function ProfilePage() {
     }
   }, [status, router]);
 
-  // Theme management
+  // Persist theme changes to localStorage
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("contentTheme");
-      if (saved === "light" || saved === "dark") {
-        setContentTheme(saved);
-      }
+      localStorage.setItem("contentTheme", contentTheme);
     } catch {}
-  }, []);
+  }, [contentTheme]);
 
   const sidebarItems = [
     {
@@ -64,35 +64,35 @@ export default function ProfilePage() {
       label: "Member Teams",
       href: "/teams/member",
       icon: <FaUsers />,
-      count: sidebarStats.memberTeamsCount,
+      count: sidebarStatsData?.activeMembershipsCount ?? 0,
     },
     {
       id: "lead",
       label: "Lead Teams",
       href: "/teams/lead",
       icon: <FaUserTie />,
-      count: sidebarStats.leadTeamsCount,
+      count: sidebarStatsData?.ownedOrganizationsCount ?? 0,
     },
     {
       id: "orgs",
       label: "My Organisations",
       href: "/teams/organisations",
       icon: <FaUsers />,
-      count: sidebarStats.organizationsCount,
+      count: sidebarStatsData?.ownedOrganizationsCount ?? 0,
     },
     {
       id: "worklogs",
       label: "My Worklogs",
       href: "/teams/member",
       icon: <FaClipboardList />,
-      count: sidebarStats.worklogsCount,
+      count: sidebarStatsData?.pendingReviewsCount ?? 0,
     },
     {
       id: "pending",
       label: "Pending Reviews",
       href: "/teams/lead",
       icon: <FaCheckCircle />,
-      count: sidebarStats.pendingReviewsCount,
+      count: sidebarStatsData?.pendingReviewsCount ?? 0,
     },
   ];
 
@@ -125,59 +125,6 @@ export default function ProfilePage() {
     mediaQuery.addEventListener("change", update);
     return () => mediaQuery.removeEventListener("change", update);
   }, []);
-
-  useEffect(() => {
-    setIsSidebarOpen(!isMobile);
-    if (isMobile) {
-      setIsSidebarCollapsed(false);
-    }
-  }, [isMobile]);
-
-  const fetchSidebarStats = useCallback(async () => {
-    if (!session?.user?.id) {
-      setSidebarLoading(false);
-      return;
-    }
-
-    try {
-      setSidebarLoading(true);
-      const response = await fetch("/api/sidebar/stats");
-      if (!response.ok) {
-        throw new Error("Failed to load sidebar stats");
-      }
-
-      const payload = await response.json();
-      const data = payload.data || payload;
-      setSidebarStats({
-        memberTeamsCount: data.memberTeamsCount ?? 0,
-        leadTeamsCount: data.leadTeamsCount ?? 0,
-        organizationsCount: data.organizationsCount ?? 0,
-        worklogsCount: data.worklogsCount ?? 0,
-        pendingReviewsCount: data.pendingReviewsCount ?? 0,
-      });
-    } catch (error) {
-      console.error("Failed to fetch sidebar stats:", error);
-    } finally {
-      setSidebarLoading(false);
-    }
-  }, [session?.user?.id]);
-
-  useEffect(() => {
-    fetchSidebarStats();
-
-    const interval = setInterval(fetchSidebarStats, 30000);
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        fetchSidebarStats();
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibility);
-
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-  }, [fetchSidebarStats]);
 
   if (!mounted || status === "loading") {
     return (
@@ -376,15 +323,21 @@ export default function ProfilePage() {
               </p>
               <div className="mt-4 flex flex-wrap justify-center gap-2 text-xs">
                 <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
-                  {sidebarLoading ? "..." : sidebarStats.memberTeamsCount}{" "}
+                  {sidebarLoading
+                    ? "..."
+                    : (sidebarStatsData?.activeMembershipsCount ?? 0)}{" "}
                   member teams
                 </span>
                 <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
-                  {sidebarLoading ? "..." : sidebarStats.leadTeamsCount} lead
-                  teams
+                  {sidebarLoading
+                    ? "..."
+                    : (sidebarStatsData?.ownedOrganizationsCount ?? 0)}{" "}
+                  lead teams
                 </span>
                 <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
-                  {sidebarLoading ? "..." : sidebarStats.organizationsCount}{" "}
+                  {sidebarLoading
+                    ? "..."
+                    : (sidebarStatsData?.ownedOrganizationsCount ?? 0)}{" "}
                   orgs
                 </span>
               </div>

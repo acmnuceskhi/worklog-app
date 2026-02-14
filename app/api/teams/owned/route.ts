@@ -49,7 +49,12 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json({ data: teams });
+    const teamsWithRole = teams.map((team) => ({
+      ...team,
+      role: "owner",
+    }));
+
+    return NextResponse.json({ data: teamsWithRole });
   } catch (error) {
     console.error("Get owned teams error:", error);
     return NextResponse.json(

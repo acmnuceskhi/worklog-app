@@ -2,11 +2,21 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 import prettier from "eslint-config-prettier/flat";
+import tanstackQuery from "@tanstack/eslint-plugin-query";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   prettier,
+  // TanStack Query ESLint plugin - flat config format
+  {
+    plugins: {
+      "@tanstack/query": tanstackQuery,
+    },
+    rules: {
+      ...tanstackQuery.configs.recommended.rules,
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

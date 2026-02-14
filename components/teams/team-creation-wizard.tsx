@@ -104,7 +104,7 @@ export const TeamCreationWizard: React.FC<TeamCreationWizardProps> = ({
       }
 
       const teamResult = await teamResponse.json();
-      const teamId = teamResult.team.id;
+      const teamId = teamResult.data.id;
 
       // Step 2: Send invitations if there are emails
       if (formValues.inviteEmails && formValues.inviteEmails.length > 0) {

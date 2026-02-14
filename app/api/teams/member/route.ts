@@ -55,7 +55,11 @@ export async function GET() {
       },
     });
 
-    const teams = teamMemberships.map((membership) => membership.team);
+    const teams = teamMemberships.map((membership) => ({
+      ...membership.team,
+      membershipStatus: membership.status,
+      role: "member",
+    }));
 
     return NextResponse.json({ data: teams });
   } catch (error) {

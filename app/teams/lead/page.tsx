@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,58 +12,22 @@ import {
 } from "@/components/ui/card";
 import { TeamCreationWizard } from "@/components/teams/team-creation-wizard";
 import { FaPlus, FaUsers, FaSpinner, FaCog } from "react-icons/fa";
-
-interface Team {
-  id: string;
-  name: string;
-  description?: string;
-  project?: string;
-  ownerId: string;
-  _count?: {
-    members: number;
-    worklogs: number;
-  };
-}
+import { useOwnedTeams } from "@/lib/hooks";
 
 export default function LeadTeamsPage() {
   const router = useRouter();
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [showWizard, setShowWizard] = useState(false);
 
-  useEffect(() => {
-    fetchTeams();
-  }, []);
-
-  const fetchTeams = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await fetch("/api/teams/owned");
-      if (!response.ok) {
-        throw new Error("Failed to fetch teams");
-      }
-
-      const data = await response.json();
-      setTeams(data.teams || []);
-    } catch (err: unknown) {
-      console.error("Error fetching teams:", err);
-      setError(err instanceof Error ? err.message : "Failed to load teams");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: teams = [], isLoading, error, refetch } = useOwnedTeams();
 
   const handleTeamCreated = (teamId: string) => {
-    // Refresh the teams list
-    fetchTeams();
+    // Refetch owned teams after creation
+    refetch();
     // Navigate to the new team
     router.push(`/teams/lead/${teamId}`);
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <FaSpinner className="animate-spin text-4xl text-blue-400" />
@@ -77,8 +41,10 @@ export default function LeadTeamsPage() {
       <div className="p-6">
         <Card className="border-red-500/40 bg-white/5 backdrop-blur-md">
           <CardContent className="pt-6 text-center">
-            <p className="text-red-300">{error}</p>
-            <Button onClick={fetchTeams} className="mt-4">
+            <p className="text-red-300">
+              {error instanceof Error ? error.message : "Failed to load teams"}
+            </p>
+            <Button onClick={() => refetch()} className="mt-4">
               Retry
             </Button>
           </CardContent>

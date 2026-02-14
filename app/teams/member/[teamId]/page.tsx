@@ -1,6 +1,13 @@
 "use client";
 
-import React, { use, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  use,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -32,13 +39,21 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { RichTextEditor } from "@/components/worklog/rich-text-editor";
 import { DeadlineStatusBadge } from "@/components/worklog/deadline-status-badge";
 import { DeadlineCountdown } from "@/components/worklog/deadline-countdown";
-import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useQueryClient } from "@tanstack/react-query";
 import { worklogCreateSchema } from "@/lib/validations";
+import { toast } from "sonner";
+import { ErrorBoundary } from "@/components/error-boundary";
+import { useTeam, useWorklogs, useUpdateWorklogStatus } from "@/lib/hooks";
+import { queryKeys } from "@/lib/query-keys";
 import {
   formatLocalDate,
   getDeadlineStatus,
   toUtcIso,
 } from "@/lib/deadline-utils";
+
+const AUTO_SAVE_DELAY_MS = 2000;
+const githubPattern = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+(?:\/.*)?$/;
 
 interface UploadedFile {
   url: string;
@@ -56,19 +71,57 @@ interface WorklogPreview {
   progressStatus?: string | null;
 }
 
-interface TeamDetails {
-  name: string;
-  leader: string;
+function TeamMemberLoadingSkeleton() {
+  return (
+    <div className="animate-pulse space-y-6 p-6">
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-4 w-48" />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="border border-white/10 bg-white/5 backdrop-blur-md">
+          <CardHeader>
+            <Skeleton className="h-6 w-48 mb-2" />
+            <Skeleton className="h-4 w-32" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-20 w-full" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <Skeleton className="h-10 w-32" />
+          </CardContent>
+        </Card>
+
+        <Card className="border border-white/10 bg-white/5 backdrop-blur-md">
+          <CardHeader>
+            <Skeleton className="h-6 w-40" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="p-3 border border-white/10 rounded">
+                  <Skeleton className="h-4 w-32 mb-2" />
+                  <Skeleton className="h-3 w-48 mb-1" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
 }
-
-const memberTeamDetails: Record<string, TeamDetails> = {
-  "101": { name: "Marketing Team", leader: "alice@example.com" },
-  "102": { name: "Design Team", leader: "bob@example.com" },
-  "103": { name: "Product Team", leader: "leader@company.com" },
-};
-
-const githubPattern = /^https:\/\/(www\.)?github\.com\/.+/;
-const AUTO_SAVE_DELAY_MS = 700;
 
 interface WorklogDraft {
   title: string;
@@ -93,12 +146,27 @@ export default function ContributionFlashcardPage({
 }: {
   params: Promise<{ teamId: string }>;
 }) {
-  const { teamId } = use(params);
-  const team = memberTeamDetails[teamId] || {
-    name: "Unknown Team",
-    leader: "N/A",
-  };
+  return (
+    <ErrorBoundary>
+      <ContributionFlashcardPageContent params={params} />
+    </ErrorBoundary>
+  );
+}
 
+function ContributionFlashcardPageContent({
+  params,
+}: {
+  params: Promise<{ teamId: string }>;
+}) {
+  const { teamId } = use(params);
+  const queryClient = useQueryClient();
+
+  // Use custom hooks for data fetching
+  const { data: team, isLoading, error, refetch } = useTeam(teamId);
+  const { data: worklogsData = [], isLoading: worklogsLoading } = useWorklogs();
+  const statusUpdateMutation = useUpdateWorklogStatus();
+
+  // Initialize all hooks at the top
   const [editorValue, setEditorValue] = useState("<p></p>");
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
@@ -106,12 +174,12 @@ export default function ContributionFlashcardPage({
   const [isDragging, setIsDragging] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
-  const [recentWorklogs, setRecentWorklogs] = useState<WorklogPreview[]>([]);
   const [canSetDeadline, setCanSetDeadline] = useState(false);
   const [draftNotice, setDraftNotice] = useState<string | null>(null);
   const [editingWorklog, setEditingWorklog] = useState<WorklogPreview | null>(
     null,
   );
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const skipAutosaveRef = useRef(true);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -138,13 +206,53 @@ export default function ContributionFlashcardPage({
     },
   });
 
-  useEffect(() => {
-    setValue("teamId", teamId);
-  }, [setValue, teamId]);
+  // Compute recent worklogs with proper formatting
+  const recentWorklogs = useMemo(() => {
+    return (worklogsData || []).slice(0, 5).map((worklog) => ({
+      id: worklog.id,
+      title: worklog.title,
+      description: stripHtml(worklog.description || ""),
+      createdAt: new Date(worklog.createdAt).toLocaleString(),
+      deadline: worklog.deadline ?? null,
+      progressStatus: worklog.progressStatus ?? null,
+    }));
+  }, [worklogsData]);
 
-  useEffect(() => {
-    setValue("description", editorValue, { shouldValidate: false });
-  }, [editorValue, setValue]);
+  // Memoized helper function to get valid status transitions
+  const getValidStatusTransitions = useMemo(
+    () =>
+      (
+        currentStatus: string | null | undefined,
+      ): Array<{ value: string; label: string }> => {
+        const status = currentStatus || "STARTED";
+        const transitions: Record<
+          string,
+          Array<{ value: string; label: string }>
+        > = {
+          STARTED: [{ value: "HALF_DONE", label: "Half Done" }],
+          HALF_DONE: [{ value: "COMPLETED", label: "Completed" }],
+          COMPLETED: [],
+        };
+        return transitions[status] || [];
+      },
+    [],
+  );
+
+  // Memoized handler for status updates
+  const handleStatusUpdate = useCallback(
+    async (worklogId: string, newStatus: string) => {
+      try {
+        await statusUpdateMutation.mutateAsync({
+          worklogId,
+          newStatus: newStatus as "STARTED" | "HALF_DONE" | "COMPLETED",
+        });
+      } catch {
+        // Error handling is done in the mutation's onError callback
+        // No need for additional error handling here
+      }
+    },
+    [statusUpdateMutation],
+  );
 
   useEffect(() => {
     let isActive = true;
@@ -186,49 +294,6 @@ export default function ContributionFlashcardPage({
       isActive = false;
     };
   }, [teamId]);
-
-  useEffect(() => {
-    let isActive = true;
-    const loadWorklogs = async () => {
-      try {
-        const response = await fetch("/api/worklogs");
-        if (!response.ok) {
-          return;
-        }
-        const payload = await response.json();
-        const worklogs = (payload.data || []) as Array<{
-          id: string;
-          title: string;
-          description: string;
-          createdAt: string;
-          deadline?: string | null;
-          progressStatus?: string | null;
-        }>;
-
-        if (isActive) {
-          setRecentWorklogs(
-            worklogs.slice(0, 5).map((worklog) => ({
-              id: worklog.id,
-              title: worklog.title,
-              description: stripHtml(worklog.description),
-              createdAt: new Date(worklog.createdAt).toLocaleString(),
-              deadline: worklog.deadline ?? null,
-              progressStatus: worklog.progressStatus ?? null,
-            })),
-          );
-        }
-      } catch {
-        if (isActive) {
-          setRecentWorklogs([]);
-        }
-      }
-    };
-
-    loadWorklogs();
-    return () => {
-      isActive = false;
-    };
-  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -341,6 +406,79 @@ export default function ContributionFlashcardPage({
     };
   }, [previews]);
 
+  useEffect(() => {
+    if (!worklogsData) return;
+
+    worklogsData.forEach((worklog) => {
+      if (!worklog.deadline || deadlineNotifiedRef.current.has(worklog.id)) {
+        return;
+      }
+      const info = getDeadlineStatus({
+        deadline: worklog.deadline,
+        status: worklog.progressStatus,
+      });
+      if (info.status === "overdue" || info.status === "due_soon") {
+        deadlineNotifiedRef.current.add(worklog.id);
+        if (info.status === "overdue") {
+          toast.error(
+            `Deadline ${formatLocalDate(new Date(worklog.deadline))}`,
+            {
+              description: `${worklog.title} is ${info.label.toLowerCase()}`,
+            },
+          );
+        } else {
+          toast.warning(
+            `Deadline ${formatLocalDate(new Date(worklog.deadline))}`,
+            {
+              description: `${worklog.title} is ${info.label.toLowerCase()}`,
+            },
+          );
+        }
+      }
+    });
+  }, [worklogsData]);
+
+  // Loading state with skeleton
+  if (isLoading) {
+    return (
+      <div className="p-6">
+        <TeamMemberLoadingSkeleton />
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-red-600 text-center">
+          <h2 className="text-xl font-semibold mb-2">Error Loading Team</h2>
+          <p>{error instanceof Error ? error.message : "An error occurred"}</p>
+          <button
+            onClick={() => refetch()}
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // No team found
+  if (!team) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Team Not Found</h2>
+          <p>The requested team could not be found.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Continue with existing component logic but use real team data
+
   const appendFiles = (files: File[]) => {
     const filtered = files.filter(
       (file) =>
@@ -440,27 +578,10 @@ export default function ContributionFlashcardPage({
         throw new Error(data.error || "Failed to create worklog");
       }
 
-      const data = await response.json();
-      const worklog = data.data as {
-        id: string;
-        title: string;
-        description: string;
-        createdAt: string;
-        deadline?: string | null;
-        progressStatus?: string | null;
-      };
+      await response.json();
 
-      setRecentWorklogs((prev) => [
-        {
-          id: worklog.id,
-          title: worklog.title,
-          description: stripHtml(worklog.description),
-          createdAt: new Date(worklog.createdAt).toLocaleString(),
-          deadline: worklog.deadline ?? null,
-          progressStatus: worklog.progressStatus ?? null,
-        },
-        ...prev,
-      ]);
+      // Invalidate worklogs query to refetch data
+      queryClient.invalidateQueries({ queryKey: queryKeys.worklogs.all() });
 
       setSubmitSuccess("Worklog created successfully.");
       setEditorValue("<p></p>");
@@ -508,13 +629,8 @@ export default function ContributionFlashcardPage({
         deadline?: string | null;
       };
 
-      setRecentWorklogs((prev) =>
-        prev.map((worklog) =>
-          worklog.id === updated.id
-            ? { ...worklog, deadline: updated.deadline ?? null }
-            : worklog,
-        ),
-      );
+      // Invalidate worklogs query to refetch data
+      queryClient.invalidateQueries({ queryKey: queryKeys.worklogs.all() });
       toast.success(
         updated.deadline
           ? `New deadline ${formatLocalDate(new Date(updated.deadline))}`
@@ -531,42 +647,49 @@ export default function ContributionFlashcardPage({
     }
   };
 
-  useEffect(() => {
-    recentWorklogs.forEach((worklog) => {
-      if (!worklog.deadline || deadlineNotifiedRef.current.has(worklog.id)) {
-        return;
-      }
-      const info = getDeadlineStatus({
-        deadline: worklog.deadline,
-        status: worklog.progressStatus,
+  const handleDeleteWorklog = async (
+    worklogId: string,
+    worklogTitle: string,
+  ) => {
+    if (
+      !confirm(
+        `Are you sure you want to delete "${worklogTitle}"? This action cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/worklogs/${worklogId}`, {
+        method: "DELETE",
       });
-      if (info.status === "overdue" || info.status === "due_soon") {
-        deadlineNotifiedRef.current.add(worklog.id);
-        if (info.status === "overdue") {
-          toast.error(
-            `Deadline ${formatLocalDate(new Date(worklog.deadline))}`,
-            {
-              description: `${worklog.title} is ${info.label.toLowerCase()}`,
-            },
-          );
-        } else {
-          toast.warning(
-            `Deadline ${formatLocalDate(new Date(worklog.deadline))}`,
-            {
-              description: `${worklog.title} is ${info.label.toLowerCase()}`,
-            },
-          );
-        }
+
+      if (!response.ok) {
+        const payload = await response.json();
+        throw new Error(payload.error || "Failed to delete worklog");
       }
-    });
-  }, [recentWorklogs]);
+
+      // Invalidate worklogs query to refetch data
+      queryClient.invalidateQueries({ queryKey: ["worklogs"] });
+      toast.success(`"${worklogTitle}" deleted successfully`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete worklog",
+        {
+          description: "Please try again",
+        },
+      );
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6 max-w-5xl mx-auto p-3">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-white">{team.name}</h1>
-          <p className="text-muted">Led by {team.leader}</p>
+          <p className="text-muted">
+            Led by {team.owner.name || team.owner.email}
+          </p>
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
           <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
@@ -811,7 +934,26 @@ export default function ContributionFlashcardPage({
             <CardTitle className="text-white">Recent Worklogs</CardTitle>
           </CardHeader>
           <CardContent>
-            {recentWorklogs.length > 0 ? (
+            {worklogsLoading ? (
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="rounded-lg border border-white/10 bg-white/5 p-3 animate-pulse"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="h-4 bg-white/20 rounded w-32 mb-2"></div>
+                        <div className="h-3 bg-white/10 rounded w-24"></div>
+                      </div>
+                      <div className="h-6 bg-white/20 rounded w-16"></div>
+                    </div>
+                    <div className="h-3 bg-white/10 rounded w-full mt-2"></div>
+                    <div className="h-8 bg-white/10 rounded w-32 mt-3"></div>
+                  </div>
+                ))}
+              </div>
+            ) : recentWorklogs.length > 0 ? (
               <div className="space-y-3">
                 {recentWorklogs.map((worklog) => (
                   <div
@@ -840,12 +982,67 @@ export default function ContributionFlashcardPage({
                     <p className="text-sm text-muted mt-2">
                       {worklog.description}
                     </p>
-                    {canSetDeadline && (
-                      <div className="mt-3">
+                    <div className="mt-3 flex gap-2 flex-wrap items-center">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-white/60">Status:</span>
+                        <Select
+                          value={worklog.progressStatus || "STARTED"}
+                          onValueChange={(value) =>
+                            handleStatusUpdate(worklog.id, value)
+                          }
+                          disabled={
+                            (statusUpdateMutation.isPending &&
+                              statusUpdateMutation.variables?.worklogId ===
+                                worklog.id) ||
+                            worklog.progressStatus === "COMPLETED"
+                          }
+                        >
+                          <SelectTrigger
+                            className="w-32 h-8 text-xs bg-white/5 border-white/20 text-white"
+                            aria-label={`Update status for ${worklog.title}`}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[var(--panel-strong)] border-white/10">
+                            <SelectItem
+                              value={worklog.progressStatus || "STARTED"}
+                              className="text-white/80"
+                            >
+                              {worklog.progressStatus === "STARTED" &&
+                                "Started"}
+                              {worklog.progressStatus === "HALF_DONE" &&
+                                "Half Done"}
+                              {worklog.progressStatus === "COMPLETED" &&
+                                "Completed"}
+                              {!worklog.progressStatus && "Started"}
+                            </SelectItem>
+                            {getValidStatusTransitions(
+                              worklog.progressStatus,
+                            ).map((transition) => (
+                              <SelectItem
+                                key={transition.value}
+                                value={transition.value}
+                                className="text-white/80"
+                              >
+                                {transition.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {statusUpdateMutation.isPending &&
+                          statusUpdateMutation.variables?.worklogId ===
+                            worklog.id && (
+                            <div className="text-xs text-amber-400 animate-pulse">
+                              Updating...
+                            </div>
+                          )}
+                      </div>
+                      {canSetDeadline && (
                         <Button
                           type="button"
                           variant="outline"
-                          className="border-white/20 text-white/80 hover:bg-white/10"
+                          size="sm"
+                          className="border-white/20 text-white/80 hover:bg-white/10 h-8 text-xs"
                           onClick={() =>
                             setEditingWorklog({
                               ...worklog,
@@ -855,8 +1052,19 @@ export default function ContributionFlashcardPage({
                         >
                           Edit deadline
                         </Button>
-                      </div>
-                    )}
+                      )}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="border-red-400/30 text-red-300 hover:bg-red-500/20 h-8 text-xs ml-auto"
+                        onClick={() =>
+                          handleDeleteWorklog(worklog.id, worklog.title)
+                        }
+                      >
+                        Delete
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
