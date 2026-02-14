@@ -22,14 +22,7 @@ import { DeadlineStatusBadge } from "@/components/worklog/deadline-status-badge"
 import { DeadlineCountdown } from "@/components/worklog/deadline-countdown";
 import { toast } from "sonner";
 import { formatLocalDate, getDeadlineStatus } from "@/lib/deadline-utils";
-import {
-  useSidebarStats,
-  useWorklogs,
-  useMemberTeams,
-  useOwnedTeams,
-  useMounted,
-  useContentTheme,
-} from "@/lib/hooks";
+import { useDashboard, useMounted, useContentTheme } from "@/lib/hooks";
 import { LoadingState } from "@/components/states/loading-state";
 
 export default function DashboardPage() {
@@ -38,11 +31,22 @@ export default function DashboardPage() {
   const { data: session } = useSession();
 
   // TanStack Query hooks for data fetching
-  const { data: sidebarStatsData, isLoading: sidebarLoading } =
-    useSidebarStats();
-  const { data: allWorklogs = [] } = useWorklogs();
-  const { data: memberTeams = [] } = useMemberTeams();
-  const { data: ownedTeams = [] } = useOwnedTeams();
+  const { data: dashboardData, isLoading } = useDashboard();
+
+  // Extract data from combined dashboard response
+  const sidebarStatsData = dashboardData?.sidebarStats;
+  const allWorklogs = dashboardData?.worklogs || [];
+
+  // Memoize team data to prevent useMemo dependency issues
+  const memberTeams = useMemo(
+    () => dashboardData?.memberTeams || [],
+    [dashboardData?.memberTeams],
+  );
+
+  const ownedTeams = useMemo(
+    () => dashboardData?.ownedTeams || [],
+    [dashboardData?.ownedTeams],
+  );
 
   // State declarations
   const [query, setQuery] = useState("");
@@ -391,13 +395,13 @@ export default function DashboardPage() {
               );
             })}
 
-            {sidebarLoading && (
+            {isLoading && (
               <div className="p-2.5 rounded-xl flex gap-2 opacity-60">
                 <FaUsers /> {showSidebarLabels ? "Loading..." : "..."}
               </div>
             )}
 
-            {!sidebarLoading &&
+            {!isLoading &&
               sidebarStatsData?.memberTeamsCount === 0 &&
               sidebarStatsData?.organizationsCount === 0 && (
                 <div className="p-2.5 rounded-xl flex gap-2 opacity-60">

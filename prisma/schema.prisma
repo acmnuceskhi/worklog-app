@@ -5,6 +5,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Account {
@@ -35,6 +36,8 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
+  @@index([userId])
+  @@index([expires])
 }
 
 model User {
@@ -66,6 +69,7 @@ model Organization {
   updatedAt   DateTime @updatedAt
 
   @@map("organizations")
+  @@index([ownerId])
 }
 
 model Team {
@@ -85,6 +89,7 @@ model Team {
 
   @@map("teams")
   @@index([organizationId])
+  @@index([ownerId])
 }
 
 model TeamMember {
@@ -102,6 +107,9 @@ model TeamMember {
 
   @@unique([teamId, userId])
   @@unique([teamId, email])
+  @@index([userId])
+  @@index([status])
+  @@index([userId, status]) // Composite index for efficient filtering by both userId and status
   @@map("team_members")
 }
 
@@ -137,9 +145,10 @@ model Worklog {
   attachments WorklogAttachment[]
 
   @@map("worklogs")
-  @@index([teamId])
   @@index([userId])
-  @@index([progressStatus])
+  @@index([teamId])
+  @@index([userId, progressStatus])
+  @@index([userId, createdAt]) // Composite index for efficient user worklog queries with ordering
   @@index([createdAt])
   @@index([deadline])
 }

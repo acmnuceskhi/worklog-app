@@ -13,6 +13,11 @@ export const queryKeys = {
     sidebarStats: () => ["user", "sidebarStats"] as const,
   },
 
+  // Dashboard queries (combined data for home page)
+  dashboard: {
+    all: () => ["dashboard"] as const,
+  },
+
   // Organization queries
   organizations: {
     all: () => ["organizations"] as const,

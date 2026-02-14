@@ -6,6 +6,9 @@
 // User hooks
 export { useUserPermissions, useSidebarStats } from "./use-user";
 
+// Dashboard hooks (combined data for optimized loading)
+export { useDashboard, type DashboardData } from "./use-dashboard";
+
 // Organization hooks
 export {
   useOrganizations,

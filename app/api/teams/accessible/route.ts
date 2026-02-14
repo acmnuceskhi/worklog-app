@@ -14,31 +14,22 @@ export async function GET() {
     }
 
     // Get owned teams
+    // OPTIMIZATION: Only fetch team metadata, remove expensive members include and _count
     const ownedTeams = await prisma.team.findMany({
       where: { ownerId: user.id },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        project: true,
+        credits: true,
+        ownerId: true, // Required to determine role
+        createdAt: true,
+        updatedAt: true,
         organization: {
           select: {
             id: true,
             name: true,
-          },
-        },
-        members: {
-          select: {
-            id: true,
-            email: true,
-            status: true,
-            user: {
-              select: {
-                name: true,
-              },
-            },
-          },
-        },
-        _count: {
-          select: {
-            members: true,
-            worklogs: true,
           },
         },
       },
@@ -50,9 +41,17 @@ export async function GET() {
         userId: user.id,
         status: "ACCEPTED",
       },
-      include: {
+      select: {
         team: {
-          include: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            project: true,
+            credits: true,
+            ownerId: true,
+            createdAt: true,
+            updatedAt: true,
             owner: {
               select: {
                 name: true,
@@ -63,12 +62,6 @@ export async function GET() {
               select: {
                 id: true,
                 name: true,
-              },
-            },
-            _count: {
-              select: {
-                members: true,
-                worklogs: true,
               },
             },
           },

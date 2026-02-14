@@ -14,37 +14,95 @@ export async function GET() {
       return unauthorized();
     }
 
+    /**
+     * Pagination limit: 100 worklogs per user
+     * Rationale:
+     * - Typical user has 10-30 active/recent worklogs
+     * - Prevents memory exhaustion for users with 100+ archived worklogs
+     * - Clients should implement pagination for deeper history
+     * - Can be configured via WORKLOG_LIST_LIMIT env var
+     */
+    const WORKLOG_LIST_LIMIT = parseInt(
+      process.env.WORKLOG_LIST_LIMIT ?? "100",
+      10,
+    );
+
+    // Get worklogs with pagination to prevent memory issues
+    // OPTIMIZATION: Only fetch essential fields to reduce query payload
     const worklogs = await prisma.worklog.findMany({
       where: { userId: user.id },
-      include: {
-        team: {
-          select: {
-            id: true,
-            name: true,
-            owner: {
-              select: {
-                name: true,
-              },
-            },
-          },
-        },
-        ratings: {
-          select: {
-            id: true,
-            value: true,
-            comment: true,
-            rater: {
-              select: {
-                name: true,
-              },
-            },
-          },
-        },
+      select: {
+        id: true,
+        title: true,
+        progressStatus: true,
+        deadline: true,
+        createdAt: true,
+        teamId: true,
       },
       orderBy: { createdAt: "desc" },
+      take: WORKLOG_LIST_LIMIT,
     });
 
-    return NextResponse.json({ data: worklogs });
+    // Early return if no worklogs
+    if (worklogs.length === 0) {
+      return NextResponse.json({ data: [] });
+    }
+
+    // Get unique team IDs and worklog IDs for efficient batch queries
+    const teamIds = [...new Set(worklogs.map((w) => w.teamId))];
+    const worklogIds = worklogs.map((w) => w.id);
+
+    // Batch fetch related data
+    const [teamsData, ratingsData] = await Promise.all([
+      prisma.team.findMany({
+        where: { id: { in: teamIds } },
+        select: {
+          id: true,
+          name: true,
+          owner: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      }),
+      prisma.rating.findMany({
+        where: {
+          worklogId: { in: worklogIds },
+        },
+        select: {
+          id: true,
+          value: true,
+          comment: true,
+          worklogId: true,
+          rater: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    // Create lookup maps for O(1) access
+    const teamsMap = new Map(teamsData.map((team) => [team.id, team]));
+    const ratingsByWorklog = new Map<string, typeof ratingsData>();
+
+    ratingsData.forEach((rating) => {
+      if (!ratingsByWorklog.has(rating.worklogId)) {
+        ratingsByWorklog.set(rating.worklogId, []);
+      }
+      ratingsByWorklog.get(rating.worklogId)!.push(rating);
+    });
+
+    // Combine data efficiently
+    const worklogsWithDetails = worklogs.map((worklog) => ({
+      ...worklog,
+      team: teamsMap.get(worklog.teamId),
+      ratings: ratingsByWorklog.get(worklog.id) || [],
+    }));
+
+    return NextResponse.json({ data: worklogsWithDetails });
   } catch (error) {
     console.error("Get worklogs error:", error);
     return NextResponse.json(

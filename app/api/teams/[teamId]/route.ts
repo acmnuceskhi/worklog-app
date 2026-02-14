@@ -16,24 +16,19 @@ export async function GET(
 
     const { teamId } = await params;
 
-    // Check if user is team owner or member
+    // Get basic team info first
     const team = await prisma.team.findUnique({
       where: { id: teamId },
-      include: {
-        owner: {
-          select: { id: true, name: true, email: true, image: true },
-        },
-        organization: {
-          select: { id: true, name: true },
-        },
-        members: {
-          where: { status: "ACCEPTED" },
-          include: {
-            user: {
-              select: { id: true, name: true, email: true, image: true },
-            },
-          },
-        },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        credits: true,
+        project: true,
+        ownerId: true,
+        organizationId: true,
+        createdAt: true,
+        updatedAt: true,
         _count: {
           select: { worklogs: true },
         },
@@ -44,17 +39,53 @@ export async function GET(
       return NextResponse.json({ error: "Team not found" }, { status: 404 });
     }
 
-    // Check authorization
+    // Check authorization early
     const isOwner = team.ownerId === session.user?.id;
-    const isMember = team.members.some(
-      (member) => member.userId === session.user?.id,
+
+    // Fetch owner and organization in parallel
+    const [owner, organization, members] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: team.ownerId },
+        select: { id: true, name: true, email: true, image: true },
+      }),
+      team.organizationId
+        ? prisma.organization.findUnique({
+            where: { id: team.organizationId },
+            select: { id: true, name: true },
+          })
+        : null,
+      prisma.teamMember.findMany({
+        where: { teamId, status: "ACCEPTED" },
+        select: {
+          id: true,
+          email: true,
+          status: true,
+          user: {
+            select: { id: true, name: true, email: true, image: true },
+          },
+        },
+        take: 100, // Limit members to prevent excessive data
+      }),
+    ]);
+
+    // Check if user is a member
+    const isMember = members.some(
+      (member) => member.user?.id === session.user?.id,
     );
 
     if (!isOwner && !isMember) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    return NextResponse.json({ team });
+    // Combine data
+    const teamWithDetails = {
+      ...team,
+      owner,
+      organization,
+      members,
+    };
+
+    return NextResponse.json({ team: teamWithDetails });
   } catch (error) {
     console.error("Error fetching team:", error);
     return NextResponse.json(

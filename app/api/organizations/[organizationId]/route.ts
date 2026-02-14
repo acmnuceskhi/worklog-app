@@ -14,6 +14,11 @@ import { validateRequest, organizationUpdateSchema } from "@/lib/validations";
 /**
  * GET /api/organizations/[organizationId]
  * Get organization details with teams and worklogs
+ *
+ * Optimization: Batch fetching pattern with parallel queries
+ * - Fetches organization, teams, members, worklogs, and ratings in parallel
+ * - Uses selective field selection to minimize data transfer
+ * - Maps data in memory for O(1) lookups
  */
 export async function GET(
   _request: NextRequest,
@@ -35,51 +40,46 @@ export async function GET(
       );
     }
 
-    const organization = await prisma.organization.findUnique({
-      where: { id: organizationId },
-      include: {
-        teams: {
-          include: {
-            members: {
-              where: { status: "ACCEPTED" },
+    // Batch fetch in parallel
+    const [organization, teams, members, worklogs, ratings] = await Promise.all(
+      [
+        // Main organization
+        prisma.organization.findUnique({
+          where: { id: organizationId },
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            credits: true,
+            createdAt: true,
+            updatedAt: true,
+            ownerId: true,
+            owner: {
               select: {
                 id: true,
-                user: {
-                  select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    image: true,
-                  },
-                },
+                name: true,
+                email: true,
+                image: true,
               },
             },
-            worklogs: {
-              orderBy: { createdAt: "desc" },
-              take: 5,
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    name: true,
-                    image: true,
-                  },
-                },
-                ratings: {
-                  select: {
-                    id: true,
-                    value: true,
-                    comment: true,
-                    rater: {
-                      select: {
-                        id: true,
-                        name: true,
-                      },
-                    },
-                  },
-                },
+            _count: {
+              select: {
+                teams: true,
               },
             },
+          },
+        }),
+        // Teams for this organization
+        prisma.team.findMany({
+          where: { organizationId },
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            credits: true,
+            project: true,
+            createdAt: true,
+            updatedAt: true,
             _count: {
               select: {
                 members: true,
@@ -87,36 +87,132 @@ export async function GET(
               },
             },
           },
-        },
-        owner: {
+          take: 100,
+        }),
+        // Team members across all organization teams
+        prisma.teamMember.findMany({
+          where: {
+            team: {
+              organizationId,
+            },
+            status: "ACCEPTED",
+          },
           select: {
             id: true,
-            name: true,
-            email: true,
-            image: true,
+            teamId: true,
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                image: true,
+              },
+            },
           },
-        },
-      },
-    });
+          take: 500,
+        }),
+        // Recent worklogs across all organization teams
+        prisma.worklog.findMany({
+          where: {
+            team: {
+              organizationId,
+            },
+          },
+          select: {
+            id: true,
+            title: true,
+            progressStatus: true,
+            teamId: true,
+            userId: true,
+            createdAt: true,
+            user: {
+              select: {
+                id: true,
+                name: true,
+                image: true,
+              },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+          take: 50,
+        }),
+        // Ratings for organization worklogs
+        prisma.rating.findMany({
+          where: {
+            worklog: {
+              team: {
+                organizationId,
+              },
+            },
+          },
+          select: {
+            id: true,
+            value: true,
+            comment: true,
+            worklogId: true,
+            rater: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+          take: 100,
+        }),
+      ],
+    );
 
     if (!organization) {
       return notFound("Organization not found");
     }
 
+    // Create Maps for O(1) lookups
+    const membersMap = new Map<string, typeof members>();
+    members.forEach((member) => {
+      if (!membersMap.has(member.teamId)) {
+        membersMap.set(member.teamId, []);
+      }
+      membersMap.get(member.teamId)!.push(member);
+    });
+
+    const worklogsMap = new Map<string, typeof worklogs>();
+    worklogs.forEach((worklog) => {
+      if (!worklogsMap.has(worklog.teamId)) {
+        worklogsMap.set(worklog.teamId, []);
+      }
+      worklogsMap.get(worklog.teamId)!.push(worklog);
+    });
+
+    const ratingsMap = new Map<string, typeof ratings>();
+    ratings.forEach((rating) => {
+      if (!ratingsMap.has(rating.worklogId)) {
+        ratingsMap.set(rating.worklogId, []);
+      }
+      ratingsMap.get(rating.worklogId)!.push(rating);
+    });
+
+    // Combine data into response format
+    const teamsWithDetails = teams.map((team) => ({
+      ...team,
+      members: membersMap.get(team.id) || [],
+      worklogs: (worklogsMap.get(team.id) || []).map((worklog) => ({
+        ...worklog,
+        ratings: ratingsMap.get(worklog.id) || [],
+      })),
+    }));
+
     // Calculate statistics
     const stats = {
-      totalTeams: organization.teams.length,
-      totalMembers: organization.teams.reduce(
-        (sum, team) => sum + team._count.members,
-        0,
-      ),
-      totalWorklogs: organization.teams.reduce(
-        (sum, team) => sum + team._count.worklogs,
-        0,
-      ),
+      totalTeams: teams.length,
+      totalMembers: members.length,
+      totalWorklogs: worklogs.length,
     };
 
-    return success({ ...organization, stats });
+    return success({
+      ...organization,
+      teams: teamsWithDetails,
+      stats,
+    });
   } catch (error) {
     console.error("Get organization detail error:", error);
     return NextResponse.json(
