@@ -1,6 +1,5 @@
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { NextResponse } from "next/server";
 
 /**
  * Authorization utilities for role-based access control
@@ -50,7 +49,17 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
   const session = await auth();
 
   if (!session?.user?.id) {
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        "[Auth Debug] No user ID found in session:",
+        JSON.stringify(session, null, 2),
+      );
+    }
     return null;
+  }
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("[Auth Debug] User authenticated:", session.user.id);
   }
 
   // Use user ID as cache key for user-specific caching
@@ -236,25 +245,23 @@ export async function isWorklogOwner(
   return !!worklog;
 }
 
+import {
+  apiResponse,
+  unauthorized as apiUnauthorized,
+  forbidden as apiForbidden,
+  badRequest as apiBadRequest,
+  notFound as apiNotFound,
+} from "@/lib/api-utils";
+
 /**
  * Authorization response helpers
+ * Re-exported from api-utils for backward compatibility
  */
-export const unauthorized = (message: string = "Unauthorized") => {
-  return NextResponse.json({ error: message }, { status: 401 });
-};
-
-export const forbidden = (message: string = "Forbidden") => {
-  return NextResponse.json({ error: message }, { status: 403 });
-};
-
-export const badRequest = (message: string = "Bad request") => {
-  return NextResponse.json({ error: message }, { status: 400 });
-};
-
-export const notFound = (message: string = "Not found") => {
-  return NextResponse.json({ error: message }, { status: 404 });
-};
+export const unauthorized = apiUnauthorized;
+export const forbidden = apiForbidden;
+export const badRequest = apiBadRequest;
+export const notFound = apiNotFound;
 
 export const success = (data: unknown, status: number = 200) => {
-  return NextResponse.json(data, { status });
+  return apiResponse(data, status);
 };

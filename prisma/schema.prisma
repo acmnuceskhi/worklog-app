@@ -110,6 +110,7 @@ model TeamMember {
   @@index([userId])
   @@index([status])
   @@index([userId, status]) // Composite index for efficient filtering by both userId and status
+  @@index([teamId, status]) // Optimize fetching team members by status
   @@map("team_members")
 }
 
@@ -149,6 +150,7 @@ model Worklog {
   @@index([teamId])
   @@index([userId, progressStatus])
   @@index([userId, createdAt]) // Composite index for efficient user worklog queries with ordering
+  @@index([teamId, createdAt]) // Optimize team worklogs fetching
   @@index([createdAt])
   @@index([deadline])
 }

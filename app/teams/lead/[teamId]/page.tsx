@@ -13,6 +13,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea"; // Import Textarea
 import {
   Dialog,
   DialogContent,
@@ -39,15 +40,53 @@ import {
   useTeamWorklogs,
   useRemoveTeamMember,
   useDeleteWorklog,
+  useCreateWorklog, // Import create hook
 } from "@/lib/hooks";
 import {
   formatLocalDate,
   getDeadlineStatus,
   toUtcIso,
 } from "@/lib/deadline-utils";
+import { type ProgressStatus } from "@/lib/hooks/use-worklogs";
+
+// Helper to calculate progress percentage
+const getProgressValue = (status: ProgressStatus): number => {
+  switch (status) {
+    case "STARTED":
+      return 25;
+    case "HALF_DONE":
+      return 50;
+    case "COMPLETED":
+      return 75;
+    case "REVIEWED":
+      return 90;
+    case "GRADED":
+      return 100;
+    default:
+      return 0;
+  }
+};
+
+// Helper to format status label
+const getStatusLabel = (status: ProgressStatus): string => {
+  switch (status) {
+    case "STARTED":
+      return "Started";
+    case "HALF_DONE":
+      return "Halfway done";
+    case "COMPLETED":
+      return "Completed";
+    case "REVIEWED":
+      return "Reviewed";
+    case "GRADED":
+      return "Graded";
+    default:
+      return "Unknown";
+  }
+};
 
 interface Task {
-  id: number;
+  id: string | number;
   assignedTo: string;
   title: string;
   status: string;
@@ -179,41 +218,28 @@ function TeamDetailsPageContent({
     useTeamWorklogs(teamId);
   const removeMemberMutation = useRemoveTeamMember(teamId);
   const deleteWorklogMutation = useDeleteWorklog(teamId);
+  const createWorklogMutation = useCreateWorklog(); // Initialize mutation
 
   // Initialize all state hooks at the top
-  const [tasks, setTasks] = useState<Task[]>([
-    {
-      id: 1,
-      assignedTo: "Ali",
-      title: "API Documentation",
-      status: "Halfway done",
-      deadline: "2025-02-10",
-      progress: 60,
-    },
-    {
-      id: 2,
-      assignedTo: "Sara",
-      title: "UI Mockups",
-      status: "Initial stage",
-      deadline: "2025-02-15",
-      progress: 20,
-    },
-    {
-      id: 3,
-      assignedTo: "Ahmed",
-      title: "Database Schema",
-      status: "Completed",
-      deadline: "2025-02-08",
-      progress: 100,
-    },
-  ]);
+  // Derive tasks from real worklogs
+  const tasks = useMemo(() => {
+    return worklogs.map((worklog) => ({
+      id: worklog.id,
+      assignedTo: worklog.user?.name || worklog.user?.email || "Unknown",
+      title: worklog.title,
+      status: getStatusLabel(worklog.progressStatus as ProgressStatus),
+      deadline: worklog.deadline || new Date().toISOString(), // Fallback for null deadline
+      progress: getProgressValue(worklog.progressStatus as ProgressStatus),
+    }));
+  }, [worklogs]);
   const [showModal, setShowModal] = useState(false);
   const [newTask, setNewTask] = useState({
     title: "",
-    assignedTo: "",
+    description: "", // Add description field
+    assignedTo: "", // Will store userId
     deadline: "",
   });
-  const notifiedRef = useRef<Set<number>>(new Set());
+  const notifiedRef = useRef<Set<string>>(new Set());
 
   const deadlineWarnings = useMemo(() => {
     return tasks
@@ -278,14 +304,46 @@ function TeamDetailsPageContent({
     );
   }
 
+  // Calculate member stats from worklogs
+  const calculateMemberStats = (userId: string | undefined) => {
+    if (!userId) return { contribution: "No Data", rating: 0 };
+
+    const userWorklogs = worklogs.filter((w) => w.userId === userId);
+
+    // Calculate rating
+    const totalRatings = userWorklogs.reduce((sum, w) => {
+      const worklogRating =
+        w.ratings?.reduce((rSum, r) => rSum + r.value, 0) || 0;
+      const count = w.ratings?.length || 0;
+      return sum + (count > 0 ? worklogRating / count : 0);
+    }, 0);
+
+    // Average rating across all rated worklogs
+    const ratedWorklogsCount = userWorklogs.filter(
+      (w) => w.ratings && w.ratings.length > 0,
+    ).length;
+    const averageRating =
+      ratedWorklogsCount > 0
+        ? Number((totalRatings / ratedWorklogsCount).toFixed(1))
+        : 0; // Default to 0 if no ratings
+
+    // Contribution text
+    const contribution = `${userWorklogs.length} Worklogs`;
+
+    return { contribution, rating: averageRating };
+  };
+
   // Update teamData when team data changes
-  const teamMembers = team.members.map((member: TeamData["members"][0]) => ({
-    id: member.id,
-    name: member.user?.name || member.email,
-    email: member.email,
-    contribution: "Team Member", // Default contribution
-    rating: 5, // Default rating
-  }));
+  const teamMembers = team.members.map((member: TeamData["members"][0]) => {
+    const stats = calculateMemberStats(member.user?.id);
+    return {
+      id: member.id,
+      name: member.user?.name || member.email,
+      email: member.email,
+      contribution: stats.contribution,
+      rating: stats.rating,
+    };
+  });
 
   // Loading state with skeleton
 
@@ -301,21 +359,33 @@ function TeamDetailsPageContent({
     deleteWorklogMutation.mutate({ worklogId, worklogTitle });
   };
 
-  const handleAssignTask = () => {
-    if (newTask.title && newTask.assignedTo && newTask.deadline) {
-      setTasks([
-        ...tasks,
-        {
-          id: tasks.length + 1,
-          assignedTo: newTask.assignedTo,
+  const handleAssignTask = async () => {
+    if (newTask.title && newTask.description && newTask.assignedTo) {
+      try {
+        await createWorklogMutation.mutateAsync({
           title: newTask.title,
-          status: "Initial stage",
-          deadline: newTask.deadline,
-          progress: 0,
-        },
-      ]);
-      setNewTask({ title: "", assignedTo: "", deadline: "" });
-      setShowModal(false);
+          description: newTask.description,
+          teamId,
+          userId: newTask.assignedTo, // This is userId from Select
+          deadline: newTask.deadline || undefined,
+        });
+
+        // Reset form and close modal on success
+        setNewTask({
+          title: "",
+          description: "",
+          assignedTo: "",
+          deadline: "",
+        });
+        setShowModal(false);
+      } catch (error) {
+        // Error handled by hook
+        console.error("Failed to assign task:", error);
+      }
+    } else {
+      toast.error(
+        "Please fill in all required fields (Title, Description, Member)",
+      );
     }
   };
 
@@ -668,6 +738,18 @@ function TeamDetailsPageContent({
               />
             </FormField>
 
+            <FormField label="Description" required htmlFor="assign-task-desc">
+              <Textarea
+                id="assign-task-desc"
+                placeholder="Enter task description"
+                value={newTask.description}
+                onChange={(e) =>
+                  setNewTask({ ...newTask, description: e.target.value })
+                }
+                className="bg-white/5 border-white/20 text-white placeholder:text-white/50 min-h-[100px]"
+              />
+            </FormField>
+
             <FormField label="Assign to Member" required>
               <Select
                 value={newTask.assignedTo}
@@ -682,8 +764,9 @@ function TeamDetailsPageContent({
                   {team.members.map((member: TeamData["members"][0]) => (
                     <SelectItem
                       key={member.id}
-                      value={member.user?.name || member.email}
+                      value={member.user?.id || ""} // Use userId as value
                       className="text-white/80"
+                      disabled={!member.user?.id}
                     >
                       {member.user?.name || member.email}
                     </SelectItem>
@@ -710,8 +793,9 @@ function TeamDetailsPageContent({
             <Button
               onClick={handleAssignTask}
               className="w-full bg-amber-400 hover:bg-amber-500 text-black font-semibold"
+              disabled={createWorklogMutation.isPending}
             >
-              Create Task
+              {createWorklogMutation.isPending ? "Assigning..." : "Assign Task"}
             </Button>
           </div>
         </DialogContent>

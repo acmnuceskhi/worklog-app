@@ -1,7 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { teamUpdateSchema } from "@/lib/validations";
+import {
+  apiResponse,
+  handleApiError,
+  unauthorized,
+  forbidden,
+  notFound,
+  badRequest,
+} from "@/lib/api-utils";
 
 // GET /api/teams/[teamId] - Get team details
 export async function GET(
@@ -11,7 +19,7 @@ export async function GET(
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return unauthorized();
     }
 
     const { teamId } = await params;
@@ -36,7 +44,7 @@ export async function GET(
     });
 
     if (!team) {
-      return NextResponse.json({ error: "Team not found" }, { status: 404 });
+      return notFound("Team not found");
     }
 
     // Check authorization early
@@ -74,7 +82,7 @@ export async function GET(
     );
 
     if (!isOwner && !isMember) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return forbidden("Forbidden");
     }
 
     // Combine data
@@ -85,13 +93,9 @@ export async function GET(
       members,
     };
 
-    return NextResponse.json({ team: teamWithDetails });
+    return apiResponse(teamWithDetails);
   } catch (error) {
-    console.error("Error fetching team:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleApiError(error);
   }
 }
 
@@ -103,7 +107,7 @@ export async function PATCH(
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return unauthorized();
     }
 
     const { teamId } = await params;
@@ -112,10 +116,7 @@ export async function PATCH(
     // Validate request body
     const validation = teamUpdateSchema.safeParse(body);
     if (!validation.success) {
-      return NextResponse.json(
-        { error: "Invalid request data", details: validation.error.issues },
-        { status: 400 },
-      );
+      return badRequest("Invalid request data", validation.error.issues);
     }
 
     // Check if user is team owner
@@ -125,14 +126,11 @@ export async function PATCH(
     });
 
     if (!team) {
-      return NextResponse.json({ error: "Team not found" }, { status: 404 });
+      return notFound("Team not found");
     }
 
     if (team.ownerId !== session.user.id) {
-      return NextResponse.json(
-        { error: "Only team owner can update team settings" },
-        { status: 403 },
-      );
+      return forbidden("Only team owner can update team settings");
     }
 
     // Update team
@@ -157,16 +155,9 @@ export async function PATCH(
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      team: updatedTeam,
-    });
+    return apiResponse(updatedTeam);
   } catch (error) {
-    console.error("Error updating team:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleApiError(error);
   }
 }
 
@@ -178,7 +169,7 @@ export async function DELETE(
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return unauthorized();
     }
 
     const { teamId } = await params;
@@ -190,30 +181,23 @@ export async function DELETE(
     });
 
     if (!team) {
-      return NextResponse.json({ error: "Team not found" }, { status: 404 });
+      return notFound("Team not found");
     }
 
     if (team.ownerId !== session.user.id) {
-      return NextResponse.json(
-        { error: "Only team owner can delete team" },
-        { status: 403 },
-      );
+      return forbidden("Only team owner can delete team");
     }
 
     // Delete team (cascade delete will handle members and worklogs)
     await prisma.team.delete({
       where: { id: teamId },
+      select: { id: true }, // Add select to make it smaller response but logic is delete
     });
 
-    return NextResponse.json({
-      success: true,
+    return apiResponse({
       message: `Team "${team.name}" deleted successfully`,
     });
   } catch (error) {
-    console.error("Error deleting team:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleApiError(error);
   }
 }

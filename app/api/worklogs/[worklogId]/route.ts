@@ -1,15 +1,18 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import {
-  badRequest,
-  forbidden,
   getCurrentUser,
-  notFound,
-  success,
-  unauthorized,
   isOrganizationOwner,
   isTeamOwner,
 } from "@/lib/auth-utils";
+import {
+  apiResponse,
+  badRequest,
+  forbidden,
+  handleApiError,
+  notFound,
+  unauthorized,
+} from "@/lib/api-utils";
 import { validateRequest, worklogUpdateSchema } from "@/lib/validations";
 
 /**
@@ -69,13 +72,9 @@ export async function PATCH(
       },
     });
 
-    return success({ data: updated });
+    return apiResponse(updated);
   } catch (error) {
-    console.error("Update worklog deadline error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleApiError(error);
   }
 }
 
@@ -130,12 +129,8 @@ export async function DELETE(
       where: { id: worklogId },
     });
 
-    return success({ message: "Worklog deleted successfully" });
+    return apiResponse({ message: "Worklog deleted successfully" });
   } catch (error) {
-    console.error("Delete worklog error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleApiError(error);
   }
 }

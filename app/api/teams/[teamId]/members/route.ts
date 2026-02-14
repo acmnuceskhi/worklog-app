@@ -1,13 +1,13 @@
 import { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { isTeamOwner } from "@/lib/auth-utils";
 import {
   apiResponse,
   handleApiError,
   unauthorized,
   forbidden,
 } from "@/lib/api-utils";
+import { isTeamMember, isTeamOwner } from "@/lib/auth-utils";
 
 export async function GET(
   request: NextRequest,
@@ -20,20 +20,20 @@ export async function GET(
     }
 
     const { teamId } = await params;
+    const userId = session.user.id;
 
-    // Check if user is team owner
-    const canAccess = await isTeamOwner(session.user.id, teamId);
-    if (!canAccess) {
+    // Check access: must be owner or member of the team
+    const isOwner = await isTeamOwner(userId, teamId);
+    const isMember = await isTeamMember(userId, teamId);
+
+    if (!isOwner && !isMember) {
       return forbidden(
-        "You do not have permission to view worklogs for this team",
+        "You do not have permission to view members of this team",
       );
     }
 
-    // Fetch worklogs for the team
-    const worklogs = await prisma.worklog.findMany({
-      where: {
-        teamId: teamId,
-      },
+    const members = await prisma.teamMember.findMany({
+      where: { teamId },
       include: {
         user: {
           select: {
@@ -42,18 +42,13 @@ export async function GET(
             email: true,
           },
         },
-        ratings: {
-          select: {
-            value: true,
-          },
-        },
       },
       orderBy: {
-        createdAt: "desc",
+        status: "asc", // PENDING first, then ACCEPTED? Or check enum order.
       },
     });
 
-    return apiResponse(worklogs);
+    return apiResponse(members);
   } catch (error) {
     return handleApiError(error);
   }

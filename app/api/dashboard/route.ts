@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getCurrentUser, success, unauthorized } from "@/lib/auth-utils";
+import { getCurrentUser } from "@/lib/auth-utils";
+import { apiResponse, unauthorized, handleApiError } from "@/lib/api-utils";
 
 /**
  * GET /api/dashboard
@@ -11,8 +11,12 @@ export async function GET() {
   try {
     const user = await getCurrentUser();
     if (!user) {
+      console.log("[Dashboard Debug] Unauthorized access attempt");
       return unauthorized();
     }
+    console.log(
+      `[Dashboard Debug] Fetching dashboard data for user: ${user.id}`,
+    );
 
     // Batch fetch all dashboard data in parallel
     const [sidebarStats, worklogs, memberTeams, ownedTeams] = await Promise.all(
@@ -59,7 +63,11 @@ export async function GET() {
             progressStatus: true,
             deadline: true,
             createdAt: true,
+            updatedAt: true,
             teamId: true,
+            userId: true,
+            description: true,
+            githubLink: true,
           },
           orderBy: { createdAt: "desc" },
           take: 20, // Reduce from 50 to 20 for better performance
@@ -90,13 +98,12 @@ export async function GET() {
                     name: true,
                   },
                 },
-                // Remove expensive _count operations for better performance
-                // _count: {
-                //   select: {
-                //     members: true,
-                //     worklogs: true,
-                //   },
-                // },
+                _count: {
+                  select: {
+                    members: true,
+                    worklogs: true,
+                  },
+                },
               },
             },
           },
@@ -119,13 +126,12 @@ export async function GET() {
                 name: true,
               },
             },
-            // Remove expensive _count operations for better performance
-            // _count: {
-            //   select: {
-            //     members: true,
-            //     worklogs: true,
-            //   },
-            // },
+            _count: {
+              select: {
+                members: true,
+                worklogs: true,
+              },
+            },
           },
         }),
       ],
@@ -139,24 +145,35 @@ export async function GET() {
       pendingReviewsCount,
     ] = sidebarStats;
 
-    return success({
+    console.log("[Dashboard Debug] Dashboard data fetched successfully:", {
+      stats: {
+        memberTeamsCount,
+        leadTeamsCount,
+        organizationsCount,
+        worklogsCount,
+        pendingReviewsCount,
+      },
+      worklogsCount: worklogs.length,
+      memberTeamsCount: memberTeams.length,
+      ownedTeamsCount: ownedTeams.length,
+    });
+
+    return apiResponse({
       sidebarStats: {
         memberTeamsCount,
         leadTeamsCount,
         organizationsCount,
         worklogsCount,
         pendingReviewsCount,
-        hasPendingItems: pendingReviewsCount > 0,
       },
-      worklogs,
-      memberTeams: memberTeams.map((tm) => tm.team),
+      worklogs: worklogs.map((w) => ({
+        ...w,
+        teamId: w.teamId,
+      })),
+      memberTeams,
       ownedTeams,
     });
   } catch (error) {
-    console.error("Dashboard API error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleApiError(error);
   }
 }

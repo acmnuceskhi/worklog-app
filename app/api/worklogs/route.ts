@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getCurrentUser, unauthorized, badRequest } from "@/lib/auth-utils";
+import { getCurrentUser } from "@/lib/auth-utils";
+import {
+  apiResponse,
+  unauthorized,
+  badRequest,
+  handleApiError,
+} from "@/lib/api-utils";
 import { validateRequest, worklogCreateSchema } from "@/lib/validations";
 
 /**
@@ -102,13 +108,9 @@ export async function GET() {
       ratings: ratingsByWorklog.get(worklog.id) || [],
     }));
 
-    return NextResponse.json({ data: worklogsWithDetails });
+    return apiResponse(worklogsWithDetails);
   } catch (error) {
-    console.error("Get worklogs error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleApiError(error);
   }
 }
 
@@ -135,6 +137,7 @@ export async function POST(request: NextRequest) {
       deadline,
       progressStatus,
       attachments,
+      userId: assignedUserId,
     } = validation.data;
 
     const allowedStatuses = new Set(["STARTED", "HALF_DONE", "COMPLETED"]);
@@ -142,27 +145,61 @@ export async function POST(request: NextRequest) {
       return badRequest("Invalid progress status for worklog creation");
     }
 
-    // Verify user is a member or owner of the team
-    const teamMember = await prisma.teamMember.findFirst({
-      where: {
-        teamId,
-        userId: user.id,
-        status: "ACCEPTED",
-      },
-    });
+    let targetUserId = user.id;
 
-    const isTeamOwner = await prisma.team.findFirst({
-      where: {
-        id: teamId,
-        ownerId: user.id,
-      },
-    });
+    // Logic for assigning tasks to others (Team Owner only)
+    if (assignedUserId && assignedUserId !== user.id) {
+      const isOwner = await prisma.team.findFirst({
+        where: {
+          id: teamId,
+          ownerId: user.id,
+        },
+      });
 
-    if (!teamMember && !isTeamOwner) {
-      return NextResponse.json(
-        { error: "You are not a member of this team" },
-        { status: 403 },
-      );
+      if (!isOwner) {
+        return NextResponse.json(
+          { error: "Only team owners can assign worklogs to others" },
+          { status: 403 },
+        );
+      }
+
+      // Verify target user is a member of the team
+      const targetMember = await prisma.teamMember.findFirst({
+        where: {
+          teamId,
+          userId: assignedUserId,
+          status: "ACCEPTED",
+        },
+      });
+
+      if (!targetMember) {
+        return badRequest("Target user is not a member of this team");
+      }
+
+      targetUserId = assignedUserId;
+    } else {
+      // Logic for creating own worklog (Member or Owner)
+      const teamMember = await prisma.teamMember.findFirst({
+        where: {
+          teamId,
+          userId: user.id,
+          status: "ACCEPTED",
+        },
+      });
+
+      const isTeamOwner = await prisma.team.findFirst({
+        where: {
+          id: teamId,
+          ownerId: user.id,
+        },
+      });
+
+      if (!teamMember && !isTeamOwner) {
+        return NextResponse.json(
+          { error: "You are not a member of this team" },
+          { status: 403 },
+        );
+      }
     }
 
     const worklog = await prisma.worklog.create({
@@ -172,7 +209,7 @@ export async function POST(request: NextRequest) {
         githubLink: githubLink || undefined,
         deadline: deadline ? new Date(deadline) : undefined,
         progressStatus: progressStatus || undefined,
-        userId: user.id,
+        userId: targetUserId,
         teamId,
         attachments: attachments?.length
           ? {
@@ -195,12 +232,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ data: worklog }, { status: 201 });
+    return apiResponse(worklog, 201);
   } catch (error) {
-    console.error("Create worklog error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleApiError(error);
   }
 }

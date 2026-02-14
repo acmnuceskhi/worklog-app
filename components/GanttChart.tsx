@@ -8,7 +8,7 @@ import { formatLocalDate } from "@/lib/deadline-utils";
 import styles from "./GanttChart.module.css";
 
 interface TaskData {
-  id: number;
+  id: string | number;
   assignedTo: string;
   title: string;
   status: string;

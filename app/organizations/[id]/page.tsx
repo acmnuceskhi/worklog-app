@@ -220,7 +220,7 @@ export default function OrganizationDashboardPage({
         throw new Error(result.error || "Failed to load organization");
       }
 
-      setOrganization(result);
+      setOrganization(result.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -413,7 +413,7 @@ export default function OrganizationDashboardPage({
     }
 
     const search = teamFilters.search.trim().toLowerCase();
-    const filtered = organization.teams.filter((team) => {
+    const filtered = (organization.teams || []).filter((team) => {
       if (!search) {
         return true;
       }
@@ -701,7 +701,7 @@ export default function OrganizationDashboardPage({
                   value={worklogFilters}
                   onChange={handleWorklogFiltersChange}
                   onReset={resetWorklogFilters}
-                  teamOptions={organization.teams.map((team) => ({
+                  teamOptions={(organization.teams || []).map((team) => ({
                     id: team.id,
                     name: team.name,
                   }))}

@@ -30,6 +30,7 @@ export interface Worklog {
     name?: string;
     email: string;
   };
+  ratings?: { value: number }[];
 }
 
 export interface WorklogPreview extends Omit<Worklog, "description"> {
@@ -105,6 +106,7 @@ export const useCreateWorklog = () => {
       githubLink?: string;
       teamId: string;
       deadline?: string;
+      userId?: string; // Add userId to mutation payload
     }) => {
       const response = await fetch("/api/worklogs", {
         method: "POST",
@@ -124,7 +126,11 @@ export const useCreateWorklog = () => {
           queryKey: queryKeys.teams.worklogs(data.teamId),
         });
       }
-      toast.success("Worklog created successfully");
+      toast.success(
+        data.userId && data.userId !== data.creatorId
+          ? "Task assigned successfully"
+          : "Worklog created successfully",
+      );
     },
     onError: (error) => {
       toast.error(

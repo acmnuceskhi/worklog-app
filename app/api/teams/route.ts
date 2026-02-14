@@ -1,6 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
-import { getCurrentUser, unauthorized, badRequest } from "@/lib/auth-utils";
+import { getCurrentUser } from "@/lib/auth-utils";
+import {
+  apiResponse,
+  badRequest,
+  handleApiError,
+  unauthorized,
+  forbidden,
+} from "@/lib/api-utils";
 import { validateRequest, teamCreateSchema } from "@/lib/validations";
 
 /**
@@ -30,10 +37,7 @@ export async function POST(request: NextRequest) {
       });
 
       if (!organization) {
-        return NextResponse.json(
-          { error: "Organization not found or unauthorized" },
-          { status: 403 },
-        );
+        return forbidden("Organization not found or unauthorized");
       }
     }
 
@@ -47,12 +51,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ data: team }, { status: 201 });
+    return apiResponse(team, 201);
   } catch (error) {
-    console.error("Create team error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleApiError(error);
   }
 }

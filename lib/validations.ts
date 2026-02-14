@@ -152,6 +152,7 @@ export const worklogCreateSchema = z.object({
     )
     .optional(),
   teamId: z.string().cuid("Invalid team ID format"),
+  userId: z.string().cuid("Invalid user ID format").optional(), // For team owners assigning tasks
 });
 
 export const worklogUpdateSchema = z.object({

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import {
   getCurrentUser,
@@ -6,12 +6,15 @@ import {
   isTeamMember,
   isWorklogOwner,
   isOrganizationOwner,
-  unauthorized,
-  forbidden,
-  notFound,
-  success,
-  badRequest,
 } from "@/lib/auth-utils";
+import {
+  apiResponse,
+  badRequest,
+  forbidden,
+  handleApiError,
+  notFound,
+  unauthorized,
+} from "@/lib/api-utils";
 import { validateRequest, worklogStatusUpdateSchema } from "@/lib/validations";
 
 type ProgressStatus =
@@ -190,7 +193,7 @@ export async function PATCH(
       },
     });
 
-    return success({
+    return apiResponse({
       id: updated.id,
       title: updated.title,
       progressStatus: updated.progressStatus,
@@ -199,11 +202,7 @@ export async function PATCH(
       team: updated.team,
     });
   } catch (error) {
-    console.error("Update worklog status error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleApiError(error);
   }
 }
 
@@ -240,15 +239,11 @@ export async function GET(
     const validNextStatuses =
       VALID_TRANSITIONS[worklog.progressStatus as ProgressStatus] || [];
 
-    return success({
+    return apiResponse({
       ...worklog,
       validNextStatuses,
     });
   } catch (error) {
-    console.error("Get worklog status error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleApiError(error);
   }
 }
