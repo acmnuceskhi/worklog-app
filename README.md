@@ -8,6 +8,7 @@ A hierarchical worklog tracking system for organizations, teams, and members wit
 - **Credits Management**: Add/subtract/set credits for organizations and teams
 - **5-State Progress Tracking**: STARTED → HALF_DONE → COMPLETED → REVIEWED → GRADED
 - **Rating System**: Organization owners rate worklogs 1-10 (hidden from team members/owners)
+- **File Attachments**: Support for images and documents as worklog evidence
 - **OAuth Authentication**: Google + GitHub login with Auth.js v5
 - **Team Management**: Invite members via email, set deadlines, review worklogs
 - **Role-Based Access Control**: Strict permissions based on organizational hierarchy
@@ -15,7 +16,7 @@ A hierarchical worklog tracking system for organizations, teams, and members wit
 ## Tech Stack
 
 - **Framework**: Next.js 16 with App Router
-- **Database**: Prisma 7 + PostgreSQL (Neon Cloud)
+- **Database**: Prisma 7 + PostgreSQL
 - **Styling**: Tailwind CSS 4
 - **Authentication**: Auth.js v5 (Google/GitHub OAuth)
 - **Validation**: Zod for API request validation
@@ -61,4 +62,9 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 - `npm run build` - Build for production
 - `npm run start` - Start production server
 - `npm run lint` - Run ESLint
+- `npm run prettier` - Format code with Prettier
+- `npm run db:seed` - Seed database with initial data
+- `npm run db:seed:test-users` - Seed database with test users
+- `npm run test:oauth-bypass` - Test OAuth bypass functionality
 - `npx prisma studio` - Open Prisma Studio (database GUI)
+- `npx prisma migrate dev` - Run database migrations
