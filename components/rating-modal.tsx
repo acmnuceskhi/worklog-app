@@ -10,9 +10,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import { FormField } from "@/components/forms/form-field";
+import { ErrorState } from "@/components/states/error-state";
 import { StarRating } from "@/components/ui/star-rating";
-import { FaSpinner, FaStar, FaCheck } from "react-icons/fa";
+import { FaStar, FaCheck } from "react-icons/fa";
 
 interface RatingModalProps {
   open: boolean;
@@ -143,42 +144,23 @@ export function RatingModal({
         </DialogHeader>
 
         <div className="space-y-5 pt-2">
-          {error && (
-            <div
-              className="p-3 rounded-lg bg-red-500/20 border border-red-500/50 text-red-400 text-sm"
-              role="alert"
-            >
-              {error}
-            </div>
-          )}
+          {error && <ErrorState message={error} className="py-3" />}
 
           {/* Star Rating */}
-          <div className="space-y-2">
-            <Label className="text-slate-200">
-              Rating <span className="text-red-400">*</span>
-            </Label>
+          <FormField label="Rating" required>
             <StarRating
               value={ratingValue}
               onChange={setRatingValue}
               size="lg"
             />
-          </div>
+          </FormField>
 
           {/* Comment */}
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <Label htmlFor="rating-comment" className="text-slate-200">
-                Comment{" "}
-                <span className="text-slate-500 font-normal">(optional)</span>
-              </Label>
-              <span
-                className={`text-xs ${
-                  remainingChars < 100 ? "text-yellow-400" : "text-slate-500"
-                }`}
-              >
-                {remainingChars} characters remaining
-              </span>
-            </div>
+          <FormField
+            label="Comment"
+            htmlFor="rating-comment"
+            helpText={`${remainingChars} characters remaining`}
+          >
             <Textarea
               id="rating-comment"
               value={comment}
@@ -193,7 +175,7 @@ export function RatingModal({
             <p id="comment-hint" className="sr-only">
               Optional feedback, maximum {MAX_COMMENT_LENGTH} characters
             </p>
-          </div>
+          </FormField>
 
           {/* Mark as Graded checkbox */}
           {canMarkAsGraded && (
@@ -226,13 +208,15 @@ export function RatingModal({
               Cancel
             </Button>
             <Button
-              className="flex-1 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-black font-medium"
+              variant="warning"
+              className="flex-1 font-medium"
               onClick={handleSubmit}
               disabled={ratingValue === 0 || isSubmitting}
             >
               {isSubmitting ? (
                 <>
-                  <FaSpinner className="mr-2 animate-spin" /> Saving...
+                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-black/30 border-t-black mr-2" />{" "}
+                  Saving...
                 </>
               ) : (
                 <>

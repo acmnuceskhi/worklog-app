@@ -12,10 +12,11 @@ interface OwnedTeamsData {
 }
 
 interface SidebarStatsData {
+  memberTeamsCount: number;
+  leadTeamsCount: number;
+  organizationsCount: number;
+  worklogsCount: number;
   pendingReviewsCount: number;
-  pendingInvitationsCount: number;
-  activeMembershipsCount: number;
-  ownedOrganizationsCount: number;
 }
 
 /**
@@ -70,21 +71,18 @@ export const useSidebarStats = () => {
       return (payload.data || payload) as SidebarStatsData;
     },
     select: (data) => ({
+      memberTeamsCount: data.memberTeamsCount ?? 0,
+      leadTeamsCount: data.leadTeamsCount ?? 0,
+      organizationsCount: data.organizationsCount ?? 0,
+      worklogsCount: data.worklogsCount ?? 0,
       pendingReviewsCount: data.pendingReviewsCount ?? 0,
-      pendingInvitationsCount: data.pendingInvitationsCount ?? 0,
-      activeMembershipsCount: data.activeMembershipsCount ?? 0,
-      ownedOrganizationsCount: data.ownedOrganizationsCount ?? 0,
-      hasPendingItems:
-        (data.pendingReviewsCount ?? 0) > 0 ||
-        (data.pendingInvitationsCount ?? 0) > 0,
+      hasPendingItems: (data.pendingReviewsCount ?? 0) > 0,
     }),
     refetchInterval: (query) => {
       // Poll more frequently when there are pending items
       const data = query.state.data;
       if (!data) return 30 * 1000; // Default 30s when no data yet
-      const hasPending =
-        (data.pendingReviewsCount ?? 0) > 0 ||
-        (data.pendingInvitationsCount ?? 0) > 0;
+      const hasPending = (data.pendingReviewsCount ?? 0) > 0;
       return hasPending ? 10 * 1000 : 30 * 1000; // 10s or 30s
     },
     refetchIntervalInBackground: false,

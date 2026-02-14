@@ -66,7 +66,7 @@ export const useTeamWorklogs = (teamId: string) => {
         throw new Error("Failed to fetch team worklogs");
       }
       const payload = await response.json();
-      return (payload.data || payload) as WorklogPreview[];
+      return (payload.worklogs || payload.data || payload) as WorklogPreview[];
     },
     enabled: !!teamId,
     staleTime: 1 * 60 * 1000,

@@ -3,16 +3,14 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { TeamCreationWizard } from "@/components/teams/team-creation-wizard";
-import { FaPlus, FaUsers, FaSpinner, FaCog } from "react-icons/fa";
+import { FaPlus, FaUsers, FaCog } from "react-icons/fa";
 import { useOwnedTeams } from "@/lib/hooks";
+import { LoadingState } from "@/components/states/loading-state";
+import { ErrorState } from "@/components/states/error-state";
+import { EmptyState } from "@/components/states/empty-state";
+import { EntityCard } from "@/components/entities/entity-card";
+import { EntityList } from "@/components/entities/entity-list";
 
 export default function LeadTeamsPage() {
   const router = useRouter();
@@ -28,28 +26,17 @@ export default function LeadTeamsPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <FaSpinner className="animate-spin text-4xl text-blue-400" />
-        <span className="ml-3 text-lg text-muted">Loading your teams...</span>
-      </div>
-    );
+    return <LoadingState text="Loading your teams..." />;
   }
 
   if (error) {
     return (
-      <div className="p-6">
-        <Card className="border-red-500/40 bg-white/5 backdrop-blur-md">
-          <CardContent className="pt-6 text-center">
-            <p className="text-red-300">
-              {error instanceof Error ? error.message : "Failed to load teams"}
-            </p>
-            <Button onClick={() => refetch()} className="mt-4">
-              Retry
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <ErrorState
+        message={
+          error instanceof Error ? error.message : "Failed to load teams"
+        }
+        onRetry={() => refetch()}
+      />
     );
   }
 
@@ -88,11 +75,7 @@ export default function LeadTeamsPage() {
             </div>
           )}
         </div>
-        <Button
-          onClick={() => setShowWizard(true)}
-          className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
-          size="lg"
-        >
+        <Button onClick={() => setShowWizard(true)} variant="primary" size="lg">
           <FaPlus />
           Create New Team
         </Button>
@@ -100,89 +83,63 @@ export default function LeadTeamsPage() {
 
       {/* Teams Grid */}
       {teams.length === 0 ? (
-        <Card className="bg-white/5 border border-white/10 backdrop-blur-md">
-          <CardContent className="pt-12 pb-12 text-center">
-            <FaUsers className="mx-auto text-6xl text-white/40 mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">
-              No teams yet
-            </h3>
-            <p className="text-muted mb-6">
-              Create your first team to start managing worklogs and members
-            </p>
-            <Button
-              onClick={() => setShowWizard(true)}
-              className="flex items-center gap-2 mx-auto bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
-            >
-              <FaPlus />
-              Create Your First Team
-            </Button>
-          </CardContent>
-        </Card>
+        <EmptyState
+          title="No teams yet"
+          description="Create your first team to start managing worklogs and members"
+          icon={<FaUsers className="h-8 w-8" />}
+          action={{
+            label: "Create Your First Team",
+            onClick: () => setShowWizard(true),
+          }}
+        />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <EntityList title="Your Teams" count={teams.length} layout="grid">
           {teams.map((team) => (
-            <Card
+            <EntityCard
               key={team.id}
-              className="cursor-pointer group border border-white/10 bg-white/5 backdrop-blur-md shadow-lg shadow-black/20 hover:-translate-y-1 hover:shadow-xl transition-all"
+              title={team.name}
+              subtitle={team.project ? `Project: ${team.project}` : undefined}
+              avatar={<FaUsers className="text-blue-400" />}
+              stats={[
+                { label: "Members", value: team._count?.members || 0 },
+                { label: "Worklogs", value: team._count?.worklogs || 0 },
+              ]}
               onClick={() => router.push(`/teams/lead/${team.id}`)}
+              className="border border-white/10 bg-white/5 backdrop-blur-md shadow-lg shadow-black/20 hover:-translate-y-1 hover:shadow-xl"
             >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-white group-hover:text-blue-300 transition-colors">
-                  <FaUsers className="text-blue-400" />
-                  {team.name}
-                </CardTitle>
-                {team.project && (
-                  <CardDescription className="text-sm text-white/70">
-                    Project: {team.project}
-                  </CardDescription>
-                )}
-              </CardHeader>
-              <CardContent>
-                {team.description && (
-                  <p className="text-sm text-muted mb-4 line-clamp-2">
-                    {team.description}
-                  </p>
-                )}
-                <div className="flex items-center justify-between text-sm text-white/60">
-                  <span>
-                    {team._count?.members || 0} member
-                    {team._count?.members !== 1 ? "s" : ""}
-                  </span>
-                  <span>
-                    {team._count?.worklogs || 0} worklog
-                    {team._count?.worklogs !== 1 ? "s" : ""}
-                  </span>
-                </div>
-                <div className="mt-4 flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 border-white/20 text-white/80 hover:text-white hover:border-white/40"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/teams/lead/${team.id}`);
-                    }}
-                  >
-                    View Details
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-white/20 text-white/80 hover:text-white hover:border-white/40"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // TODO: Open team settings modal
-                      alert("Team settings coming soon!");
-                    }}
-                    aria-label={`Settings for ${team.name}`}
-                  >
-                    <FaCog />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+              {team.description && (
+                <p className="text-sm text-muted line-clamp-2">
+                  {team.description}
+                </p>
+              )}
+              <div className="mt-4 flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 border-white/20 text-white/80 hover:text-white hover:border-white/40"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push(`/teams/lead/${team.id}`);
+                  }}
+                >
+                  View Details
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-white/20 text-white/80 hover:text-white hover:border-white/40"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    alert("Team settings coming soon!");
+                  }}
+                  aria-label={`Settings for ${team.name}`}
+                >
+                  <FaCog />
+                </Button>
+              </div>
+            </EntityCard>
           ))}
-        </div>
+        </EntityList>
       )}
 
       {/* Team Creation Wizard */}

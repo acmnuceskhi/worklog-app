@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { FormField } from "@/components/forms/form-field";
+import { LoadingState } from "@/components/states/loading-state";
 import {
   Select,
   SelectContent,
@@ -83,11 +85,11 @@ export const TeamBasicInfoStep: React.FC<WizardStepProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <FaInfoCircle className="text-blue-600 mt-1 flex-shrink-0" />
-        <div className="text-sm text-blue-800">
+      <div className="flex items-start gap-3 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+        <FaInfoCircle className="text-blue-400 mt-1 flex-shrink-0" />
+        <div className="text-sm text-blue-300">
           <p className="font-medium mb-1">Let&apos;s create your team</p>
-          <p className="text-blue-700">
+          <p className="text-blue-300/80">
             Start by providing basic information about your team. You can always
             update these details later.
           </p>
@@ -95,10 +97,12 @@ export const TeamBasicInfoStep: React.FC<WizardStepProps> = ({
       </div>
 
       <div className="space-y-4">
-        <div>
-          <Label htmlFor="team-name" className="required">
-            Team Name
-          </Label>
+        <FormField
+          label="Team Name"
+          required
+          htmlFor="team-name"
+          error={errors.name}
+        >
           <Input
             id="team-name"
             type="text"
@@ -107,22 +111,16 @@ export const TeamBasicInfoStep: React.FC<WizardStepProps> = ({
             placeholder="e.g., Frontend Development Team"
             className={errors.name ? "border-red-500" : ""}
             aria-invalid={!!errors.name}
-            aria-describedby={errors.name ? "team-name-error" : undefined}
             autoFocus
           />
-          {errors.name && (
-            <p
-              id="team-name-error"
-              className="text-sm text-red-600 mt-1"
-              role="alert"
-            >
-              {errors.name}
-            </p>
-          )}
-        </div>
+        </FormField>
 
-        <div>
-          <Label htmlFor="team-project">Project Name (Optional)</Label>
+        <FormField
+          label="Project Name (Optional)"
+          htmlFor="team-project"
+          error={errors.project}
+          helpText="What project is this team working on?"
+        >
           <Input
             id="team-project"
             type="text"
@@ -131,24 +129,14 @@ export const TeamBasicInfoStep: React.FC<WizardStepProps> = ({
             placeholder="e.g., Company Website Redesign"
             className={errors.project ? "border-red-500" : ""}
             aria-invalid={!!errors.project}
-            aria-describedby={errors.project ? "team-project-error" : undefined}
           />
-          {errors.project && (
-            <p
-              id="team-project-error"
-              className="text-sm text-red-600 mt-1"
-              role="alert"
-            >
-              {errors.project}
-            </p>
-          )}
-          <p className="text-xs text-gray-500 mt-1">
-            What project is this team working on?
-          </p>
-        </div>
+        </FormField>
 
-        <div>
-          <Label htmlFor="team-description">Description (Optional)</Label>
+        <FormField
+          label="Description (Optional)"
+          htmlFor="team-description"
+          error={errors.description}
+        >
           <Textarea
             id="team-description"
             value={teamData.description || ""}
@@ -157,24 +145,12 @@ export const TeamBasicInfoStep: React.FC<WizardStepProps> = ({
             rows={4}
             className={errors.description ? "border-red-500" : ""}
             aria-invalid={!!errors.description}
-            aria-describedby={
-              errors.description ? "team-description-error" : undefined
-            }
           />
-          {errors.description && (
-            <p
-              id="team-description-error"
-              className="text-sm text-red-600 mt-1"
-              role="alert"
-            >
-              {errors.description}
-            </p>
-          )}
-          <div className="flex justify-between text-xs text-gray-500 mt-1">
+          <div className="flex justify-between text-xs text-white/50 mt-1">
             <span>Provide details about your team</span>
             <span>{teamData.description?.length || 0}/500</span>
           </div>
-        </div>
+        </FormField>
       </div>
     </div>
   );
@@ -221,11 +197,11 @@ export const TeamOrganizationStep: React.FC<WizardStepProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-        <FaInfoCircle className="text-amber-600 mt-1 flex-shrink-0" />
-        <div className="text-sm text-amber-800">
+      <div className="flex items-start gap-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+        <FaInfoCircle className="text-amber-400 mt-1 flex-shrink-0" />
+        <div className="text-sm text-amber-300">
           <p className="font-medium mb-1">Organization (Optional)</p>
-          <p className="text-amber-700">
+          <p className="text-amber-300/80">
             You can associate this team with an organization you own. This is
             completely optional - teams can exist independently.
           </p>
@@ -234,12 +210,9 @@ export const TeamOrganizationStep: React.FC<WizardStepProps> = ({
 
       <div className="space-y-4">
         {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-            <span className="ml-3 text-gray-600">Loading organizations...</span>
-          </div>
+          <LoadingState text="Loading organizations..." />
         ) : error ? (
-          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+          <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-sm text-yellow-400">
             {error}
           </div>
         ) : (
@@ -263,7 +236,7 @@ export const TeamOrganizationStep: React.FC<WizardStepProps> = ({
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-white/50 mt-1">
               {organizations.length === 0
                 ? "You don't own any organizations yet. You can create one later."
                 : `Choose from ${organizations.length} organization${organizations.length !== 1 ? "s" : ""}`}
@@ -272,8 +245,8 @@ export const TeamOrganizationStep: React.FC<WizardStepProps> = ({
         )}
 
         {teamData.organizationId && organizations.length > 0 && (
-          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-sm text-green-800">
+          <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
+            <p className="text-sm text-green-400">
               <strong>Selected:</strong>{" "}
               {organizations.find((org) => org.id === teamData.organizationId)
                 ?.name || "Unknown"}
@@ -297,11 +270,11 @@ export const TeamMemberInvitationStep: React.FC<WizardStepProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start gap-3 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-        <FaEnvelope className="text-purple-600 mt-1 flex-shrink-0" />
-        <div className="text-sm text-purple-800">
+      <div className="flex items-start gap-3 p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+        <FaEnvelope className="text-purple-400 mt-1 flex-shrink-0" />
+        <div className="text-sm text-purple-300">
           <p className="font-medium mb-1">Invite Team Members</p>
-          <p className="text-purple-700">
+          <p className="text-purple-300/80">
             Add email addresses of people you want to invite to your team. They
             will receive an invitation email. You can also invite members later.
           </p>
@@ -317,12 +290,12 @@ export const TeamMemberInvitationStep: React.FC<WizardStepProps> = ({
           maxEmails={50}
         />
 
-        <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-          <h4 className="text-sm font-medium text-gray-900 mb-2 flex items-center gap-2">
-            <FaUsers className="text-gray-600" />
+        <div className="p-4 bg-white/5 border border-white/10 rounded-lg">
+          <h4 className="text-sm font-medium text-white mb-2 flex items-center gap-2">
+            <FaUsers className="text-white/60" />
             What happens next?
           </h4>
-          <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
+          <ul className="text-sm text-white/70 space-y-1 list-disc list-inside">
             <li>
               Invited members will receive an email with an invitation link
             </li>
@@ -343,11 +316,11 @@ export const TeamReviewStep: React.FC<WizardStepProps> = ({ data }) => {
   const teamData = data as TeamFormData;
   return (
     <div className="space-y-6">
-      <div className="flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
-        <FaCheckCircle className="text-green-600 mt-1 flex-shrink-0" />
-        <div className="text-sm text-green-800">
+      <div className="flex items-start gap-3 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
+        <FaCheckCircle className="text-green-400 mt-1 flex-shrink-0" />
+        <div className="text-sm text-green-300">
           <p className="font-medium mb-1">Review Your Team</p>
-          <p className="text-green-700">
+          <p className="text-green-300/80">
             Please review the information below. You can go back to make changes
             or click &quot;Complete&quot; to create your team.
           </p>
@@ -356,46 +329,46 @@ export const TeamReviewStep: React.FC<WizardStepProps> = ({ data }) => {
 
       <div className="space-y-4">
         {/* Team Information */}
-        <div className="p-5 bg-white border border-gray-200 rounded-lg shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="p-5 bg-white/5 border border-white/10 rounded-lg shadow-sm">
+          <h3 className="text-lg font-semibold text-white mb-4">
             Team Information
           </h3>
           <dl className="space-y-3">
             <div>
-              <dt className="text-sm font-medium text-gray-600">Team Name</dt>
-              <dd className="text-base text-gray-900 mt-1">
+              <dt className="text-sm font-medium text-white/60">Team Name</dt>
+              <dd className="text-base text-white mt-1">
                 {teamData.name || "Not provided"}
               </dd>
             </div>
             {teamData.project && (
               <div>
-                <dt className="text-sm font-medium text-gray-600">Project</dt>
-                <dd className="text-base text-gray-900 mt-1">
+                <dt className="text-sm font-medium text-white/60">Project</dt>
+                <dd className="text-base text-white mt-1">
                   {teamData.project}
                 </dd>
               </div>
             )}
             {teamData.description && (
               <div>
-                <dt className="text-sm font-medium text-gray-600">
+                <dt className="text-sm font-medium text-white/60">
                   Description
                 </dt>
-                <dd className="text-base text-gray-900 mt-1 whitespace-pre-wrap">
+                <dd className="text-base text-white mt-1 whitespace-pre-wrap">
                   {teamData.description}
                 </dd>
               </div>
             )}
             <div>
-              <dt className="text-sm font-medium text-gray-600">
+              <dt className="text-sm font-medium text-white/60">
                 Organization
               </dt>
-              <dd className="text-base text-gray-900 mt-1">
+              <dd className="text-base text-white mt-1">
                 {teamData.organizationId ? (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300">
                     Assigned to organization
                   </span>
                 ) : (
-                  <span className="text-gray-500">Standalone team</span>
+                  <span className="text-white/50">Standalone team</span>
                 )}
               </dd>
             </div>
@@ -404,15 +377,15 @@ export const TeamReviewStep: React.FC<WizardStepProps> = ({ data }) => {
 
         {/* Member Invitations */}
         {teamData.inviteEmails && teamData.inviteEmails.length > 0 && (
-          <div className="p-5 bg-white border border-gray-200 rounded-lg shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          <div className="p-5 bg-white/5 border border-white/10 rounded-lg shadow-sm">
+            <h3 className="text-lg font-semibold text-white mb-4">
               Member Invitations ({teamData.inviteEmails.length})
             </h3>
             <div className="flex flex-wrap gap-2">
               {teamData.inviteEmails.map((email: string, index: number) => (
                 <span
                   key={index}
-                  className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-purple-100 text-purple-800 border border-purple-200"
+                  className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-purple-500/20 text-purple-300 border border-purple-500/30"
                 >
                   {email}
                 </span>
@@ -422,7 +395,7 @@ export const TeamReviewStep: React.FC<WizardStepProps> = ({ data }) => {
         )}
 
         {(!teamData.inviteEmails || teamData.inviteEmails.length === 0) && (
-          <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600">
+          <div className="p-4 bg-white/5 border border-white/10 rounded-lg text-sm text-white/60">
             No member invitations. You can invite members after creating the
             team.
           </div>

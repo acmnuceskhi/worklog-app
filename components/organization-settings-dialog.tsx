@@ -28,12 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { organizationUpdateSchema } from "@/lib/validations";
 import { toast } from "sonner";
-import {
-  FaSpinner,
-  FaEdit,
-  FaTrash,
-  FaExclamationTriangle,
-} from "react-icons/fa";
+import { FaEdit, FaTrash, FaExclamationTriangle } from "react-icons/fa";
 
 type OrganizationFormData = z.infer<typeof organizationUpdateSchema>;
 
@@ -458,7 +453,7 @@ export function OrganizationSettingsDialog({
               >
                 {isDeleting ? (
                   <>
-                    <FaSpinner className="mr-2 animate-spin" />
+                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-red-300/30 border-t-red-300 mr-2" />
                     Deleting...
                   </>
                 ) : (
@@ -482,13 +477,13 @@ export function OrganizationSettingsDialog({
                 </Button>
                 <Button
                   type="submit"
+                  variant="primary"
                   disabled={!isDirty || !isValid || isUpdating || isSubmitting}
-                  className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-describedby={!isDirty ? "no-changes-hint" : undefined}
                 >
                   {isUpdating || isSubmitting ? (
                     <>
-                      <FaSpinner className="mr-2 animate-spin" />
+                      <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white mr-2" />
                       Updating...
                     </>
                   ) : (
@@ -544,7 +539,7 @@ export function OrganizationSettingsDialog({
             >
               {isDeleting ? (
                 <>
-                  <FaSpinner className="mr-2 animate-spin" />
+                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white mr-2" />
                   Deleting...
                 </>
               ) : (

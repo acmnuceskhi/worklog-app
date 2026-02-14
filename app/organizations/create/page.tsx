@@ -8,7 +8,8 @@ import { organizationCreateSchema } from "@/lib/validations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import { FormField } from "@/components/forms/form-field";
+import { ErrorState } from "@/components/states/error-state";
 import {
   Card,
   CardContent,
@@ -17,13 +18,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  FaBuilding,
-  FaSpinner,
-  FaArrowLeft,
-  FaUsers,
-  FaUserTie,
-} from "react-icons/fa";
+import { FaBuilding, FaArrowLeft, FaUsers, FaUserTie } from "react-icons/fa";
 import { useCreateOrganization } from "@/lib/hooks";
 
 type OrganizationFormData = z.infer<typeof organizationCreateSchema>;
@@ -60,35 +55,35 @@ export default function CreateOrganizationPage() {
         <div className="flex items-center gap-4">
           <h1 className="text-xl font-bold text-white">Worklog</h1>
           <div className="flex items-center gap-2 text-sm text-white/70">
-            <button
+            <Button
+              variant="ghost"
               onClick={() => router.push("/teams/member")}
-              className="flex items-center gap-1 px-3 py-1 rounded hover:bg-white/10 transition-colors"
+              className="flex items-center gap-1 px-3 py-1 text-sm text-white/70"
             >
               <FaUsers className="h-4 w-4" />
               Member Teams
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
               onClick={() => router.push("/teams/lead")}
-              className="flex items-center gap-1 px-3 py-1 rounded hover:bg-white/10 transition-colors"
+              className="flex items-center gap-1 px-3 py-1 text-sm text-white/70"
             >
               <FaUserTie className="h-4 w-4" />
               Lead Teams
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
               onClick={() => router.push("/teams/organisations")}
-              className="flex items-center gap-1 px-3 py-1 rounded bg-white/10 text-white"
+              className="flex items-center gap-1 px-3 py-1 text-sm bg-white/10 text-white"
             >
               <FaBuilding className="h-4 w-4" />
               My Organisations
-            </button>
+            </Button>
           </div>
         </div>
-        <button
-          onClick={() => router.push("/home")}
-          className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg font-medium transition-colors"
-        >
+        <Button variant="success" onClick={() => router.push("/home")}>
           Back to Dashboard
-        </button>
+        </Button>
       </nav>
 
       {/* Main Content */}
@@ -114,77 +109,51 @@ export default function CreateOrganizationPage() {
             <CardContent className="space-y-6">
               {/* Server Error Display */}
               {createOrganization.error && (
-                <div
-                  role="alert"
-                  className="p-4 rounded-lg bg-red-500/20 border border-red-500/50 text-red-400"
-                >
-                  <p className="text-sm font-medium">
-                    {createOrganization.error instanceof Error
+                <ErrorState
+                  title="Failed to create organization"
+                  message={
+                    createOrganization.error instanceof Error
                       ? createOrganization.error.message
-                      : "Failed to create organization"}
-                  </p>
-                </div>
+                      : "Failed to create organization"
+                  }
+                  className="py-2"
+                />
               )}
 
               {/* Organization Name Field */}
-              <div className="space-y-2">
-                <Label
-                  htmlFor="name"
-                  className="text-sm font-medium text-white/80"
-                >
-                  Organization Name <span className="text-red-400">*</span>
-                </Label>
+              <FormField
+                label="Organization Name"
+                required
+                htmlFor="name"
+                error={errors.name?.message}
+                helpText="Maximum 100 characters"
+              >
                 <Input
                   id="name"
                   type="text"
                   placeholder="Enter organization name"
-                  aria-describedby={errors.name ? "name-error" : undefined}
                   aria-invalid={!!errors.name}
                   className="bg-white/5 border-white/10 text-white placeholder:text-white/50 focus:border-white/30 focus:ring-white/10"
                   {...register("name")}
                 />
-                {errors.name && (
-                  <p
-                    id="name-error"
-                    className="text-sm text-red-400"
-                    role="alert"
-                  >
-                    {errors.name.message}
-                  </p>
-                )}
-                <p className="text-xs text-white/50">Maximum 100 characters</p>
-              </div>
+              </FormField>
 
               {/* Description Field */}
-              <div className="space-y-2">
-                <Label
-                  htmlFor="description"
-                  className="text-sm font-medium text-white/80"
-                >
-                  Description <span className="text-white/50">(optional)</span>
-                </Label>
+              <FormField
+                label="Description"
+                htmlFor="description"
+                error={errors.description?.message}
+                helpText="Maximum 500 characters"
+              >
                 <Textarea
                   id="description"
                   placeholder="Describe what this organization is about..."
                   rows={4}
-                  aria-describedby={
-                    errors.description ? "description-error" : undefined
-                  }
                   aria-invalid={!!errors.description}
                   className="bg-white/5 border-white/10 text-white placeholder:text-white/50 focus:border-white/30 focus:ring-white/10 resize-none"
                   {...register("description")}
                 />
-                {errors.description && (
-                  <p
-                    id="description-error"
-                    className="text-sm text-red-400"
-                    role="alert"
-                  >
-                    {errors.description.message}
-                  </p>
-                )}
-                <p className="text-xs text-white/50">Maximum 500 characters</p>
-              </div>
+              </FormField>
             </CardContent>
 
             <CardFooter className="flex gap-3 pt-2">
@@ -201,11 +170,12 @@ export default function CreateOrganizationPage() {
               <Button
                 type="submit"
                 disabled={createOrganization.isPending}
-                className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold"
+                variant="primary"
+                className="flex-1"
               >
                 {createOrganization.isPending ? (
                   <>
-                    <FaSpinner className="mr-2 h-4 w-4 animate-spin" />
+                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white mr-2" />
                     Creating...
                   </>
                 ) : (

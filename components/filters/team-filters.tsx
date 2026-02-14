@@ -22,7 +22,7 @@ export interface TeamFilterState {
 
 interface TeamFiltersProps {
   value: TeamFilterState;
-  onChange: (next: TeamFilterState) => void;
+  onChange: (_: TeamFilterState) => void;
   onReset?: () => void;
 }
 

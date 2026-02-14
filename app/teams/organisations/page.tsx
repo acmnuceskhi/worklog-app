@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  FaBuilding,
-  FaUsers,
-  FaPlus,
-  FaArrowRight,
-  FaSpinner,
-} from "react-icons/fa";
+import { FaBuilding, FaUsers, FaPlus, FaArrowRight } from "react-icons/fa";
+import { Button } from "@/components/ui/button";
+import { LoadingState } from "@/components/states/loading-state";
+import { ErrorState } from "@/components/states/error-state";
+import { EmptyState } from "@/components/states/empty-state";
+import { EntityCard } from "@/components/entities/entity-card";
+import { EntityList } from "@/components/entities/entity-list";
 
 interface Organization {
   id: string;
@@ -50,30 +50,11 @@ export default function OrganisationsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-        <div className="text-center">
-          <FaSpinner className="h-8 w-8 animate-spin text-blue-400 mx-auto mb-4" />
-          <p className="text-muted">Loading organizations...</p>
-        </div>
-      </div>
-    );
+    return <LoadingState text="Loading organizations..." fullPage />;
   }
 
   if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-        <div className="text-center">
-          <p className="text-red-400 mb-4">{error}</p>
-          <button
-            onClick={fetchOrganizations}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
+    return <ErrorState message={error} onRetry={fetchOrganizations} fullPage />;
   }
 
   const totalTeams = organizations.reduce(
@@ -109,10 +90,10 @@ export default function OrganisationsPage() {
             )}
           </div>
           <Link href="/organizations/create">
-            <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-blue-500/20">
+            <Button variant="primary" size="lg">
               <FaPlus className="h-4 w-4" />
               Create Organization
-            </button>
+            </Button>
           </Link>
         </div>
 
@@ -158,52 +139,43 @@ export default function OrganisationsPage() {
 
         {/* Organizations Grid */}
         {organizations.length === 0 ? (
-          <div className="text-center py-12">
-            <FaBuilding className="h-16 w-16 text-white/40 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">
-              No organizations yet
-            </h3>
-            <p className="text-muted mb-6">
-              Create your first organization to get started
-            </p>
-            <Link href="/organizations/create">
-              <button className="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-blue-500/20">
-                Create Organization
-              </button>
-            </Link>
-          </div>
+          <EmptyState
+            title="No organizations yet"
+            description="Create your first organization to get started"
+            icon={<FaBuilding className="h-8 w-8" />}
+            action={{
+              label: "Create Organization",
+              onClick: () => (window.location.href = "/organizations/create"),
+            }}
+          />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <EntityList
+            title="Your Organizations"
+            count={organizations.length}
+            layout="grid"
+          >
             {organizations.map((org) => (
               <Link key={org.id} href={`/organizations/${org.id}`}>
-                <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-all duration-200 cursor-pointer group shadow-lg shadow-black/20 hover:-translate-y-1">
-                  <div className="flex items-start justify-between mb-4">
+                <EntityCard
+                  title={org.name}
+                  subtitle={org.description || undefined}
+                  avatar={
                     <div className="p-3 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500">
                       <FaBuilding className="h-6 w-6 text-white" />
                     </div>
+                  }
+                  actions={
                     <FaArrowRight className="h-5 w-5 text-muted group-hover:text-white transition-colors" />
-                  </div>
-
-                  <h3 className="text-xl font-semibold text-white mb-2">
-                    {org.name}
-                  </h3>
-                  {org.description && (
-                    <p className="text-muted text-sm mb-4 line-clamp-2">
-                      {org.description}
-                    </p>
-                  )}
-
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2 text-muted">
-                      <FaUsers className="h-4 w-4" />
-                      <span>{org._count.teams} teams</span>
-                    </div>
-                    <div className="text-muted">{org.credits} credits</div>
-                  </div>
-                </div>
+                  }
+                  stats={[
+                    { label: "Teams", value: org._count.teams },
+                    { label: "Credits", value: org.credits },
+                  ]}
+                  className="backdrop-blur-md shadow-lg shadow-black/20 hover:-translate-y-1 group"
+                />
               </Link>
             ))}
-          </div>
+          </EntityList>
         )}
       </div>
     </div>

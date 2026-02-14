@@ -35,7 +35,9 @@ export const useWorklogRatings = (worklogId: string) => {
         throw new Error("Failed to fetch ratings");
       }
       const payload = await response.json();
-      return (payload.data || []) as Rating[];
+      return (
+        Array.isArray(payload) ? payload : payload.data || []
+      ) as Rating[];
     },
     enabled: !!worklogId,
     staleTime: 2 * 60 * 1000, // 2 minutes

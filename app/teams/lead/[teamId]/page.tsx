@@ -4,6 +4,7 @@ import React, { use } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FaPlus } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
+import { ErrorState } from "@/components/states/error-state";
 import {
   Card,
   CardContent,
@@ -25,13 +26,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/ui/date-picker";
 import { GanttChart } from "@/components/GanttChart";
 import { DeadlineStatusBadge } from "@/components/worklog/deadline-status-badge";
 import { DeadlineCountdown } from "@/components/worklog/deadline-countdown";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { FormField } from "@/components/forms/form-field";
 import { ErrorBoundary } from "@/components/error-boundary";
 import {
   useTeam,
@@ -258,18 +259,10 @@ function TeamDetailsPageContent({
   // Error state
   if (error) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-red-600 text-center">
-          <h2 className="text-xl font-semibold mb-2">Error Loading Team</h2>
-          <p>{error instanceof Error ? error.message : "An error occurred"}</p>
-          <button
-            onClick={() => refetch()}
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
+      <ErrorState
+        message={error instanceof Error ? error.message : "An error occurred"}
+        onRetry={() => refetch()}
+      />
     );
   }
 
@@ -426,17 +419,19 @@ function TeamDetailsPageContent({
                         </div>
                       </td>
                       <td className="py-3 px-2">
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() =>
                             handleRemoveMember(member.id, member.name)
                           }
                           disabled={removeMemberMutation.isPending}
-                          className="px-3 py-1 text-red-400 hover:bg-red-500/10 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="text-red-400 hover:bg-red-500/10"
                         >
                           {removeMemberMutation.isPending
                             ? "Removing..."
                             : "Remove"}
-                        </button>
+                        </Button>
                       </td>
                     </tr>
                   );
@@ -661,9 +656,9 @@ function TeamDetailsPageContent({
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            <div>
-              <Label className="text-white/80 mb-2 block">Task Title</Label>
+            <FormField label="Task Title" required htmlFor="assign-task-title">
               <Input
+                id="assign-task-title"
                 placeholder="Enter task title"
                 value={newTask.title}
                 onChange={(e) =>
@@ -671,12 +666,9 @@ function TeamDetailsPageContent({
                 }
                 className="bg-white/5 border-white/20 text-white placeholder:text-white/50"
               />
-            </div>
+            </FormField>
 
-            <div>
-              <Label className="text-white/80 mb-2 block">
-                Assign to Member
-              </Label>
+            <FormField label="Assign to Member" required>
               <Select
                 value={newTask.assignedTo}
                 onValueChange={(value) =>
@@ -698,10 +690,9 @@ function TeamDetailsPageContent({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </FormField>
 
-            <div>
-              <Label className="text-white/80 mb-2 block">Deadline</Label>
+            <FormField label="Deadline">
               <DatePicker
                 value={
                   newTask.deadline ? new Date(newTask.deadline) : undefined
@@ -714,7 +705,7 @@ function TeamDetailsPageContent({
                 }
                 placeholder="Select deadline"
               />
-            </div>
+            </FormField>
 
             <Button
               onClick={handleAssignTask}

@@ -172,26 +172,26 @@ export const MultiStepWizard: React.FC<MultiStepWizardProps> = ({
         {/* Mobile: Compact Progress Bar */}
         <div className="md:hidden mb-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-sm font-medium text-white/70">
               Step {currentStepIndex + 1} of {steps.length}
             </span>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-white/50">
               {Math.round(((currentStepIndex + 1) / steps.length) * 100)}%
             </span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="w-full bg-white/10 rounded-full h-2">
             <div
-              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              className="bg-blue-500 h-2 rounded-full transition-all duration-300"
               style={{
                 width: `${((currentStepIndex + 1) / steps.length) * 100}%`,
               }}
             />
           </div>
-          <p className="text-sm font-medium text-blue-600 mt-2">
+          <p className="text-sm font-medium text-blue-400 mt-2">
             {currentStep.title}
           </p>
           {currentStep.description && (
-            <p className="text-xs text-gray-500">{currentStep.description}</p>
+            <p className="text-xs text-white/50">{currentStep.description}</p>
           )}
         </div>
 
@@ -212,8 +212,8 @@ export const MultiStepWizard: React.FC<MultiStepWizardProps> = ({
                         isCompleted
                           ? "bg-blue-600 text-white"
                           : isCurrent
-                            ? "bg-blue-500 text-white ring-4 ring-blue-200"
-                            : "bg-gray-200 text-gray-500"
+                            ? "bg-blue-500 text-white ring-4 ring-blue-500/30"
+                            : "bg-white/10 text-white/50"
                       }
                     `}
                     aria-current={isCurrent ? "step" : undefined}
@@ -227,13 +227,13 @@ export const MultiStepWizard: React.FC<MultiStepWizardProps> = ({
                   <div className="mt-2 text-center">
                     <p
                       className={`text-sm font-medium ${
-                        isCurrent ? "text-blue-600" : "text-gray-600"
+                        isCurrent ? "text-blue-400" : "text-white/60"
                       }`}
                     >
                       {step.title}
                     </p>
                     {step.description && (
-                      <p className="text-xs text-gray-500 mt-1 hidden lg:block">
+                      <p className="text-xs text-white/50 mt-1 hidden lg:block">
                         {step.description}
                       </p>
                     )}
@@ -244,7 +244,7 @@ export const MultiStepWizard: React.FC<MultiStepWizardProps> = ({
                     className={`
                       flex-1 h-1 mx-2 rounded
                       transition-all duration-300
-                      ${isCompleted ? "bg-blue-600" : "bg-gray-200"}
+                      ${isCompleted ? "bg-blue-600" : "bg-white/10"}
                     `}
                     aria-hidden="true"
                   />
@@ -281,7 +281,7 @@ export const MultiStepWizard: React.FC<MultiStepWizardProps> = ({
       </div>
 
       {/* Navigation Buttons */}
-      <div className="wizard-navigation flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mt-8 pt-6 border-t border-gray-200">
+      <div className="wizard-navigation flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mt-8 pt-6 border-t border-white/10">
         <div className="order-2 sm:order-1">
           {onCancel && (
             <Button
@@ -336,7 +336,7 @@ export const MultiStepWizard: React.FC<MultiStepWizardProps> = ({
 
       {/* Keyboard shortcuts hint */}
       <div
-        className="text-xs text-gray-500 mt-4 text-center hidden md:block"
+        className="text-xs text-white/50 mt-4 text-center hidden md:block"
         aria-live="polite"
       >
         <span>Tip: Use Ctrl + Arrow keys to navigate between steps</span>

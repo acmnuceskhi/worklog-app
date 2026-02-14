@@ -31,7 +31,7 @@ interface TeamOption {
 
 interface WorklogFiltersProps {
   value: WorklogFilterState;
-  onChange: (next: WorklogFilterState) => void;
+  onChange: (_: WorklogFilterState) => void;
   onReset?: () => void;
   teamOptions: TeamOption[];
 }

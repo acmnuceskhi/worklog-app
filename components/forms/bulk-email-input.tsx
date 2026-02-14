@@ -198,7 +198,7 @@ export const BulkEmailInput: React.FC<BulkEmailInputProps> = ({
         className="text-sm font-medium mb-2 block"
       >
         {label}
-        <span className="text-gray-500 ml-2 text-xs font-normal">
+        <span className="text-white/50 ml-2 text-xs font-normal">
           ({emails.length}/{maxEmails})
         </span>
       </Label>
@@ -206,9 +206,9 @@ export const BulkEmailInput: React.FC<BulkEmailInputProps> = ({
       {/* Email Tags Display */}
       <div
         className={`
-          min-h-[100px] p-3 border rounded-md bg-white
+          min-h-[100px] p-3 border rounded-md bg-white/5
           transition-all duration-200
-          ${focused ? "ring-2 ring-blue-500 border-blue-500" : "border-gray-300"}
+          ${focused ? "ring-2 ring-blue-500 border-blue-500" : "border-white/20"}
           ${error ? "border-red-500" : ""}
           touch-manipulation
         `}
@@ -225,7 +225,7 @@ export const BulkEmailInput: React.FC<BulkEmailInputProps> = ({
                 transition={{ duration: 0.2 }}
                 className={`
                   inline-flex items-center gap-1 px-3 py-1.5 md:py-1 rounded-full text-sm
-                  bg-blue-100 text-blue-800 border border-blue-300
+                  bg-blue-500/20 text-blue-300 border border-blue-500/30
                   transition-all duration-200
                   ${selectedEmailIndex === index ? "ring-2 ring-blue-400" : ""}
                   min-h-[36px] md:min-h-0
@@ -238,7 +238,7 @@ export const BulkEmailInput: React.FC<BulkEmailInputProps> = ({
                   handleEmailKeyDown(e, index)
                 }
               >
-                <FaCheck className="text-blue-600" aria-hidden="true" />
+                <FaCheck className="text-blue-400" aria-hidden="true" />
                 <span className="text-xs sm:text-sm">{email}</span>
                 <button
                   type="button"
@@ -246,7 +246,7 @@ export const BulkEmailInput: React.FC<BulkEmailInputProps> = ({
                     e.stopPropagation();
                     removeEmail(index);
                   }}
-                  className="ml-1 hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-400 rounded-full p-1 md:p-0.5 min-w-[24px] md:min-w-0"
+                  className="ml-1 hover:text-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 rounded-full p-1 md:p-0.5 min-w-[24px] md:min-w-0"
                   aria-label={`Remove ${email}`}
                 >
                   <FaTimes aria-hidden="true" />
@@ -285,7 +285,7 @@ export const BulkEmailInput: React.FC<BulkEmailInputProps> = ({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="flex items-center gap-2 mt-2 text-sm text-red-600"
+            className="flex items-center gap-2 mt-2 text-sm text-red-400"
             role="alert"
           >
             <FaExclamationCircle aria-hidden="true" />
@@ -295,7 +295,7 @@ export const BulkEmailInput: React.FC<BulkEmailInputProps> = ({
       </AnimatePresence>
 
       {/* Help Text */}
-      <p id="email-help" className="text-xs text-gray-500 mt-2">
+      <p id="email-help" className="text-xs text-white/50 mt-2">
         Press Enter, comma, or semicolon to add emails. Paste multiple emails
         from clipboard.
       </p>

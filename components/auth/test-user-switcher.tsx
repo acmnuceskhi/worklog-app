@@ -83,7 +83,7 @@ export function TestUserSwitcher() {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Switch Test User (Development Only)</DialogTitle>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-white/60">
             Select a test user to switch authentication contexts.
           </p>
         </DialogHeader>
@@ -98,18 +98,18 @@ export function TestUserSwitcher() {
             >
               <div className="text-left">
                 <div className="font-medium">{user.name}</div>
-                <div className="text-sm text-gray-500">{user.role}</div>
-                <div className="text-xs text-gray-400">{user.email}</div>
+                <div className="text-sm text-white/50">{user.role}</div>
+                <div className="text-xs text-white/40">{user.email}</div>
               </div>
               {loading === user.id && (
                 <div className="ml-auto">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                 </div>
               )}
             </Button>
           ))}
         </div>
-        <div className="text-xs text-gray-500 mt-4 p-2 bg-gray-50 rounded">
+        <div className="text-xs text-white/50 mt-4 p-2 bg-white/5 rounded">
           ⚠️ This feature is only available in development mode and uses test
           authentication.
         </div>

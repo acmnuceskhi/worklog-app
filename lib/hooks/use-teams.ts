@@ -112,7 +112,7 @@ export const useTeam = (teamId: string) => {
         throw new Error("Failed to fetch team");
       }
       const payload = await response.json();
-      return payload.data || payload;
+      return payload.team || payload.data || payload;
     },
     enabled: !!teamId,
     staleTime: 5 * 60 * 1000,
@@ -192,7 +192,7 @@ export const useInviteTeamMember = () => {
       teamId: string;
       email: string;
     }) => {
-      const response = await fetch(`/api/teams/${teamId}/invitations`, {
+      const response = await fetch(`/api/teams/${teamId}/invite`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),

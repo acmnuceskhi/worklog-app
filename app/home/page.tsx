@@ -17,6 +17,7 @@ import {
 import { signOut, useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
 import { DeadlineStatusBadge } from "@/components/worklog/deadline-status-badge";
 import { DeadlineCountdown } from "@/components/worklog/deadline-countdown";
 import { toast } from "sonner";
@@ -26,7 +27,10 @@ import {
   useWorklogs,
   useMemberTeams,
   useOwnedTeams,
+  useMounted,
+  useContentTheme,
 } from "@/lib/hooks";
+import { LoadingState } from "@/components/states/loading-state";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -42,15 +46,8 @@ export default function DashboardPage() {
 
   // State declarations
   const [query, setQuery] = useState("");
-  const [contentTheme, setContentTheme] = useState<"light" | "dark">(() => {
-    if (typeof window === "undefined") return "light";
-    try {
-      const saved = localStorage.getItem("contentTheme");
-      if (saved === "light" || saved === "dark") return saved;
-    } catch {}
-    return "light";
-  });
-  const mounted = true; // Always true after hydration
+  const [contentTheme, setContentTheme] = useContentTheme();
+  const mounted = useMounted();
 
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [teamName, setTeamName] = useState("");
@@ -58,30 +55,18 @@ export default function DashboardPage() {
   const [inviteEmails, setInviteEmails] = useState<string[]>([]);
   const [inviteInput, setInviteInput] = useState("");
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
-    // Initialize based on window size, but only once
-    if (typeof window === "undefined") return true;
-    return window.innerWidth > 960;
-  });
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const deadlineNotifiedRef = useRef<Set<string>>(new Set());
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [invitations, setInvitations] = useState<
-    { from: string; team: string }[]
-  >([]);
 
-  // Persist theme changes to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem("contentTheme", contentTheme);
-    } catch {}
-  }, [contentTheme]);
-
-  // Detect mobile breakpoint changes
+  // Detect mobile breakpoint changes and initialise sidebar
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 960px)");
-    const update = () => setIsMobile(mediaQuery.matches);
+    const update = () => {
+      setIsMobile(mediaQuery.matches);
+      if (mediaQuery.matches) setIsSidebarOpen(false);
+    };
     update();
     mediaQuery.addEventListener("change", update);
     return () => mediaQuery.removeEventListener("change", update);
@@ -158,21 +143,21 @@ export default function DashboardPage() {
       label: "Member Teams",
       href: "/teams/member",
       icon: <FaUsers />,
-      count: sidebarStatsData?.activeMembershipsCount ?? 0,
+      count: sidebarStatsData?.memberTeamsCount ?? 0,
     },
     {
       id: "lead",
       label: "Lead Teams",
       href: "/teams/lead",
       icon: <FaUserTie />,
-      count: sidebarStatsData?.ownedOrganizationsCount ?? 0,
+      count: sidebarStatsData?.leadTeamsCount ?? 0,
     },
     {
       id: "orgs",
       label: "My Organisations",
       href: "/teams/organisations",
       icon: <FaUsers />,
-      count: sidebarStatsData?.ownedOrganizationsCount ?? 0,
+      count: sidebarStatsData?.organizationsCount ?? 0,
     },
     {
       id: "pending",
@@ -216,8 +201,6 @@ export default function DashboardPage() {
       ? "fixed top-[88px] left-[12px] bottom-[12px] h-auto shadow-[0_24px_80px_rgba(2,6,23,0.4)]"
       : ""
   }`;
-  const invitesClassName =
-    "w-72 p-4 rounded-xl flex-shrink-0 bg-[var(--nav-bg)] text-yellow-300";
   const handleNavigate = useCallback(
     (href: string) => {
       router.push(href);
@@ -236,9 +219,7 @@ export default function DashboardPage() {
   if (!mounted) {
     return (
       <div className="min-h-screen w-screen p-3 flex flex-col bg-[var(--page-bg-dark)] text-white">
-        <div className="flex items-center justify-center min-h-[200px] text-muted">
-          Loading...
-        </div>
+        <LoadingState text="Loading..." className="min-h-[200px]" />
       </div>
     );
   }
@@ -247,14 +228,16 @@ export default function DashboardPage() {
     <div className={pageClassName}>
       <nav className="h-16 px-4 flex justify-between items-center rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 text-white">
         <div className="flex gap-4 items-center">
-          <button
-            className="bg-transparent border border-white/20 text-white rounded-lg px-2.5 py-1.5 cursor-pointer hidden md:inline-flex items-center gap-1.5"
+          <Button
+            variant="ghost"
+            size="sm"
+            className="border border-white/20 text-white hidden md:inline-flex items-center gap-1.5"
             onClick={() => setIsSidebarOpen((prev) => !prev)}
             aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
             aria-expanded={isSidebarOpen}
           >
             <FaBars />
-          </button>
+          </Button>
           <h1 className="text-2xl font-bold">Worklog</h1>
           <div className="flex gap-2 items-center bg-white/10 px-2.5 py-1.5 rounded-lg">
             <FaSearch />
@@ -270,11 +253,17 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex gap-3">
-          <button className="bg-transparent border border-white/20 text-white rounded-lg px-2.5 py-1.5 cursor-pointer hover:bg-white/10 transition-colors">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="border border-white/20 text-white"
+          >
             <FaBell />
-          </button>
-          <button
-            className="bg-transparent border border-white/20 text-white rounded-lg px-2.5 py-1.5 cursor-pointer hover:bg-white/10 transition-colors relative"
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="border border-white/20 text-white relative"
             onClick={() => router.push("/profile")}
             title="View Profile"
           >
@@ -293,21 +282,25 @@ export default function DashboardPage() {
                   "U"}
               </div>
             )}
-          </button>
-          <button
-            className="bg-transparent border border-white/20 text-white rounded-lg px-2.5 py-1.5 cursor-pointer hover:bg-white/10 transition-colors"
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="border border-white/20 text-white"
             onClick={() =>
-              setContentTheme((t) => (t === "light" ? "dark" : "light"))
+              setContentTheme(contentTheme === "light" ? "dark" : "light")
             }
           >
             {contentTheme === "light" ? "🌙" : "☀️"}
-          </button>
-          <button
-            className="bg-transparent border border-white/20 text-white rounded-lg px-2.5 py-1.5 cursor-pointer hover:bg-white/10 transition-colors"
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="border border-white/20 text-white"
             onClick={() => signOut({ callbackUrl: "/" })}
           >
             Logout
-          </button>
+          </Button>
         </div>
       </nav>
 
@@ -341,15 +334,17 @@ export default function DashboardPage() {
               {showSidebarLabels ? "Navigation" : "Nav"}
             </span>
             {!isMobile && (
-              <button
-                className="bg-white/8 border-none text-white rounded-lg p-1.5 cursor-pointer hover:bg-white/12 transition-colors"
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-white p-1.5"
                 onClick={() => setIsSidebarCollapsed((prev) => !prev)}
                 aria-label={
                   isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
                 }
               >
                 {isSidebarCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
-              </button>
+              </Button>
             )}
           </div>
 
@@ -403,20 +398,21 @@ export default function DashboardPage() {
             )}
 
             {!sidebarLoading &&
-              sidebarStatsData?.activeMembershipsCount === 0 &&
-              sidebarStatsData?.ownedOrganizationsCount === 0 && (
+              sidebarStatsData?.memberTeamsCount === 0 &&
+              sidebarStatsData?.organizationsCount === 0 && (
                 <div className="p-2.5 rounded-xl flex gap-2 opacity-60">
                   <FaUsers /> {showSidebarLabels ? "No teams yet" : "0"}
                 </div>
               )}
           </div>
 
-          <button
-            className="mt-auto bg-gradient-to-r from-green-500 to-green-600 border-none p-2.5 rounded-xl text-white flex gap-2 items-center justify-center cursor-pointer hover:from-green-600 hover:to-green-700 transition-colors"
+          <Button
+            variant="success"
+            className="mt-auto w-full flex gap-2 items-center justify-center"
             onClick={() => setShowCreateTeam(true)}
           >
             <FaPlus /> {showSidebarLabels ? "Create Team" : "Create"}
-          </button>
+          </Button>
         </motion.aside>
 
         <main className="flex-1 flex flex-col gap-4 overflow-hidden">
@@ -428,9 +424,7 @@ export default function DashboardPage() {
               <p className="text-muted">
                 Quick access to your teams, tasks, and recent activity.
               </p>
-              <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-                View My Teams
-              </button>
+              <Button variant="primary">View My Teams</Button>
             </div>
 
             <div className="flex flex-wrap gap-3 text-xs">
@@ -586,38 +580,19 @@ export default function DashboardPage() {
             )}
           </section>
         </main>
-
-        <aside className={invitesClassName}>
-          <h3>Invitations</h3>
-          {invitations.map((i, index) => (
-            <div
-              key={`${i.from}-${i.team}-${index}`}
-              className="bg-white text-black p-2.5 rounded-xl mt-2.5"
-            >
-              <p className="text-muted">Invited by {i.from}</p>
-              <strong>{i.team}</strong>
-              <div className="flex gap-2 mt-2">
-                <button className="bg-green-500 border-none py-1.5 px-2 rounded-lg flex-1">
-                  Accept
-                </button>
-                <button className="bg-red-500 border-none py-1.5 px-2 rounded-lg flex-1 text-white">
-                  Decline
-                </button>
-              </div>
-            </div>
-          ))}
-        </aside>
       </div>
 
       {showCreateTeam && (
         <div className="fixed inset-0 bg-black/55 flex items-start justify-center pt-20 z-200">
           <div className="bg-[var(--panel-strong)] p-6 rounded-2xl w-96 flex flex-col gap-3 text-white relative">
-            <button
-              className="absolute top-3 right-3 border-none bg-transparent text-white text-xl cursor-pointer"
+            <Button
+              variant="ghost"
+              size="sm"
+              className="absolute top-3 right-3 text-white text-xl"
               onClick={() => setShowCreateTeam(false)}
             >
               <FaTimes />
-            </button>
+            </Button>
             <h3>Create Team</h3>
             <input
               className="p-3 rounded-xl border-none outline-none bg-white/6 text-white"
@@ -665,14 +640,14 @@ export default function DashboardPage() {
               />
             </div>
             <div className="flex justify-end gap-2.5">
-              <button
-                className="bg-white/10 text-white border-none py-1.5 px-3 rounded-lg"
+              <Button
+                variant="outline"
                 onClick={() => setShowCreateTeam(false)}
               >
                 Cancel
-              </button>
-              <button
-                className="bg-gradient-to-r from-green-500 to-green-600 text-white border-none py-1.5 px-3 rounded-lg font-semibold"
+              </Button>
+              <Button
+                variant="success"
                 onClick={() => {
                   alert(
                     `Team Created!\nName: ${teamName}\nDescription: ${teamDesc}\nEmails: ${inviteEmails.join(
@@ -687,7 +662,7 @@ export default function DashboardPage() {
                 }}
               >
                 Create
-              </button>
+              </Button>
             </div>
           </div>
         </div>

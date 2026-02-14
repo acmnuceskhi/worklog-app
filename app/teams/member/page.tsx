@@ -3,10 +3,11 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { FaUsers } from "react-icons/fa";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { useMemberTeams } from "@/lib/hooks";
+import { ErrorState } from "@/components/states/error-state";
+import { EmptyState } from "@/components/states/empty-state";
 
 // 10. Add proper TypeScript interfaces for API response types
 
@@ -68,18 +69,12 @@ function MemberTeamsPageContent() {
 
       {/* 4. Add error handling */}
       {isError && (
-        <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-8 text-center text-white">
-          <FaUsers className="mx-auto mb-4 h-12 w-12 text-red-400/70" />
-          <p className="text-lg font-semibold text-red-400">
-            Error fetching teams
-          </p>
-          <p className="text-red-400/80 mb-4">
-            {error instanceof Error
-              ? error.message
-              : "An unknown error occurred"}
-          </p>
-          <Button onClick={() => refetch()}>Retry</Button>
-        </div>
+        <ErrorState
+          message={
+            error instanceof Error ? error.message : "An unknown error occurred"
+          }
+          onRetry={() => refetch()}
+        />
       )}
 
       {/* 1. Replace mock data with real API call */}
@@ -124,13 +119,11 @@ function MemberTeamsPageContent() {
               ))}
             </div>
           ) : (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-white">
-              <FaUsers className="mx-auto mb-4 h-12 w-12 text-white/40" />
-              <p className="text-lg font-semibold">No teams joined yet</p>
-              <p className="text-muted">
-                Accept an invitation to get started with your first worklog.
-              </p>
-            </div>
+            <EmptyState
+              title="No teams joined yet"
+              description="Accept an invitation to get started with your first worklog."
+              icon={<FaUsers className="h-8 w-8" />}
+            />
           )}
         </>
       )}

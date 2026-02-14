@@ -72,3 +72,7 @@ export {
   useDeleteRating,
   type Rating,
 } from "./use-ratings";
+
+// Client-side hooks (hydration-safe, useSyncExternalStore-based)
+export { useMounted } from "./use-mounted";
+export { useContentTheme } from "./use-content-theme";

@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { FaUsers } from "react-icons/fa";
+import { ErrorState } from "@/components/states/error-state";
 
 interface TeamFormData {
   name: string;
@@ -154,11 +155,7 @@ export const TeamCreationWizard: React.FC<TeamCreationWizardProps> = ({
           </DialogTitle>
         </DialogHeader>
 
-        {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800 mb-4">
-            <strong>Error:</strong> {error}
-          </div>
-        )}
+        {error && <ErrorState message={error} className="py-4 mb-4" />}
 
         <MultiStepWizard
           steps={wizardSteps}

@@ -19,14 +19,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import {
   FaBuilding,
   FaUsers,
   FaCog,
   FaPlus,
   FaArrowLeft,
-  FaSpinner,
   FaClipboardList,
   FaStar,
   FaCoins,
@@ -44,6 +42,9 @@ import {
 } from "@/components/filters/worklog-filters";
 import { toast } from "sonner";
 import { OrganizationSettingsDialog } from "@/components/organization-settings-dialog";
+import { LoadingState } from "@/components/states/loading-state";
+import { ErrorState } from "@/components/states/error-state";
+import { FormField } from "@/components/forms/form-field";
 interface TeamMember {
   id: string;
   user: {
@@ -471,11 +472,8 @@ export default function OrganizationDashboardPage({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-        <div className="text-center">
-          <FaSpinner className="h-12 w-12 text-blue-500 animate-spin mx-auto mb-4" />
-          <p className="text-muted">Loading organization...</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        <LoadingState fullPage text="Loading organization..." />
       </div>
     );
   }
@@ -483,24 +481,11 @@ export default function OrganizationDashboardPage({
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
-        <Card className="w-full max-w-md border-red-500/40 bg-white/5 backdrop-blur-md">
-          <CardContent className="p-6 text-center">
-            <div className="text-red-400 mb-4">
-              <FaBuilding className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p className="font-medium">{error}</p>
-            </div>
-            <div className="flex gap-3 justify-center">
-              <Button
-                variant="outline"
-                onClick={() => router.push("/teams/organisations")}
-                className="border-white/20 text-white/70 hover:bg-white/10 hover:text-white"
-              >
-                <FaArrowLeft className="mr-2" /> Back
-              </Button>
-              <Button onClick={fetchOrganization}>Retry</Button>
-            </div>
-          </CardContent>
-        </Card>
+        <ErrorState
+          title="Failed to load organization"
+          message={error}
+          onRetry={fetchOrganization}
+        />
       </div>
     );
   }
@@ -514,35 +499,38 @@ export default function OrganizationDashboardPage({
         <div className="flex items-center gap-4">
           <h1 className="text-xl font-bold text-white">Worklog</h1>
           <div className="flex items-center gap-2 text-sm text-white/70">
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => router.push("/teams/member")}
-              className="flex items-center gap-1 px-3 py-1 rounded hover:bg-white/10 transition-colors"
+              className="flex items-center gap-1"
             >
               <FaUsers className="h-4 w-4" />
               Member Teams
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => router.push("/teams/lead")}
-              className="flex items-center gap-1 px-3 py-1 rounded hover:bg-white/10 transition-colors"
+              className="flex items-center gap-1"
             >
               <FaUserTie className="h-4 w-4" />
               Lead Teams
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => router.push("/teams/organisations")}
-              className="flex items-center gap-1 px-3 py-1 rounded bg-white/10 text-white"
+              className="flex items-center gap-1 bg-white/10 text-white"
             >
               <FaBuilding className="h-4 w-4" />
               My Organisations
-            </button>
+            </Button>
           </div>
         </div>
-        <button
-          onClick={() => router.push("/home")}
-          className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg font-medium transition-colors"
-        >
+        <Button variant="success" onClick={() => router.push("/home")}>
           Back to Dashboard
-        </button>
+        </Button>
       </nav>
 
       {/* Main Content */}
@@ -721,13 +709,12 @@ export default function OrganizationDashboardPage({
               </div>
 
               {worklogsLoading ? (
-                <div className="text-center py-8 text-muted">
-                  Loading worklogs...
-                </div>
+                <LoadingState text="Loading worklogs..." />
               ) : worklogsError ? (
-                <div className="text-center py-8 text-red-400">
-                  {worklogsError}
-                </div>
+                <ErrorState
+                  title="Failed to load worklogs"
+                  message={worklogsError}
+                />
               ) : worklogs.length === 0 ? (
                 <div className="text-center py-8">
                   <FaClipboardList className="h-12 w-12 text-white/40 mx-auto mb-3" />
@@ -885,14 +872,13 @@ export default function OrganizationDashboardPage({
             </DialogHeader>
             <div className="space-y-4">
               {createTeamError && (
-                <div className="p-3 rounded-lg bg-red-500/20 border border-red-500/50 text-red-400 text-sm">
-                  {createTeamError}
-                </div>
+                <ErrorState
+                  title="Failed to create team"
+                  message={createTeamError}
+                  className="py-2"
+                />
               )}
-              <div className="space-y-2">
-                <Label htmlFor="teamName" className="text-white/80">
-                  Team Name <span className="text-red-400">*</span>
-                </Label>
+              <FormField label="Team Name" required>
                 <Input
                   id="teamName"
                   placeholder="Enter team name"
@@ -900,11 +886,8 @@ export default function OrganizationDashboardPage({
                   onChange={(e) => setNewTeamName(e.target.value)}
                   className="bg-white/5 border-white/10 text-white placeholder:text-white/50"
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="teamDescription" className="text-white/80">
-                  Description <span className="text-white/50">(optional)</span>
-                </Label>
+              </FormField>
+              <FormField label="Description" helpText="Optional">
                 <Textarea
                   id="teamDescription"
                   placeholder="Describe the team..."
@@ -913,7 +896,7 @@ export default function OrganizationDashboardPage({
                   className="bg-white/5 border-white/10 text-white placeholder:text-white/50 resize-none"
                   rows={3}
                 />
-              </div>
+              </FormField>
               <div className="flex gap-3">
                 <Button
                   variant="outline"
@@ -924,13 +907,15 @@ export default function OrganizationDashboardPage({
                   Cancel
                 </Button>
                 <Button
-                  className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500"
+                  variant="success"
+                  className="flex-1"
                   onClick={handleCreateTeam}
                   disabled={!newTeamName.trim() || isCreatingTeam}
                 >
                   {isCreatingTeam ? (
                     <>
-                      <FaSpinner className="mr-2 animate-spin" /> Creating...
+                      <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white mr-2" />{" "}
+                      Creating...
                     </>
                   ) : (
                     <>

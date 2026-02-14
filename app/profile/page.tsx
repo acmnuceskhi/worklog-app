@@ -4,7 +4,8 @@ import { useSession, signOut } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
-import { useSidebarStats } from "@/lib/hooks";
+import { useSidebarStats, useMounted, useContentTheme } from "@/lib/hooks";
+import { Button } from "@/components/ui/button";
 import {
   FaSignOutAlt,
   FaEnvelope,
@@ -27,20 +28,13 @@ export default function ProfilePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
-  const mounted = typeof window !== "undefined";
+  const [contentTheme, setContentTheme] = useContentTheme();
+  const mounted = useMounted();
 
   // TanStack Query hook for sidebar stats
   const { data: sidebarStatsData, isLoading: sidebarLoading } =
     useSidebarStats();
 
-  const [contentTheme, setContentTheme] = useState<"light" | "dark">(() => {
-    if (typeof window === "undefined") return "light";
-    try {
-      const saved = localStorage.getItem("contentTheme");
-      if (saved === "light" || saved === "dark") return saved;
-    } catch {}
-    return "light";
-  });
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -51,12 +45,17 @@ export default function ProfilePage() {
     }
   }, [status, router]);
 
-  // Persist theme changes to localStorage
+  // Hydrate client-only state after mount to prevent hydration mismatch
   useEffect(() => {
-    try {
-      localStorage.setItem("contentTheme", contentTheme);
-    } catch {}
-  }, [contentTheme]);
+    const mediaQuery = window.matchMedia("(max-width: 960px)");
+    const update = () => {
+      setIsMobile(mediaQuery.matches);
+      if (mediaQuery.matches) setIsSidebarOpen(false);
+    };
+    update();
+    mediaQuery.addEventListener("change", update);
+    return () => mediaQuery.removeEventListener("change", update);
+  }, []);
 
   const sidebarItems = [
     {
@@ -64,21 +63,21 @@ export default function ProfilePage() {
       label: "Member Teams",
       href: "/teams/member",
       icon: <FaUsers />,
-      count: sidebarStatsData?.activeMembershipsCount ?? 0,
+      count: sidebarStatsData?.memberTeamsCount ?? 0,
     },
     {
       id: "lead",
       label: "Lead Teams",
       href: "/teams/lead",
       icon: <FaUserTie />,
-      count: sidebarStatsData?.ownedOrganizationsCount ?? 0,
+      count: sidebarStatsData?.leadTeamsCount ?? 0,
     },
     {
       id: "orgs",
       label: "My Organisations",
       href: "/teams/organisations",
       icon: <FaUsers />,
-      count: sidebarStatsData?.ownedOrganizationsCount ?? 0,
+      count: sidebarStatsData?.organizationsCount ?? 0,
     },
     {
       id: "worklogs",
@@ -144,8 +143,10 @@ export default function ProfilePage() {
     <div className={pageClassName}>
       <nav className="flex items-center justify-between rounded-xl bg-[var(--page-bg-dark)] p-5 text-white mb-5">
         <div className="flex items-center gap-4 flex-shrink-0">
-          <button
-            className={`bg-transparent border border-white/20 text-white rounded-lg px-2.5 py-1.5 cursor-pointer items-center gap-1.5 ${
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`border border-white/20 items-center gap-1.5 ${
               isMobile ? "inline-flex" : "hidden"
             }`}
             onClick={() => setIsSidebarOpen((prev) => !prev)}
@@ -153,7 +154,7 @@ export default function ProfilePage() {
             aria-expanded={isSidebarOpen}
           >
             <FaBars />
-          </button>
+          </Button>
           <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
             Worklog
           </h1>
@@ -167,23 +168,26 @@ export default function ProfilePage() {
         </div>
 
         <div className="flex gap-3 flex-shrink-0">
-          <button className="bg-transparent border border-white/20 text-white rounded-lg px-2.5 py-1.5 cursor-pointer hover:bg-white/10 transition-colors">
+          <Button variant="ghost" size="sm" className="border border-white/20">
             <FaBell />
-          </button>
-          <button
-            className="bg-transparent border border-white/20 text-white rounded-lg px-2.5 py-1.5 cursor-pointer hover:bg-white/10 transition-colors"
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="border border-white/20"
             onClick={() =>
               setContentTheme(contentTheme === "dark" ? "light" : "dark")
             }
           >
             {contentTheme === "light" ? "🌙" : "☀️"}
-          </button>
-          <button
-            className="flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/20 px-3 py-2 text-sm font-semibold text-red-200 hover:bg-red-500/30 transition-colors"
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
             onClick={() => signOut({ callbackUrl: "/" })}
           >
-            <FaSignOutAlt /> Sign Out
-          </button>
+            <FaSignOutAlt className="mr-2" /> Sign Out
+          </Button>
         </div>
       </nav>
 
@@ -218,15 +222,17 @@ export default function ProfilePage() {
               {showSidebarLabels ? "Navigation" : "Nav"}
             </span>
             {!isMobile && (
-              <button
-                className="bg-white/8 border-none text-white rounded-lg px-2 py-1.5 cursor-pointer hover:bg-white/12 transition-colors"
+              <Button
+                variant="ghost"
+                size="sm"
+                className="bg-white/8 hover:bg-white/12"
                 onClick={() => setIsSidebarCollapsed((prev) => !prev)}
                 aria-label={
                   isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
                 }
               >
                 {isSidebarCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
-              </button>
+              </Button>
             )}
           </div>
 
@@ -285,12 +291,14 @@ export default function ProfilePage() {
             )}
           </div>
 
-          <button
-            className="mt-auto w-full rounded-xl border-none bg-gradient-to-r from-green-500 to-green-600 px-3 py-2 font-bold text-white flex items-center justify-center gap-2 hover:from-green-600 hover:to-green-700 transition-colors"
+          <Button
+            variant="success"
+            className="mt-auto w-full"
             onClick={() => router.push("/home")}
           >
-            <FaPlus /> {showSidebarLabels ? "Back to Dashboard" : "Back"}
-          </button>
+            <FaPlus className="mr-2" />{" "}
+            {showSidebarLabels ? "Back to Dashboard" : "Back"}
+          </Button>
         </motion.aside>
 
         <main className="flex-1 overflow-auto p-5">
@@ -325,19 +333,19 @@ export default function ProfilePage() {
                 <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
                   {sidebarLoading
                     ? "..."
-                    : (sidebarStatsData?.activeMembershipsCount ?? 0)}{" "}
+                    : (sidebarStatsData?.memberTeamsCount ?? 0)}{" "}
                   member teams
                 </span>
                 <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
                   {sidebarLoading
                     ? "..."
-                    : (sidebarStatsData?.ownedOrganizationsCount ?? 0)}{" "}
+                    : (sidebarStatsData?.leadTeamsCount ?? 0)}{" "}
                   lead teams
                 </span>
                 <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
                   {sidebarLoading
                     ? "..."
-                    : (sidebarStatsData?.ownedOrganizationsCount ?? 0)}{" "}
+                    : (sidebarStatsData?.organizationsCount ?? 0)}{" "}
                   orgs
                 </span>
               </div>
@@ -390,12 +398,13 @@ export default function ProfilePage() {
 
             {/* Actions */}
             <div className="flex justify-center gap-2.5">
-              <button
-                className="px-7 py-3 rounded-xl border border-blue-400/30 bg-blue-400/20 text-blue-400 text-base font-semibold hover:bg-blue-400/30 transition"
+              <Button
+                variant="outline"
+                className="px-7 py-3"
                 onClick={() => router.push("/home")}
               >
                 Go to Dashboard
-              </button>
+              </Button>
             </div>
           </div>
         </main>

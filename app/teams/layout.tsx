@@ -18,12 +18,16 @@ import { useRouter, usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useMounted, useContentTheme } from "@/lib/hooks";
+import { FormField } from "@/components/forms/form-field";
+import { LoadingState } from "@/components/states/loading-state";
 
 const lobsterTwo = Lobster_Two({ weight: "400", subsets: ["latin"] });
 
@@ -35,8 +39,8 @@ export default function TeamsLayout({
   const router = useRouter();
   const pathname = usePathname();
   const { data: session } = useSession();
-  const [contentTheme, setContentTheme] = useState<"light" | "dark">("light");
-  const [mounted, setMounted] = useState(false);
+  const [contentTheme, setContentTheme] = useContentTheme();
+  const mounted = useMounted();
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [sentInvites, setSentInvites] = useState<string[]>([]);
@@ -63,24 +67,6 @@ export default function TeamsLayout({
 
   const isLeadPage = pathname.includes("/lead");
   const isMemberPage = pathname.includes("/member");
-
-  useEffect(() => {
-    setMounted(true);
-    try {
-      const saved = localStorage.getItem("contentTheme");
-      if (saved === "light" || saved === "dark") {
-        setContentTheme(saved);
-      }
-    } catch {}
-  }, []);
-
-  useEffect(() => {
-    if (mounted) {
-      try {
-        localStorage.setItem("contentTheme", contentTheme);
-      } catch {}
-    }
-  }, [contentTheme, mounted]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 960px)");
@@ -225,7 +211,7 @@ export default function TeamsLayout({
   if (!mounted) {
     return (
       <div className="min-h-screen w-screen p-3 flex flex-col bg-[var(--page-bg-dark)] text-white">
-        <div className="text-center py-8">Loading...</div>
+        <LoadingState text="Loading..." className="py-8" />
       </div>
     );
   }
@@ -234,14 +220,16 @@ export default function TeamsLayout({
     <div className={pageClassName}>
       <nav className="h-16 px-4 flex justify-between items-center rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 text-white">
         <div className="flex gap-4 items-center">
-          <button
-            className="bg-transparent border border-white/20 text-white rounded-lg px-2.5 py-1.5 cursor-pointer hidden md:inline-flex items-center gap-1.5"
+          <Button
+            variant="ghost"
+            size="sm"
+            className="border border-white/20 hidden md:inline-flex items-center gap-1.5"
             onClick={() => setIsSidebarOpen((prev) => !prev)}
             aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
             aria-expanded={isSidebarOpen}
           >
             <FaBars />
-          </button>
+          </Button>
           <h1 className={`text-2xl font-bold ${lobsterTwo.className}`}>
             Worklog
           </h1>
@@ -257,23 +245,22 @@ export default function TeamsLayout({
         </div>
 
         <div className="flex gap-3">
-          <button className="bg-transparent border border-white/20 text-white rounded-lg px-2.5 py-1.5 cursor-pointer hover:bg-white/10 transition-colors">
+          <Button variant="ghost" size="sm" className="border border-white/20">
             <FaBell />
-          </button>
-          <button
-            className="bg-transparent border border-white/20 text-white rounded-lg px-2.5 py-1.5 cursor-pointer hover:bg-white/10 transition-colors"
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="border border-white/20"
             onClick={() =>
-              setContentTheme((t) => (t === "light" ? "dark" : "light"))
+              setContentTheme(contentTheme === "light" ? "dark" : "light")
             }
           >
             {contentTheme === "light" ? "🌙" : "☀️"}
-          </button>
-          <button
-            className="bg-red-500 hover:bg-red-600 text-white border-2 border-red-500 px-3 py-2 rounded-lg font-bold cursor-pointer transition-colors"
-            onClick={() => router.push("/")}
-          >
+          </Button>
+          <Button variant="danger" size="sm" onClick={() => router.push("/")}>
             Logout
-          </button>
+          </Button>
         </div>
       </nav>
 
@@ -307,15 +294,17 @@ export default function TeamsLayout({
               {showSidebarLabels ? "Navigation" : "Nav"}
             </span>
             {!isMobile && (
-              <button
-                className="bg-white/8 border-none text-white rounded-lg px-2 py-1.5 cursor-pointer hover:bg-white/12 transition-colors"
+              <Button
+                variant="ghost"
+                size="sm"
+                className="bg-white/8 hover:bg-white/12"
                 onClick={() => setIsSidebarCollapsed((prev) => !prev)}
                 aria-label={
                   isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
                 }
               >
                 {isSidebarCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
-              </button>
+              </Button>
             )}
           </div>
 
@@ -374,15 +363,16 @@ export default function TeamsLayout({
             )}
           </div>
 
-          <button
+          <Button
+            variant="success"
+            className="mt-auto w-full"
             onClick={() => router.push("/home")}
-            className="mt-auto bg-gradient-to-r from-green-500 to-green-600 border-none p-2.5 rounded-xl text-white flex gap-2 items-center justify-center cursor-pointer hover:from-green-600 hover:to-green-700 transition-colors"
           >
             <span className="inline-flex items-center justify-center w-5">
               <FaPlus />
             </span>{" "}
             {showSidebarLabels ? "Back to Dashboard" : "Back"}
-          </button>
+          </Button>
         </motion.aside>
 
         <main className="flex-1 overflow-hidden flex flex-col gap-4">
@@ -393,12 +383,13 @@ export default function TeamsLayout({
           {isLeadPage ? (
             <div className="h-full flex flex-col">
               <h3 className="mt-0">Send Invites</h3>
-              <button
+              <Button
+                variant="success"
+                className="w-full"
                 onClick={() => setShowInviteModal(true)}
-                className="w-full bg-green-500 text-white font-bold rounded-lg px-3 py-2 cursor-pointer mb-3 flex gap-2 items-center justify-center hover:bg-green-600 transition-colors"
               >
-                <FaPlus /> Invite
-              </button>
+                <FaPlus className="mr-2" /> Invite
+              </Button>
 
               <div className="flex-1 overflow-y-auto flex flex-col gap-2">
                 {sentInvites.length > 0 ? (
@@ -440,18 +431,22 @@ export default function TeamsLayout({
                         From: {invite.from}
                       </p>
                       <div className="flex gap-1.5">
-                        <button
+                        <Button
+                          variant="success"
+                          size="sm"
+                          className="flex-1 text-xs"
                           onClick={() => handleAcceptInvite(idx)}
-                          className="flex-1 bg-green-500 border-none py-1.5 px-2 rounded text-white text-xs font-semibold cursor-pointer hover:bg-green-600 transition-colors"
                         >
                           Accept
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          className="flex-1 text-xs"
                           onClick={() => handleDeclineInvite(idx)}
-                          className="flex-1 bg-red-500 border-none py-1.5 px-2 rounded text-white text-xs font-semibold cursor-pointer hover:bg-red-600 transition-colors"
                         >
                           Decline
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   ))
@@ -480,30 +475,29 @@ export default function TeamsLayout({
               </DialogTitle>
             </DialogHeader>
             <div className="flex flex-col gap-4">
-              <div>
-                <label className="text-white/80 text-sm font-semibold block mb-2">
-                  Email Address
-                </label>
+              <FormField label="Email Address">
                 <Input
                   placeholder="member@example.com"
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                   className="bg-white/5 border-white/20 text-white placeholder:text-white/50"
                 />
-              </div>
+              </FormField>
               <div className="flex gap-2">
-                <button
+                <Button
+                  variant="success"
+                  className="flex-1"
                   onClick={handleSendInvite}
-                  className="flex-1 bg-green-500 border-none py-2.5 px-2.5 rounded text-white font-semibold cursor-pointer hover:bg-green-600 transition-colors"
                 >
                   Send Invite
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="danger"
+                  className="flex-1"
                   onClick={() => setShowInviteModal(false)}
-                  className="flex-1 bg-red-500 border-none py-2.5 px-2.5 rounded text-white font-semibold cursor-pointer hover:bg-red-600 transition-colors"
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             </div>
           </DialogContent>

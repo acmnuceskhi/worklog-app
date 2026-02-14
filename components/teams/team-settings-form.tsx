@@ -4,6 +4,9 @@ import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { FormField } from "@/components/forms/form-field";
+import { LoadingState } from "@/components/states/loading-state";
+import { ErrorState } from "@/components/states/error-state";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -19,7 +22,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { FaCog, FaSpinner } from "react-icons/fa";
+import { FaCog } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Organization {
@@ -199,7 +202,7 @@ export const TeamSettingsForm: React.FC<TeamSettingsFormProps> = ({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
-            <FaCog className="text-gray-600" />
+            <FaCog className="text-white/60" />
             Team Settings
           </DialogTitle>
         </DialogHeader>
@@ -212,7 +215,7 @@ export const TeamSettingsForm: React.FC<TeamSettingsFormProps> = ({
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="p-4 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800"
+                className="p-4 bg-green-500/20 border border-green-500/30 rounded-lg text-sm text-green-400"
                 role="alert"
               >
                 {successMessage}
@@ -227,19 +230,19 @@ export const TeamSettingsForm: React.FC<TeamSettingsFormProps> = ({
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800"
-                role="alert"
               >
-                {errorMessage}
+                <ErrorState message={errorMessage} className="py-4" />
               </motion.div>
             )}
           </AnimatePresence>
 
           {/* Team Name */}
-          <div>
-            <Label htmlFor="settings-team-name" className="required">
-              Team Name
-            </Label>
+          <FormField
+            label="Team Name"
+            required
+            htmlFor="settings-team-name"
+            error={errors.name}
+          >
             <Input
               id="settings-team-name"
               type="text"
@@ -248,25 +251,16 @@ export const TeamSettingsForm: React.FC<TeamSettingsFormProps> = ({
               placeholder="e.g., Frontend Development Team"
               className={errors.name ? "border-red-500" : ""}
               aria-invalid={!!errors.name}
-              aria-describedby={errors.name ? "settings-name-error" : undefined}
               disabled={loading}
             />
-            {errors.name && (
-              <p
-                id="settings-name-error"
-                className="text-sm text-red-600 mt-1"
-                role="alert"
-              >
-                {errors.name}
-              </p>
-            )}
-          </div>
+          </FormField>
 
           {/* Project Name */}
-          <div>
-            <Label htmlFor="settings-team-project">
-              Project Name (Optional)
-            </Label>
+          <FormField
+            label="Project Name (Optional)"
+            htmlFor="settings-team-project"
+            error={errors.project}
+          >
             <Input
               id="settings-team-project"
               type="text"
@@ -275,27 +269,16 @@ export const TeamSettingsForm: React.FC<TeamSettingsFormProps> = ({
               placeholder="e.g., Company Website Redesign"
               className={errors.project ? "border-red-500" : ""}
               aria-invalid={!!errors.project}
-              aria-describedby={
-                errors.project ? "settings-project-error" : undefined
-              }
               disabled={loading}
             />
-            {errors.project && (
-              <p
-                id="settings-project-error"
-                className="text-sm text-red-600 mt-1"
-                role="alert"
-              >
-                {errors.project}
-              </p>
-            )}
-          </div>
+          </FormField>
 
           {/* Description */}
-          <div>
-            <Label htmlFor="settings-team-description">
-              Description (Optional)
-            </Label>
+          <FormField
+            label="Description (Optional)"
+            htmlFor="settings-team-description"
+            error={errors.description}
+          >
             <Textarea
               id="settings-team-description"
               value={formData.description}
@@ -304,35 +287,18 @@ export const TeamSettingsForm: React.FC<TeamSettingsFormProps> = ({
               rows={4}
               className={errors.description ? "border-red-500" : ""}
               aria-invalid={!!errors.description}
-              aria-describedby={
-                errors.description ? "settings-description-error" : undefined
-              }
               disabled={loading}
             />
-            {errors.description && (
-              <p
-                id="settings-description-error"
-                className="text-sm text-red-600 mt-1"
-                role="alert"
-              >
-                {errors.description}
-              </p>
-            )}
-            <div className="flex justify-end text-xs text-gray-500 mt-1">
+            <div className="flex justify-end text-xs text-white/50 mt-1">
               <span>{formData.description.length}/500</span>
             </div>
-          </div>
+          </FormField>
 
           {/* Organization (Display Only - changing org might require backend support) */}
           <div>
             <Label htmlFor="settings-organization">Organization</Label>
             {fetchingOrgs ? (
-              <div className="flex items-center gap-2 p-3 border border-gray-300 rounded-md bg-gray-50">
-                <FaSpinner className="animate-spin text-gray-500" />
-                <span className="text-sm text-gray-600">
-                  Loading organizations...
-                </span>
-              </div>
+              <LoadingState text="Loading organizations..." className="py-2" />
             ) : (
               <Select
                 value={formData.organizationId || "none"}
@@ -354,7 +320,7 @@ export const TeamSettingsForm: React.FC<TeamSettingsFormProps> = ({
                 </SelectContent>
               </Select>
             )}
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-white/50 mt-1">
               Note: Changing organization may require additional permissions
             </p>
           </div>
@@ -369,10 +335,15 @@ export const TeamSettingsForm: React.FC<TeamSettingsFormProps> = ({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading} aria-busy={loading}>
+            <Button
+              type="submit"
+              disabled={loading}
+              aria-busy={loading}
+              variant="primary"
+            >
               {loading ? (
                 <>
-                  <FaSpinner className="animate-spin mr-2" />
+                  <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                   Saving...
                 </>
               ) : (

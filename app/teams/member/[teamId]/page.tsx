@@ -13,6 +13,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { ErrorState } from "@/components/states/error-state";
+import { FormField } from "@/components/forms/form-field";
 import {
   Card,
   CardContent,
@@ -450,18 +452,10 @@ function ContributionFlashcardPageContent({
   // Error state
   if (error) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-red-600 text-center">
-          <h2 className="text-xl font-semibold mb-2">Error Loading Team</h2>
-          <p>{error instanceof Error ? error.message : "An error occurred"}</p>
-          <button
-            onClick={() => refetch()}
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
+      <ErrorState
+        message={error instanceof Error ? error.message : "An error occurred"}
+        onRetry={() => refetch()}
+      />
     );
   }
 
@@ -719,55 +713,45 @@ function ContributionFlashcardPageContent({
             >
               <input type="hidden" {...register("teamId")} />
               <input type="hidden" {...register("description")} />
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="title" className="text-white/80">
-                  Title
-                </Label>
+              <FormField
+                label="Title"
+                htmlFor="title"
+                error={errors.title?.message}
+              >
                 <Input
                   id="title"
                   {...register("title")}
                   placeholder="Short summary of your work"
                   className="bg-white/5 border-white/20 text-white placeholder:text-white/50"
                 />
-                {errors.title && (
-                  <p className="text-xs text-red-400">{errors.title.message}</p>
-                )}
-              </div>
+              </FormField>
 
-              <div className="flex flex-col gap-2">
-                <Label className="text-white/80">Description</Label>
+              <FormField
+                label="Description"
+                error={errors.description?.message}
+              >
                 <RichTextEditor
                   value={editorValue}
                   onChange={setEditorValue}
                   placeholder="Describe your work and any outcomes."
                   id="worklog-description"
                 />
-                {errors.description && (
-                  <p className="text-xs text-red-400">
-                    {errors.description.message}
-                  </p>
-                )}
-              </div>
+              </FormField>
 
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="githubLink" className="text-white/80">
-                  GitHub Link (optional)
-                </Label>
+              <FormField
+                label="GitHub Link (optional)"
+                htmlFor="githubLink"
+                error={errors.githubLink?.message}
+              >
                 <Input
                   id="githubLink"
                   {...register("githubLink")}
                   placeholder="https://github.com/owner/repo/pull/123"
                   className="bg-white/5 border-white/20 text-white placeholder:text-white/50"
                 />
-                {errors.githubLink && (
-                  <p className="text-xs text-red-400">
-                    {errors.githubLink.message}
-                  </p>
-                )}
-              </div>
+              </FormField>
 
-              <div className="flex flex-col gap-2">
-                <Label className="text-white/80">Progress Status</Label>
+              <FormField label="Progress Status">
                 <Select
                   value={watch("progressStatus") || "STARTED"}
                   onValueChange={(value) =>
@@ -792,13 +776,13 @@ function ContributionFlashcardPageContent({
                     </SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+              </FormField>
 
               {canSetDeadline && (
-                <div className="flex flex-col gap-2">
-                  <Label className="text-white/80">
-                    Deadline (leaders only)
-                  </Label>
+                <FormField
+                  label="Deadline (leaders only)"
+                  error={errors.deadline?.message}
+                >
                   <DatePicker
                     value={
                       watch("deadline")
@@ -820,18 +804,10 @@ function ContributionFlashcardPageContent({
                       <DeadlineCountdown deadline={String(watch("deadline"))} />
                     </div>
                   )}
-                  {errors.deadline && (
-                    <p className="text-xs text-red-400">
-                      {errors.deadline.message}
-                    </p>
-                  )}
-                </div>
+                </FormField>
               )}
 
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="files" className="text-white/80">
-                  Upload Evidence
-                </Label>
+              <FormField label="Upload Evidence" htmlFor="files">
                 <div
                   onDrop={handleDrop}
                   onDragOver={handleDragOver}
@@ -904,7 +880,7 @@ function ContributionFlashcardPageContent({
                     {uploadedFiles.length} file(s) ready to attach.
                   </p>
                 )}
-              </div>
+              </FormField>
 
               {submitError && (
                 <p className="text-sm text-red-400">{submitError}</p>

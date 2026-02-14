@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { LoadingState } from "@/components/states/loading-state";
+import { ErrorState } from "@/components/states/error-state";
 
 interface DebugTeam {
   id: string;
@@ -44,7 +46,7 @@ export default function DebugPage() {
     return (
       <div className="p-8">
         <h1 className="text-2xl font-bold mb-4">Debug - Accessible Teams</h1>
-        <p>Loading teams...</p>
+        <LoadingState text="Loading teams..." />
       </div>
     );
   }
@@ -53,7 +55,7 @@ export default function DebugPage() {
     return (
       <div className="p-8">
         <h1 className="text-2xl font-bold mb-4">Debug - Accessible Teams</h1>
-        <p className="text-red-500">Error: {error.message}</p>
+        <ErrorState title="Error" message={error.message} />
       </div>
     );
   }

@@ -1,4 +1,5 @@
 import { signIn, signOut } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
 
 export function SignIn({ provider }: { provider?: string }) {
   return (
@@ -8,9 +9,9 @@ export function SignIn({ provider }: { provider?: string }) {
         await signIn(provider);
       }}
     >
-      <button className="bg-neutral-700 text-white p-2 rounded-md">
+      <Button type="submit" variant="secondary">
         Sign In with {provider}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -24,9 +25,9 @@ export function SignOut() {
       }}
       className="w-full"
     >
-      <button className="bg-neutral-700 text-white p-2 rounded-md">
+      <Button type="submit" variant="secondary">
         Sign Out
-      </button>
+      </Button>
     </form>
   );
 }
@@ -39,9 +40,9 @@ export function SignInWithGitHub() {
         await signIn("github");
       }}
     >
-      <button className="bg-neutral-700 text-white p-2 rounded-md">
+      <Button type="submit" variant="secondary">
         Sign In with GitHub
-      </button>
+      </Button>
     </form>
   );
 }
@@ -54,9 +55,9 @@ export function SignInWithGoogle() {
         await signIn("google");
       }}
     >
-      <button className="bg-blue-600 text-white p-2 rounded-md">
+      <Button type="submit" variant="primary">
         Sign In with Google
-      </button>
+      </Button>
     </form>
   );
 }
