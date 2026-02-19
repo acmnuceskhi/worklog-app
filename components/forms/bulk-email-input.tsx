@@ -240,17 +240,19 @@ export const BulkEmailInput: React.FC<BulkEmailInputProps> = ({
               >
                 <FaCheck className="text-blue-400" aria-hidden="true" />
                 <span className="text-xs sm:text-sm">{email}</span>
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
                     removeEmail(index);
                   }}
-                  className="ml-1 hover:text-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 rounded-full p-1 md:p-0.5 min-w-[24px] md:min-w-0"
+                  className="ml-1 hover:text-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 rounded-full p-1 md:p-0.5 min-w-[24px] md:min-w-0 h-auto"
                   aria-label={`Remove ${email}`}
                 >
                   <FaTimes aria-hidden="true" />
-                </button>
+                </Button>
               </motion.div>
             ))}
           </AnimatePresence>

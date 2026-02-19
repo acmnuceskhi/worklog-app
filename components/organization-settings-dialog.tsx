@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -28,7 +28,16 @@ import {
 } from "@/components/ui/alert-dialog";
 import { organizationUpdateSchema } from "@/lib/validations";
 import { toast } from "sonner";
-import { FaEdit, FaTrash, FaExclamationTriangle } from "react-icons/fa";
+import {
+  FaEdit,
+  FaTrash,
+  FaExclamationTriangle,
+  FaSpinner,
+} from "react-icons/fa";
+import {
+  useUpdateOrganization,
+  useDeleteOrganization,
+} from "@/lib/hooks/use-organizations";
 
 type OrganizationFormData = z.infer<typeof organizationUpdateSchema>;
 
@@ -69,28 +78,32 @@ export function OrganizationSettingsDialog({
 }: OrganizationSettingsDialogProps) {
   // UI state
   const [isUpdating, setIsUpdating] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const { mutateAsync: updateOrganization } = useUpdateOrganization(
+    organization.id,
+  );
+  const { mutateAsync: deleteOrganization } = useDeleteOrganization();
 
   const {
     register,
     handleSubmit,
     reset,
-    watch,
+    control,
     formState: { errors, isDirty, isValid, isSubmitting },
     setError,
     clearErrors,
   } = useForm<OrganizationFormData>({
     resolver: zodResolver(organizationUpdateSchema),
-    mode: "onChange", // Enable real-time validation
+    mode: "onChange",
     defaultValues: {
       name: organization.name,
       description: organization.description || "",
     },
   });
 
-  // Watch description field for character count
-  const descriptionValue = watch("description", "");
+  // Get description for character count using useWatch (React Compiler compatible)
+  const descriptionValue = useWatch({ control, name: "description" }) || "";
 
   // Reset form when dialog opens or organization changes
   useEffect(() => {
@@ -123,17 +136,15 @@ export function OrganizationSettingsDialog({
       // Prevent double submission
       if (isUpdating || isSubmitting) return;
 
-      try {
+      const updateProcess = async () => {
         setIsUpdating(true);
         clearErrors();
 
-        // Trim whitespace from inputs
         const cleanedData = {
           name: data.name.trim(),
           description: data.description?.trim() || undefined,
         };
 
-        // Validate cleaned data again
         const validation = organizationUpdateSchema.safeParse(cleanedData);
         if (!validation.success) {
           validation.error.issues.forEach((issue) => {
@@ -141,61 +152,34 @@ export function OrganizationSettingsDialog({
               message: issue.message,
             });
           });
-          return;
+          throw new Error("Validation failed");
         }
 
-        const response = await fetch(`/api/organizations/${organization.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(cleanedData),
-        });
+        return await updateOrganization(cleanedData);
+      };
 
-        const result = await response.json();
-
-        if (!response.ok) {
-          if (result.error && typeof result.error === "string") {
-            // Handle server validation errors by setting field errors
-            const errorMessage = result.error.toLowerCase();
-            if (errorMessage.includes("name")) {
-              setError("name", { message: result.error });
-              return;
-            } else if (errorMessage.includes("description")) {
-              setError("description", { message: result.error });
-              return;
-            }
-          }
-          // For other server errors, throw to be handled by catch block
-          throw new Error(result.error || `Server error: ${response.status}`);
-        }
-
-        toast.success("Organization updated successfully");
-        onSuccess();
-        onOpenChange(false);
-      } catch (error) {
-        console.error("Error updating organization:", error);
-
-        // Handle network errors specifically
-        if (error instanceof TypeError && error.message.includes("fetch")) {
-          toast.error(
-            "Network error. Please check your connection and try again.",
-          );
-        } else {
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : "An error occurred while updating the organization",
-          );
-        }
-      } finally {
-        setIsUpdating(false);
-      }
+      toast.promise(updateProcess(), {
+        loading: "Updating organization...",
+        success: () => {
+          onSuccess();
+          onOpenChange(false);
+          setIsUpdating(false);
+          return "Organization updated successfully";
+        },
+        error: (err) => {
+          setIsUpdating(false);
+          return err instanceof Error
+            ? err.message
+            : "Failed to update organization";
+        },
+      });
     },
     [
-      organization.id,
       isUpdating,
       isSubmitting,
       clearErrors,
       setError,
+      updateOrganization,
       onSuccess,
       onOpenChange,
     ],
@@ -207,7 +191,7 @@ export function OrganizationSettingsDialog({
       if (!open) return;
 
       // Close dialog on Escape key
-      if (event.key === "Escape" && !isUpdating && !isDeleting) {
+      if (event.key === "Escape" && !isUpdating) {
         handleDialogClose(false);
       }
 
@@ -231,7 +215,6 @@ export function OrganizationSettingsDialog({
     isDirty,
     isValid,
     isUpdating,
-    isDeleting,
     handleSubmit,
     onSubmit,
     handleDialogClose,
@@ -239,44 +222,20 @@ export function OrganizationSettingsDialog({
 
   // Handle organization deletion
   const handleDelete = async () => {
-    // Prevent double deletion
-    if (isDeleting) return;
-
-    try {
-      setIsDeleting(true);
-
-      const response = await fetch(`/api/organizations/${organization.id}`, {
-        method: "DELETE",
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to delete organization");
-      }
-
-      toast.success(result.message || "Organization deleted successfully");
-      onSuccess();
-      handleDialogClose(false);
-      setShowDeleteDialog(false);
-    } catch (error) {
-      console.error("Error deleting organization:", error);
-
-      // Handle network errors specifically
-      if (error instanceof TypeError && error.message.includes("fetch")) {
-        toast.error(
-          "Network error. Please check your connection and try again.",
-        );
-      } else {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "An error occurred while deleting the organization",
-        );
-      }
-    } finally {
-      setIsDeleting(false);
-    }
+    toast.promise(deleteOrganization(organization.id), {
+      loading: "Deleting organization...",
+      success: () => {
+        onSuccess();
+        handleDialogClose(false);
+        setShowDeleteDialog(false);
+        return "Organization deleted successfully";
+      },
+      error: (err) => {
+        return err instanceof Error
+          ? err.message
+          : "Failed to delete organization";
+      },
+    });
   };
 
   return (
@@ -446,32 +405,25 @@ export function OrganizationSettingsDialog({
               {/* Delete Button */}
               <Button
                 type="button"
-                variant="outline"
+                variant="danger"
                 className="border-red-400/30 text-red-300 hover:bg-red-500/20 hover:text-red-200"
                 onClick={() => setShowDeleteDialog(true)}
-                disabled={isUpdating || isSubmitting || isDeleting}
+                disabled={isUpdating || isSubmitting}
+                aria-label="Delete Organization"
               >
-                {isDeleting ? (
-                  <>
-                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-red-300/30 border-t-red-300 mr-2" />
-                    Deleting...
-                  </>
-                ) : (
-                  <>
-                    <FaTrash className="mr-2" />
-                    Delete Organization
-                  </>
-                )}
+                <FaTrash className="mr-2" />
+                Delete Organization
               </Button>
 
               {/* Cancel and Update Buttons */}
               <div className="flex gap-2">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   className="border-white/20 text-white/70 hover:bg-white/10 hover:text-white"
                   onClick={() => handleDialogClose(false)}
                   disabled={isUpdating || isSubmitting}
+                  aria-label="Cancel updates"
                 >
                   Cancel
                 </Button>
@@ -480,10 +432,11 @@ export function OrganizationSettingsDialog({
                   variant="primary"
                   disabled={!isDirty || !isValid || isUpdating || isSubmitting}
                   aria-describedby={!isDirty ? "no-changes-hint" : undefined}
+                  aria-label="Update Organization"
                 >
                   {isUpdating || isSubmitting ? (
                     <>
-                      <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white mr-2" />
+                      <FaSpinner className="mr-2 animate-spin" />
                       Updating...
                     </>
                   ) : (
@@ -528,26 +481,17 @@ export function OrganizationSettingsDialog({
           <AlertDialogFooter>
             <AlertDialogCancel
               className="border-white/20 text-white/70 hover:bg-white/10 hover:text-white"
-              disabled={isDeleting}
+              aria-label="Cancel deletion"
             >
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              disabled={isDeleting}
               className="bg-red-600 hover:bg-red-700 text-white"
+              aria-label="Confirm Delete Organization"
             >
-              {isDeleting ? (
-                <>
-                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white mr-2" />
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <FaTrash className="mr-2" />
-                  Delete Organization
-                </>
-              )}
+              <FaTrash className="mr-2" />
+              Delete Organization
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

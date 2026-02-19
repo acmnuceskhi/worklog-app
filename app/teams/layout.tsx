@@ -3,20 +3,20 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Lobster_Two } from "next/font/google";
 import {
+  FaHome,
   FaUsers,
   FaUserTie,
   FaBell,
   FaSearch,
   FaPlus,
-  FaClipboardList,
-  FaCheckCircle,
   FaBars,
   FaChevronLeft,
   FaChevronRight,
   FaSignOutAlt,
 } from "react-icons/fa";
 import { useRouter, usePathname } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { signOut } from "next-auth/react";
+import { useSharedSession } from "@/components/providers";
 import { AnimatePresence, motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -26,11 +26,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useMounted, useContentTheme } from "@/lib/hooks";
+import { useMounted, useContentTheme, useSidebarStats } from "@/lib/hooks";
 import { FormField } from "@/components/forms/form-field";
 import { LoadingState } from "@/components/states/loading-state";
 
-const lobsterTwo = Lobster_Two({ weight: "400", subsets: ["latin"] });
+const lobsterTwo = Lobster_Two({
+  weight: ["400", "700"],
+  subsets: ["latin"],
+  display: "swap",
+});
 
 export default function TeamsLayout({
   children,
@@ -39,7 +43,7 @@ export default function TeamsLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { data: session } = useSession();
+  useSharedSession();
   const [contentTheme, setContentTheme] = useContentTheme();
   const mounted = useMounted();
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -53,15 +57,9 @@ export default function TeamsLayout({
   ]);
   const [query, setQuery] = useState("");
 
-  // Dynamic sidebar state
-  const [sidebarStats, setSidebarStats] = useState({
-    memberTeamsCount: 0,
-    leadTeamsCount: 0,
-    organizationsCount: 0,
-    worklogsCount: 0,
-    pendingReviewsCount: 0,
-  });
-  const [sidebarLoading, setSidebarLoading] = useState(true);
+  // TanStack Query hook for sidebar stats
+  const { data: sidebarStatsData, isLoading: sidebarLoading } =
+    useSidebarStats();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -71,64 +69,19 @@ export default function TeamsLayout({
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 960px)");
-    const update = () => setIsMobile(mediaQuery.matches);
+    const update = () => {
+      const mobile = mediaQuery.matches;
+      setIsMobile(mobile);
+      // Sync sidebar state with device type transitions
+      setIsSidebarOpen(!mobile);
+      if (mobile) {
+        setIsSidebarCollapsed(false);
+      }
+    };
     update();
     mediaQuery.addEventListener("change", update);
     return () => mediaQuery.removeEventListener("change", update);
   }, []);
-
-  useEffect(() => {
-    setIsSidebarOpen(!isMobile);
-    if (isMobile) {
-      setIsSidebarCollapsed(false);
-    }
-  }, [isMobile]);
-
-  const fetchSidebarStats = useCallback(async () => {
-    if (!session?.user?.id) {
-      setSidebarLoading(false);
-      return;
-    }
-
-    try {
-      setSidebarLoading(true);
-      const response = await fetch("/api/sidebar/stats");
-      if (!response.ok) {
-        throw new Error("Failed to load sidebar stats");
-      }
-
-      const payload = await response.json();
-      const data = payload.data || payload;
-      setSidebarStats({
-        memberTeamsCount: data.memberTeamsCount ?? 0,
-        leadTeamsCount: data.leadTeamsCount ?? 0,
-        organizationsCount: data.organizationsCount ?? 0,
-        worklogsCount: data.worklogsCount ?? 0,
-        pendingReviewsCount: data.pendingReviewsCount ?? 0,
-      });
-    } catch (error) {
-      console.error("Failed to fetch sidebar stats:", error);
-    } finally {
-      setSidebarLoading(false);
-    }
-  }, [session?.user?.id]);
-
-  useEffect(() => {
-    fetchSidebarStats();
-
-    const interval = setInterval(fetchSidebarStats, 30000);
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        fetchSidebarStats();
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibility);
-
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-  }, [fetchSidebarStats]);
 
   const handleSendInvite = () => {
     if (inviteEmail.trim()) {
@@ -148,39 +101,33 @@ export default function TeamsLayout({
 
   const sidebarItems = [
     {
+      id: "dashboard",
+      label: "Dashboard",
+      href: "/home",
+      icon: <FaHome />,
+      count: null,
+    },
+    {
       id: "member",
       label: "My Teams",
       href: "/teams/member",
       icon: <FaUsers />,
-      count: sidebarStats.memberTeamsCount,
+      count: sidebarStatsData?.memberTeamsCount ?? 0,
     },
     {
       id: "lead",
       label: "Teams I Lead",
       href: "/teams/lead",
       icon: <FaUserTie />,
-      count: sidebarStats.leadTeamsCount,
+      count: sidebarStatsData?.leadTeamsCount ?? 0,
+      reviewCount: sidebarStatsData?.pendingReviewsCount ?? 0,
     },
     {
       id: "orgs",
       label: "My Organizations",
       href: "/teams/organisations",
       icon: <FaUsers />,
-      count: sidebarStats.organizationsCount,
-    },
-    {
-      id: "worklogs",
-      label: "My Worklogs",
-      href: "/teams/member",
-      icon: <FaClipboardList />,
-      count: sidebarStats.worklogsCount,
-    },
-    {
-      id: "pending",
-      label: "Pending Reviews",
-      href: "/teams/lead",
-      icon: <FaCheckCircle />,
-      count: sidebarStats.pendingReviewsCount,
+      count: sidebarStatsData?.organizationsCount ?? 0,
     },
   ];
 
@@ -219,8 +166,8 @@ export default function TeamsLayout({
 
   return (
     <div className={pageClassName}>
-      <nav className="h-16 px-4 flex justify-between items-center rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 text-white">
-        <div className="flex gap-4 items-center">
+      <nav className="flex items-center justify-between rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 p-5 text-white mb-5 shadow-lg border border-white/5">
+        <div className="flex items-center gap-4 flex-shrink-0">
           <Button
             variant="ghost"
             size="sm"
@@ -231,7 +178,9 @@ export default function TeamsLayout({
           >
             <FaBars />
           </Button>
-          <h1 className={`text-2xl font-bold ${lobsterTwo.className}`}>
+          <h1
+            className={`${lobsterTwo.className} text-2xl font-bold text-white tracking-tight`}
+          >
             Worklog
           </h1>
           <div className="flex gap-2 items-center bg-white/10 px-2.5 py-1.5 rounded-lg w-70">
@@ -360,8 +309,18 @@ export default function TeamsLayout({
                     }`}
                     aria-live="polite"
                   >
-                    {item.count}
+                    {item.count !== null && item.count}
                   </span>
+                  {"reviewCount" in item &&
+                    item.reviewCount !== undefined &&
+                    item.reviewCount > 0 && (
+                      <span
+                        className="ml-1 rounded-full bg-orange-500 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-lg"
+                        title={`${item.reviewCount} reviews pending`}
+                      >
+                        {item.reviewCount}
+                      </span>
+                    )}
                 </div>
               );
             })}
@@ -375,17 +334,6 @@ export default function TeamsLayout({
               </div>
             )}
           </div>
-
-          <Button
-            variant="ghost"
-            className="mt-auto w-full"
-            onClick={() => router.push("/home")}
-          >
-            <span className="inline-flex items-center justify-center w-5">
-              <FaPlus />
-            </span>{" "}
-            {showSidebarLabels ? "Back to Dashboard" : "Back"}
-          </Button>
         </motion.aside>
 
         <main className="flex-1 overflow-hidden flex flex-col gap-4">

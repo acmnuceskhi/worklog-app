@@ -8,12 +8,16 @@ import prisma from "@/lib/prisma";
 /**
  * Session cache configuration
  */
+export interface AuthUser {
+  id: string;
+  email: string;
+  name?: string | null;
+}
+
 interface CacheEntry {
   data: AuthUser | null;
   timestamp: number;
 }
-
-const sessionCache = new Map<string, CacheEntry>();
 
 /**
  * Cache TTL in milliseconds: 3 seconds
@@ -35,25 +39,31 @@ const CACHE_TTL = 3000;
  */
 const MAX_CACHE_SIZE = 100;
 
-export interface AuthUser {
-  id: string;
-  email: string;
-  name?: string | null;
-}
+import { cache } from "react";
+
+const sessionCache = new Map<string, CacheEntry>();
 
 /**
- * Get the current authenticated user with JWT-based caching
- * This prevents multiple JWT decoding operations for the same session within a short time window
+ * Get the current session with per-request memoization.
+ * Uses React.cache to ensure that multiple calls within the same request
+ * lifecycle (e.g., in middleware or multiple server components/functions)
+ * only trigger one execution of the auth() logic.
+ */
+export const getCachedSession = cache(async () => {
+  return await auth();
+});
+
+/**
+ * Get the current authenticated user with JWT-based caching and request-memoization.
+ * Optimized to balance performance (preventing redundant JWT/DB calls) and
+ * freshness (validating the session at least once per request or cache TTL).
  */
 export async function getCurrentUser(): Promise<AuthUser | null> {
-  const session = await auth();
+  const session = await getCachedSession();
 
   if (!session?.user?.id) {
     if (process.env.NODE_ENV === "development") {
-      console.log(
-        "[Auth Debug] No user ID found in session:",
-        JSON.stringify(session, null, 2),
-      );
+      console.log("[Auth Debug] No user ID found in session");
     }
     return null;
   }

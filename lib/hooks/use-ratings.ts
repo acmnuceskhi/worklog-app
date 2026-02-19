@@ -6,7 +6,6 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { toast } from "sonner";
 
 export interface Rating {
   id: string;
@@ -99,12 +98,6 @@ export const useCreateRating = () => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.ratings.list(),
       });
-      toast.success("Rating created successfully");
-    },
-    onError: (error) => {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to create rating",
-      );
     },
   });
 };
@@ -131,12 +124,6 @@ export const useUpdateRating = (ratingId: string) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.ratings.all() });
-      toast.success("Rating updated successfully");
-    },
-    onError: (error) => {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to update rating",
-      );
     },
   });
 };
@@ -165,15 +152,6 @@ export const useDeleteRating = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.ratings.all() });
-      toast.success("Rating deleted successfully");
-    },
-    onError: (error) => {
-      if (error instanceof Error && error.message === "User cancelled") {
-        return;
-      }
-      toast.error(
-        error instanceof Error ? error.message : "Failed to delete rating",
-      );
     },
   });
 };

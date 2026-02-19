@@ -5,7 +5,6 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { toast } from "sonner";
 
 export interface Organization {
   id: string;
@@ -102,18 +101,10 @@ export const useCreateOrganization = () => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.organizations.list(),
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() }); // Invalidate dashboard cache
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() });
       queryClient.invalidateQueries({
         queryKey: queryKeys.user.sidebarStats(),
       });
-      toast.success("Organization created successfully");
-    },
-    onError: (error) => {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to create organization",
-      );
     },
   });
 };
@@ -144,14 +135,6 @@ export const useUpdateOrganization = (organizationId: string) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.organizations.list(),
       });
-      toast.success("Organization updated successfully");
-    },
-    onError: (error) => {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to update organization",
-      );
     },
   });
 };
@@ -185,17 +168,6 @@ export const useDeleteOrganization = () => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.user.sidebarStats(),
       });
-      toast.success("Organization deleted successfully");
-    },
-    onError: (error) => {
-      if (error instanceof Error && error.message === "User cancelled") {
-        return;
-      }
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to delete organization",
-      );
     },
   });
 };
@@ -235,12 +207,6 @@ export const useUpdateOrganizationCredits = (organizationId: string) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.organizations.list(),
       });
-      toast.success("Organization credits updated successfully");
-    },
-    onError: (error) => {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to update credits",
-      );
     },
   });
 };

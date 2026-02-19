@@ -1,4 +1,28 @@
 import { NextResponse } from "next/server";
+
+/**
+ * Helper to add cache headers to a Response object
+ */
+export function withCache(
+  response: Response,
+  ttlSeconds: number = 300,
+): Response {
+  const newResponse = response.clone();
+  newResponse.headers.set("Cache-Control", `private, max-age=${ttlSeconds}`);
+  return newResponse;
+}
+
+/**
+ * Helper to add cache headers to a NextResponse object
+ */
+export function withCacheHeaders(
+  response: NextResponse,
+  ttlSeconds: number = 300,
+): NextResponse {
+  response.headers.set("Cache-Control", `private, max-age=${ttlSeconds}`);
+  return response;
+}
+
 import { ZodError } from "zod";
 
 export function apiResponse<T>(data: T, status: number = 200) {

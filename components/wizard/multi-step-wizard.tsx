@@ -3,7 +3,13 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { FaCheck, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import {
+  FaCheck,
+  FaChevronLeft,
+  FaChevronRight,
+  FaTimes,
+  FaSpinner,
+} from "react-icons/fa";
 
 export interface WizardStepProps {
   data: Record<string, unknown>;
@@ -286,12 +292,13 @@ export const MultiStepWizard: React.FC<MultiStepWizardProps> = ({
           {onCancel && (
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={handleCancel}
               disabled={isSubmitting}
               aria-label="Cancel wizard"
               className="w-full sm:w-auto"
             >
+              <FaTimes className="mr-2" />
               Cancel
             </Button>
           )}
@@ -300,7 +307,7 @@ export const MultiStepWizard: React.FC<MultiStepWizardProps> = ({
           {!isFirstStep && (
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={handleBack}
               disabled={isSubmitting}
               aria-label="Go to previous step"
@@ -320,11 +327,14 @@ export const MultiStepWizard: React.FC<MultiStepWizardProps> = ({
           >
             {isSubmitting ? (
               <>
-                <span className="animate-spin mr-2">⏳</span>
+                <FaSpinner className="mr-2 animate-spin" />
                 Submitting...
               </>
             ) : isLastStep ? (
-              "Complete"
+              <>
+                <FaCheck className="mr-2" />
+                Complete
+              </>
             ) : (
               <>
                 Next

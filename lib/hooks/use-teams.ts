@@ -5,7 +5,6 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { toast } from "sonner";
 
 export interface Team {
   id: string;
@@ -138,9 +137,6 @@ export const useTeamMembers = (teamId: string) => {
   });
 };
 
-/**
- * Create a new team mutation
- */
 export const useCreateTeam = () => {
   const queryClient = useQueryClient();
 
@@ -157,7 +153,8 @@ export const useCreateTeam = () => {
         body: JSON.stringify(data),
       });
       if (!response.ok) {
-        throw new Error("Failed to create team");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create team");
       }
       const payload = await response.json();
       return payload.data || payload;
@@ -165,16 +162,10 @@ export const useCreateTeam = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.teams.list() });
       queryClient.invalidateQueries({ queryKey: queryKeys.teams.owned() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() }); // Invalidate dashboard cache
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() });
       queryClient.invalidateQueries({
         queryKey: queryKeys.user.sidebarStats(),
       });
-      toast.success("Team created successfully");
-    },
-    onError: (error) => {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to create team",
-      );
     },
   });
 };
@@ -208,12 +199,6 @@ export const useInviteTeamMember = () => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.teams.members(teamId),
       });
-      toast.success("Invitation sent successfully");
-    },
-    onError: (error) => {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to send invitation",
-      );
     },
   });
 };
@@ -242,12 +227,6 @@ export const useUpdateTeam = (teamId: string) => {
         queryKey: queryKeys.teams.detail(teamId),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.teams.list() });
-      toast.success("Team updated successfully");
-    },
-    onError: (error) => {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to update team",
-      );
     },
   });
 };
@@ -281,22 +260,13 @@ export const useRemoveTeamMember = (teamId: string) => {
       }
       return { memberId, memberName };
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.teams.detail(teamId),
       });
       queryClient.invalidateQueries({
         queryKey: queryKeys.teams.members(teamId),
       });
-      toast.success(`Successfully removed ${data.memberName} from the team`);
-    },
-    onError: (error) => {
-      if (error instanceof Error && error.message === "User cancelled") {
-        return;
-      }
-      toast.error(
-        error instanceof Error ? error.message : "Failed to remove member",
-      );
     },
   });
 };
@@ -325,19 +295,10 @@ export const useDeleteTeam = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.teams.all() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() }); // Invalidate dashboard cache
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() });
       queryClient.invalidateQueries({
         queryKey: queryKeys.user.sidebarStats(),
       });
-      toast.success("Team deleted successfully");
-    },
-    onError: (error) => {
-      if (error instanceof Error && error.message === "User cancelled") {
-        return;
-      }
-      toast.error(
-        error instanceof Error ? error.message : "Failed to delete team",
-      );
     },
   });
 };
@@ -370,12 +331,6 @@ export const useUpdateTeamCredits = (teamId: string) => {
         queryKey: queryKeys.teams.detail(teamId),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.teams.list() });
-      toast.success("Team credits updated successfully");
-    },
-    onError: (error) => {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to update credits",
-      );
     },
   });
 };

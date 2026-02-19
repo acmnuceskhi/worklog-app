@@ -13,6 +13,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { FaCheck, FaEdit, FaTimes, FaSpinner } from "react-icons/fa";
 import { ErrorState } from "@/components/states/error-state";
 import { FormField } from "@/components/forms/form-field";
 import {
@@ -42,12 +43,18 @@ import { RichTextEditor } from "@/components/worklog/rich-text-editor";
 import { DeadlineStatusBadge } from "@/components/worklog/deadline-status-badge";
 import { DeadlineCountdown } from "@/components/worklog/deadline-countdown";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useQueryClient } from "@tanstack/react-query";
+
 import { worklogCreateSchema } from "@/lib/validations";
 import { toast } from "sonner";
 import { ErrorBoundary } from "@/components/error-boundary";
-import { useTeam, useWorklogs, useUpdateWorklogStatus } from "@/lib/hooks";
-import { queryKeys } from "@/lib/query-keys";
+import {
+  useTeam,
+  useWorklogs,
+  useUpdateWorklogStatus,
+  useCreateWorklog,
+  useUpdateWorklogDeadline,
+  useDeleteWorklog,
+} from "@/lib/hooks";
 import {
   formatLocalDate,
   getDeadlineStatus,
@@ -161,12 +168,14 @@ function ContributionFlashcardPageContent({
   params: Promise<{ teamId: string }>;
 }) {
   const { teamId } = use(params);
-  const queryClient = useQueryClient();
 
   // Use custom hooks for data fetching
   const { data: team, isLoading, error, refetch } = useTeam(teamId);
   const { data: worklogsData = [], isLoading: worklogsLoading } = useWorklogs();
   const statusUpdateMutation = useUpdateWorklogStatus();
+  const createWorklogMutation = useCreateWorklog();
+  const deadlineUpdateMutation = useUpdateWorklogDeadline();
+  const deleteWorklogMutation = useDeleteWorklog(teamId);
 
   // Initialize all hooks at the top
   const [editorValue, setEditorValue] = useState("<p></p>");
@@ -243,15 +252,18 @@ function ContributionFlashcardPageContent({
   // Memoized handler for status updates
   const handleStatusUpdate = useCallback(
     async (worklogId: string, newStatus: string) => {
-      try {
-        await statusUpdateMutation.mutateAsync({
+      toast.promise(
+        statusUpdateMutation.mutateAsync({
           worklogId,
           newStatus: newStatus as "STARTED" | "HALF_DONE" | "COMPLETED",
-        });
-      } catch {
-        // Error handling is done in the mutation's onError callback
-        // No need for additional error handling here
-      }
+        }),
+        {
+          loading: "Updating status...",
+          success: "Status updated successfully",
+          error: (err) =>
+            err instanceof Error ? err.message : "Failed to update status",
+        },
+      );
     },
     [statusUpdateMutation],
   );
@@ -551,94 +563,73 @@ function ContributionFlashcardPageContent({
       return;
     }
 
-    try {
+    const processSubmission = async () => {
       const attachments = await uploadFiles();
+      const rawDeadline = canSetDeadline ? values.deadline : undefined;
       const payload = {
-        ...values,
-        githubLink: values.githubLink || undefined,
+        title: values.title,
         description: editorValue,
-        deadline: canSetDeadline ? values.deadline : undefined,
+        githubLink: values.githubLink || undefined,
+        teamId,
+        deadline:
+          rawDeadline instanceof Date ? rawDeadline.toISOString() : rawDeadline,
         attachments,
       };
 
-      const response = await fetch("/api/worklogs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      return await createWorklogMutation.mutateAsync(payload);
+    };
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to create worklog");
-      }
-
-      await response.json();
-
-      // Invalidate worklogs query to refetch data
-      queryClient.invalidateQueries({ queryKey: queryKeys.worklogs.all() });
-
-      setSubmitSuccess("Worklog created successfully.");
-      setEditorValue("<p></p>");
-      setPendingFiles([]);
-      setUploadedFiles([]);
-      reset({
-        title: "",
-        description: "",
-        githubLink: "",
-        deadline: undefined,
-        progressStatus: "STARTED",
-        teamId,
-      });
-      if (typeof window !== "undefined") {
-        window.localStorage.removeItem(`worklog-draft-${teamId}`);
-      }
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to create worklog";
-      setSubmitError(message);
-    }
+    toast.promise(processSubmission(), {
+      loading: "Creating worklog...",
+      success: () => {
+        setEditorValue("<p></p>");
+        setPendingFiles([]);
+        setUploadedFiles([]);
+        reset({
+          title: "",
+          description: "",
+          githubLink: "",
+          deadline: undefined,
+          progressStatus: "STARTED",
+          teamId,
+        });
+        if (typeof window !== "undefined") {
+          window.localStorage.removeItem(`worklog-draft-${teamId}`);
+        }
+        return "Worklog created successfully";
+      },
+      error: (err: unknown) => {
+        const message =
+          err instanceof Error ? err.message : "Failed to create worklog";
+        setSubmitError(message);
+        return message;
+      },
+    });
   };
 
   const handleDeadlineUpdate = async () => {
     if (!editingWorklog) {
       return;
     }
-    try {
-      const response = await fetch(`/api/worklogs/${editingWorklog.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          deadline: editingWorklog.deadline || null,
-        }),
+
+    const updateProcess = async () => {
+      return await deadlineUpdateMutation.mutateAsync({
+        worklogId: editingWorklog.id,
+        deadline: editingWorklog.deadline || null,
       });
+    };
 
-      if (!response.ok) {
-        const payload = await response.json();
-        throw new Error(payload.error || "Failed to update deadline");
-      }
-
-      const payload = await response.json();
-      const updated = payload.data as {
-        id: string;
-        deadline?: string | null;
-      };
-
-      // Invalidate worklogs query to refetch data
-      queryClient.invalidateQueries({ queryKey: queryKeys.worklogs.all() });
-      toast.success(
-        updated.deadline
-          ? `New deadline ${formatLocalDate(new Date(updated.deadline))}`
-          : "Deadline cleared",
-        {
-          description: "Deadline updated",
-        },
-      );
-      setEditingWorklog(null);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Please try again", {
-        description: "Deadline update failed",
-      });
-    }
+    toast.promise(updateProcess(), {
+      loading: "Updating deadline...",
+      success: (updated) => {
+        setEditingWorklog(null);
+        return updated.deadline
+          ? `New deadline: ${formatLocalDate(new Date(updated.deadline))}`
+          : "Deadline cleared";
+      },
+      error: (err: unknown) =>
+        err instanceof Error ? err.message : "Failed to update deadline",
+    });
   };
 
   const handleDeleteWorklog = async (
@@ -653,27 +644,15 @@ function ContributionFlashcardPageContent({
       return;
     }
 
-    try {
-      const response = await fetch(`/api/worklogs/${worklogId}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const payload = await response.json();
-        throw new Error(payload.error || "Failed to delete worklog");
-      }
-
-      // Invalidate worklogs query to refetch data
-      queryClient.invalidateQueries({ queryKey: ["worklogs"] });
-      toast.success(`"${worklogTitle}" deleted successfully`);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to delete worklog",
-        {
-          description: "Please try again",
-        },
-      );
-    }
+    toast.promise(
+      deleteWorklogMutation.mutateAsync({ worklogId, worklogTitle }),
+      {
+        loading: `Deleting "${worklogTitle}"...`,
+        success: () => `"${worklogTitle}" deleted successfully`,
+        error: (err: unknown) =>
+          err instanceof Error ? err.message : "Failed to delete worklog",
+      },
+    );
   };
 
   return (
@@ -820,13 +799,15 @@ function ContributionFlashcardPageContent({
                 >
                   <p className="text-center">
                     Drag and drop files here, or{" "}
-                    <button
+                    <Button
                       type="button"
-                      className="ml-1 text-amber-200 underline"
+                      variant="ghost"
+                      className="h-auto p-0 ml-1 text-amber-200 underline hover:text-amber-100 bg-transparent hover:bg-transparent"
                       onClick={() => fileInputRef.current?.click()}
+                      aria-label="Browse files"
                     >
                       browse
-                    </button>
+                    </Button>
                   </p>
                   <p className="text-center text-xs text-white/60 mt-1">
                     Add images or PDFs to support your worklog.
@@ -896,10 +877,16 @@ function ContributionFlashcardPageContent({
                 type="submit"
                 disabled={isSubmitting || isUploading}
                 className="w-full bg-amber-400 hover:bg-amber-500 text-black font-semibold"
+                aria-label="Submit Worklog"
               >
-                {isSubmitting || isUploading
-                  ? "Submitting..."
-                  : "Submit Worklog"}
+                {isSubmitting || isUploading ? (
+                  <>
+                    <FaSpinner className="mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  "Submit Worklog"
+                )}
               </Button>
             </form>
           </CardContent>
@@ -1016,7 +1003,7 @@ function ContributionFlashcardPageContent({
                       {canSetDeadline && (
                         <Button
                           type="button"
-                          variant="outline"
+                          variant="secondary"
                           size="sm"
                           className="border-white/20 text-white/80 hover:bg-white/10 h-8 text-xs"
                           onClick={() =>
@@ -1025,7 +1012,9 @@ function ContributionFlashcardPageContent({
                               deadline: worklog.deadline ?? null,
                             })
                           }
+                          aria-label={`Edit deadline for ${worklog.title}`}
                         >
+                          <FaEdit className="mr-2" />
                           Edit deadline
                         </Button>
                       )}
@@ -1098,17 +1087,21 @@ function ContributionFlashcardPageContent({
               <div className="flex justify-end gap-2">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   className="border-white/20 text-white/80 hover:bg-white/10"
                   onClick={() => setEditingWorklog(null)}
+                  aria-label="Cancel deadline edit"
                 >
+                  <FaTimes className="mr-2" />
                   Cancel
                 </Button>
                 <Button
                   type="button"
                   className="bg-amber-400 hover:bg-amber-500 text-black font-semibold"
                   onClick={handleDeadlineUpdate}
+                  aria-label="Save deadline"
                 >
+                  <FaCheck className="mr-2" />
                   Save deadline
                 </Button>
               </div>

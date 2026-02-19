@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export type TeamSortBy = "name" | "members" | "worklogs" | "credits";
+export type TeamSortBy = "name" | "members" | "worklogs";
 export type TeamSortDir = "asc" | "desc";
 
 export interface TeamFilterState {
@@ -55,7 +55,6 @@ export function TeamFilters({ value, onChange, onReset }: TeamFiltersProps) {
             <SelectItem value="name">Name</SelectItem>
             <SelectItem value="members">Members</SelectItem>
             <SelectItem value="worklogs">Worklogs</SelectItem>
-            <SelectItem value="credits">Credits</SelectItem>
           </SelectContent>
         </Select>
       </div>

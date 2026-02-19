@@ -22,7 +22,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { FaCog } from "react-icons/fa";
+import { FaCog, FaCheck, FaTimes, FaSpinner } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Organization {
@@ -329,10 +329,11 @@ export const TeamSettingsForm: React.FC<TeamSettingsFormProps> = ({
           <DialogFooter className="flex gap-3 mt-6">
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={handleCancel}
               disabled={loading}
             >
+              <FaTimes className="mr-2" />
               Cancel
             </Button>
             <Button
@@ -343,11 +344,14 @@ export const TeamSettingsForm: React.FC<TeamSettingsFormProps> = ({
             >
               {loading ? (
                 <>
-                  <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  <FaSpinner className="mr-2 animate-spin" />
                   Saving...
                 </>
               ) : (
-                "Save Changes"
+                <>
+                  <FaCheck className="mr-2" />
+                  Save Changes
+                </>
               )}
             </Button>
           </DialogFooter>

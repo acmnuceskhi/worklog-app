@@ -1,21 +1,21 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { Lobster_Two } from "next/font/google";
 import Image from "next/image";
 import {
+  FaHome,
   FaUsers,
   FaUserTie,
   FaBell,
   FaSearch,
-  FaPlus,
-  FaTimes,
-  FaCheckCircle,
   FaBars,
   FaChevronLeft,
   FaChevronRight,
   FaSignOutAlt,
 } from "react-icons/fa";
-import { signOut, useSession } from "next-auth/react";
+import { signOut } from "next-auth/react";
+import { useSharedSession } from "@/components/providers";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -31,11 +31,18 @@ import {
   usePrefetchMemberTeams,
 } from "@/lib/hooks";
 import { LoadingState } from "@/components/states/loading-state";
+import { EmptyState } from "@/components/states/empty-state";
+import { TeamCreationWizard } from "@/components/teams/team-creation-wizard";
+const lobster = Lobster_Two({
+  weight: ["400", "700"],
+  subsets: ["latin"],
+  display: "swap",
+});
 
 export default function DashboardPage() {
   const router = useRouter();
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { data: session } = useSharedSession();
 
   // TanStack Query hooks for data fetching
   const { data: dashboardData, isLoading } = useDashboard();
@@ -64,13 +71,8 @@ export default function DashboardPage() {
   const [contentTheme, setContentTheme] = useContentTheme();
   const mounted = useMounted();
 
-  const [showCreateTeam, setShowCreateTeam] = useState(false);
-  const [teamName, setTeamName] = useState("");
-  const [teamDesc, setTeamDesc] = useState("");
-  const [inviteEmails, setInviteEmails] = useState<string[]>([]);
-  const [inviteInput, setInviteInput] = useState("");
-
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [showTeamWizard, setShowTeamWizard] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const deadlineNotifiedRef = useRef<Set<string>>(new Set());
@@ -154,6 +156,13 @@ export default function DashboardPage() {
 
   const sidebarItems = [
     {
+      id: "dashboard",
+      label: "Dashboard",
+      href: "/home",
+      icon: <FaHome />,
+      count: null,
+    },
+    {
       id: "member",
       label: "My Teams",
       href: "/teams/member",
@@ -166,6 +175,7 @@ export default function DashboardPage() {
       href: "/teams/lead",
       icon: <FaUserTie />,
       count: sidebarStatsData?.leadTeamsCount ?? 0,
+      reviewCount: sidebarStatsData?.pendingReviewsCount ?? 0,
     },
     {
       id: "orgs",
@@ -174,23 +184,7 @@ export default function DashboardPage() {
       icon: <FaUsers />,
       count: sidebarStatsData?.organizationsCount ?? 0,
     },
-    {
-      id: "pending",
-      label: "Pending Reviews",
-      href: "/teams/lead",
-      icon: <FaCheckCircle />,
-      count: sidebarStatsData?.pendingReviewsCount ?? 0,
-    },
-    {
-      id: "debug",
-      label: "Debug Teams",
-      href: "/debug",
-      icon: <FaBell />,
-      count: null,
-    },
-  ].filter(
-    (item) => item.id !== "debug" || process.env.NODE_ENV === "development",
-  );
+  ];
 
   const sidebarWidth = isMobile ? 260 : isSidebarCollapsed ? 72 : 220;
   const showSidebarLabels = !isSidebarCollapsed || isMobile;
@@ -233,10 +227,6 @@ export default function DashboardPage() {
     [router, isMobile, prefetchMemberTeams, prefetchOwnedTeams],
   );
 
-  const removeEmail = (email: string) => {
-    setInviteEmails(inviteEmails.filter((e) => e !== email));
-  };
-
   // Prevent hydration mismatch by waiting for client mount
   if (!mounted) {
     return (
@@ -248,20 +238,25 @@ export default function DashboardPage() {
 
   return (
     <div className={pageClassName}>
-      <nav className="h-16 px-4 flex justify-between items-center rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 text-white">
-        <div className="flex gap-4 items-center">
+      <nav className="flex items-center justify-between rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 p-5 text-white mb-5 shadow-lg border border-white/5">
+        <div className="flex items-center gap-4 flex-shrink-0">
           <Button
             variant="ghost"
             size="sm"
-            className="border border-white/20 text-white hidden md:inline-flex items-center gap-1.5"
+            className={`border border-white/20 items-center gap-1.5 ${
+              isMobile ? "inline-flex" : "hidden"
+            }`}
             onClick={() => setIsSidebarOpen((prev) => !prev)}
             aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
-            aria-expanded={isSidebarOpen}
           >
             <FaBars />
           </Button>
-          <h1 className="text-2xl font-bold">Worklog</h1>
-          <div className="flex gap-2 items-center bg-white/10 px-2.5 py-1.5 rounded-lg">
+          <h1
+            className={`${lobster.className} text-2xl font-bold text-white tracking-tight`}
+          >
+            Worklog
+          </h1>
+          <div className="flex items-center gap-2 bg-white/10 px-2.5 py-1.5 rounded-lg w-[280px]">
             <FaSearch />
             <input
               className="bg-transparent border-none outline-none text-white placeholder-white/70"
@@ -286,9 +281,9 @@ export default function DashboardPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="border border-white/20 text-white relative"
+            className="border border-white/20 text-white relative p-0 overflow-hidden"
             onClick={() => router.push("/profile")}
-            title="View Profile"
+            aria-label="View Profile"
           >
             {session?.user?.image ? (
               <Image
@@ -384,7 +379,7 @@ export default function DashboardPage() {
               return (
                 <div
                   key={item.id}
-                  className={`p-2.5 rounded-xl flex gap-2 cursor-pointer mb-2 items-center ${
+                  className={`p-2.5 rounded-xl flex gap-2 cursor-pointer mb-2 items-center transition-colors ${
                     isActive
                       ? "bg-gradient-to-r from-blue-500 to-cyan-500"
                       : "hover:bg-white/5"
@@ -411,8 +406,18 @@ export default function DashboardPage() {
                     className="ml-auto rounded-lg bg-[var(--color-primary)] px-1.5 py-0.5 text-xs font-semibold text-[var(--color-text-inverse)]"
                     aria-live="polite"
                   >
-                    {item.count}
+                    {item.count !== null && item.count}
                   </span>
+                  {"reviewCount" in item &&
+                    item.reviewCount !== undefined &&
+                    item.reviewCount > 0 && (
+                      <span
+                        className="ml-1 rounded-full bg-orange-500 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-lg"
+                        title={`${item.reviewCount} reviews pending`}
+                      >
+                        {item.reviewCount}
+                      </span>
+                    )}
                 </div>
               );
             })}
@@ -431,14 +436,6 @@ export default function DashboardPage() {
                 </div>
               )}
           </div>
-
-          <Button
-            variant="primary"
-            className="mt-auto w-full flex gap-2 items-center justify-center"
-            onClick={() => setShowCreateTeam(true)}
-          >
-            <FaPlus /> {showSidebarLabels ? "Create Team" : "Create"}
-          </Button>
         </motion.aside>
 
         <main className="flex-1 flex flex-col gap-4 overflow-hidden">
@@ -450,7 +447,6 @@ export default function DashboardPage() {
               <p className="text-muted">
                 Here&apos;s what&apos;s happening with your teams and work.
               </p>
-              <Button variant="primary">View My Teams</Button>
             </div>
 
             <div className="flex flex-wrap gap-3 text-xs">
@@ -472,10 +468,15 @@ export default function DashboardPage() {
           <section className={cardClassName}>
             <h3>Featured Teams</h3>
             {teams.length === 0 ? (
-              <p className="text-muted">
-                Ready to get started? Create your first team to begin
-                collaborating!
-              </p>
+              <EmptyState
+                title="No teams joined yet"
+                description="Create or join a team to start collaborating and tracking your worklogs"
+                icon={<FaUsers className="h-8 w-8" />}
+                action={{
+                  label: "Create Team",
+                  onClick: () => setShowTeamWizard(true),
+                }}
+              />
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {teams.slice(0, 6).map((team) => (
@@ -610,91 +611,10 @@ export default function DashboardPage() {
         </main>
       </div>
 
-      {showCreateTeam && (
-        <div className="fixed inset-0 bg-black/55 flex items-start justify-center pt-20 z-200">
-          <div className="bg-[var(--panel-strong)] p-6 rounded-2xl w-96 flex flex-col gap-3 text-white relative">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute top-3 right-3 text-white text-xl"
-              onClick={() => setShowCreateTeam(false)}
-            >
-              <FaTimes />
-            </Button>
-            <h3>Create Team</h3>
-            <input
-              className="p-3 rounded-xl border-none outline-none bg-white/6 text-white"
-              placeholder="Team Name"
-              value={teamName}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setTeamName(e.target.value)
-              }
-            />
-            <textarea
-              className="p-3 rounded-xl border-none outline-none bg-white/6 text-white min-h-16"
-              placeholder="Team Description"
-              value={teamDesc}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                setTeamDesc(e.target.value)
-              }
-            />
-            <div className="flex flex-wrap gap-1.5 p-1.5 rounded-lg border border-white/30">
-              {inviteEmails.map((email) => (
-                <span
-                  key={email}
-                  className="bg-green-500 px-2 py-1 rounded-full inline-flex items-center gap-1 text-xs"
-                >
-                  {email}
-                  <FaTimes onClick={() => removeEmail(email)} />
-                </span>
-              ))}
-              <input
-                className="bg-transparent border-none outline-none text-white min-w-[180px] flex-1"
-                placeholder="Add invite emails"
-                value={inviteInput}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setInviteInput(e.target.value)
-                }
-                onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                  if (e.key === "Enter" || e.key === ",") {
-                    e.preventDefault();
-                    const email = inviteInput.trim();
-                    if (email && !inviteEmails.includes(email)) {
-                      setInviteEmails([...inviteEmails, email]);
-                    }
-                    setInviteInput("");
-                  }
-                }}
-              />
-            </div>
-            <div className="flex justify-end gap-2.5">
-              <Button
-                variant="outline"
-                onClick={() => setShowCreateTeam(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => {
-                  alert(
-                    `Team Created!\nName: ${teamName}\nDescription: ${teamDesc}\nEmails: ${inviteEmails.join(
-                      ", ",
-                    )}`,
-                  );
-                  setShowCreateTeam(false);
-                  setTeamName("");
-                  setTeamDesc("");
-                  setInviteInput("");
-                  setInviteEmails([]);
-                }}
-              >
-                Create
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <TeamCreationWizard
+        isOpen={showTeamWizard}
+        onClose={() => setShowTeamWizard(false)}
+      />
     </div>
   );
 }

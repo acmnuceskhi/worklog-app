@@ -49,24 +49,11 @@ async function testOAuthBypass() {
 
     console.log("   ✅ Auth configuration loaded");
 
-    // Test component import
-    console.log("\n3. Checking component imports...");
-    try {
-      await import("../components/auth/test-user-switcher");
-      console.log("   ✅ TestUserSwitcher component loads");
-    } catch (error) {
-      console.log(
-        "   ❌ TestUserSwitcher component error:",
-        (error as Error).message,
-      );
-    }
+    // Frontend component check removed as the feature is decommissioned
 
     console.log("\n🎉 OAuth Bypass System Ready!");
-    console.log("\n📋 Next Steps:");
-    console.log("   1. Start dev server: npm run dev");
-    console.log("   2. Look for yellow 'Test Users' button (bottom-right)");
-    console.log("   3. Click to switch between test users");
-    console.log("   4. Verify different data appears for each role");
+    console.log("   1. Backend configuration is verified and ready.");
+    console.log("   2. Frontend switcher has been decommissioned.");
   } catch (error) {
     console.error(
       "❌ Test failed:",

@@ -12,14 +12,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
   FaBuilding,
   FaUsers,
   FaCog,
@@ -27,7 +19,6 @@ import {
   FaArrowLeft,
   FaClipboardList,
   FaStar,
-  FaCoins,
   FaEdit,
   FaUserTie,
 } from "react-icons/fa";
@@ -43,8 +34,11 @@ import {
 import { toast } from "sonner";
 import { OrganizationSettingsDialog } from "@/components/organization-settings-dialog";
 import { LoadingState } from "@/components/states/loading-state";
+import { EmptyState } from "@/components/states/empty-state";
 import { ErrorState } from "@/components/states/error-state";
-import { FormField } from "@/components/forms/form-field";
+import { TeamCreationWizard } from "@/components/teams/team-creation-wizard";
+import { useDeleteWorklog } from "@/lib/hooks";
+
 interface TeamMember {
   id: string;
   user: {
@@ -172,12 +166,11 @@ export default function OrganizationDashboardPage({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Mutations
+  const deleteWorklogMutation = useDeleteWorklog();
+
   // Create team modal state
   const [showCreateTeam, setShowCreateTeam] = useState(false);
-  const [newTeamName, setNewTeamName] = useState("");
-  const [newTeamDescription, setNewTeamDescription] = useState("");
-  const [isCreatingTeam, setIsCreatingTeam] = useState(false);
-  const [createTeamError, setCreateTeamError] = useState<string | null>(null);
 
   // Rating modal state
   const [showRatingModal, setShowRatingModal] = useState(false);
@@ -300,74 +293,24 @@ export default function OrganizationDashboardPage({
     }
   }, [worklogPage, totalWorklogPages]);
 
-  const handleCreateTeam = async () => {
-    if (!newTeamName.trim()) return;
-
-    try {
-      setIsCreatingTeam(true);
-      setCreateTeamError(null);
-
-      const response = await fetch("/api/teams", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: newTeamName,
-          description: newTeamDescription || undefined,
-          organizationId,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to create team");
-      }
-
-      // Refresh organization data
-      await fetchOrganization();
-      setShowCreateTeam(false);
-      setNewTeamName("");
-      setNewTeamDescription("");
-    } catch (err) {
-      setCreateTeamError(
-        err instanceof Error ? err.message : "Failed to create team",
-      );
-    } finally {
-      setIsCreatingTeam(false);
-    }
-  };
-
   const handleDeleteWorklog = async (
     worklogId: string,
     worklogTitle: string,
   ) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${worklogTitle}"? This action cannot be undone.`,
+    // The hook internally confirms, then deletes and invalidates cache
+    toast.promise(
+      deleteWorklogMutation.mutateAsync({ worklogId, worklogTitle }),
+      {
+        loading: `Deleting "${worklogTitle}"...`,
+        success: () => {
+          // Refresh local worklog list after hook invalidates global cache
+          fetchWorklogs();
+          return `Successfully deleted "${worklogTitle}"`;
+        },
+        error: (err: unknown) =>
+          err instanceof Error ? err.message : "Failed to delete worklog",
+      },
     );
-
-    if (!confirmed) return;
-
-    try {
-      const response = await fetch(`/api/worklogs/${worklogId}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to delete worklog");
-      }
-
-      // Refresh worklogs
-      await fetchWorklogs();
-      toast.success(`Successfully deleted "${worklogTitle}"`);
-    } catch (error) {
-      console.error("Error deleting worklog:", error);
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "An error occurred while deleting the worklog",
-      );
-    }
   };
 
   const getStatusColor = (status: string) => {
@@ -431,9 +374,6 @@ export default function OrganizationDashboardPage({
       }
       if (teamFilters.sortBy === "worklogs") {
         return (a._count.worklogs - b._count.worklogs) * direction;
-      }
-      if (teamFilters.sortBy === "credits") {
-        return (a.credits - b.credits) * direction;
       }
       return a.name.localeCompare(b.name) * direction;
     });
@@ -604,14 +544,10 @@ export default function OrganizationDashboardPage({
                 <p className="text-sm text-muted">Worklogs</p>
               </CardContent>
             </Card>
-            <Card className="border-white/10 bg-white/5">
-              <CardContent className="p-4 text-center">
-                <FaCoins className="h-6 w-6 text-yellow-400 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-white">
-                  {organization.credits}
-                </p>
-                <p className="text-sm text-muted">Credits</p>
-              </CardContent>
+            <Card className="border-white/10 bg-white/5 flex items-center justify-center p-4">
+              <p className="text-xs text-muted italic">
+                More stats coming soon...
+              </p>
             </Card>
           </div>
 
@@ -634,18 +570,15 @@ export default function OrganizationDashboardPage({
                 />
               </div>
               {filteredTeams.length === 0 ? (
-                <div className="text-center py-8">
-                  <FaUsers className="h-12 w-12 text-white/40 mx-auto mb-3" />
-                  <p className="text-muted mb-4">
-                    No teams match these filters
-                  </p>
-                  <Button
-                    onClick={() => setShowCreateTeam(true)}
-                    variant="primary"
-                  >
-                    <FaPlus className="mr-2" /> Create Your First Team
-                  </Button>
-                </div>
+                <EmptyState
+                  title="No teams found"
+                  description="Create a team to start collaborating with members and tracking their worklogs"
+                  icon={<FaUsers className="h-8 w-8" />}
+                  action={{
+                    label: "Create Team",
+                    onClick: () => setShowCreateTeam(true),
+                  }}
+                />
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredTeams.map((team) => (
@@ -674,7 +607,6 @@ export default function OrganizationDashboardPage({
                           )}
                           <div className="flex items-center justify-between text-xs text-white/60">
                             <span>{team._count.worklogs} worklogs</span>
-                            <span>{team.credits} credits</span>
                           </div>
                         </CardContent>
                       </Card>
@@ -864,69 +796,16 @@ export default function OrganizationDashboardPage({
           </Card>
         </div>
 
-        {/* Create Team Modal */}
-        <Dialog open={showCreateTeam} onOpenChange={setShowCreateTeam}>
-          <DialogContent className="bg-white/5 border-white/10 backdrop-blur-md">
-            <DialogHeader>
-              <DialogTitle className="text-white">Create New Team</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              {createTeamError && (
-                <ErrorState
-                  title="Failed to create team"
-                  message={createTeamError}
-                  className="py-2"
-                />
-              )}
-              <FormField label="Team Name" required>
-                <Input
-                  id="teamName"
-                  placeholder="Enter team name"
-                  value={newTeamName}
-                  onChange={(e) => setNewTeamName(e.target.value)}
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/50"
-                />
-              </FormField>
-              <FormField label="Description" helpText="Optional">
-                <Textarea
-                  id="teamDescription"
-                  placeholder="Describe the team..."
-                  value={newTeamDescription}
-                  onChange={(e) => setNewTeamDescription(e.target.value)}
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/50 resize-none"
-                  rows={3}
-                />
-              </FormField>
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  className="flex-1 border-white/20 text-white/70 hover:bg-white/10 hover:text-white"
-                  onClick={() => setShowCreateTeam(false)}
-                  disabled={isCreatingTeam}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="primary"
-                  className="flex-1"
-                  onClick={handleCreateTeam}
-                  disabled={!newTeamName.trim() || isCreatingTeam}
-                >
-                  {isCreatingTeam ? (
-                    <>
-                      <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white mr-2" />{" "}
-                      Creating...
-                    </>
-                  ) : (
-                    <>
-                      <FaPlus className="mr-2" /> Create Team
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        {/* Create Team Wizard */}
+        <TeamCreationWizard
+          isOpen={showCreateTeam}
+          onClose={() => setShowCreateTeam(false)}
+          onSuccess={() => {
+            fetchOrganization();
+            setShowCreateTeam(false);
+          }}
+          initialData={{ organizationId }}
+        />
 
         {/* Rating Modal */}
         {selectedWorklog && (

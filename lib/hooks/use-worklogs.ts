@@ -5,7 +5,6 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { toast } from "sonner";
 
 export type ProgressStatus =
   | "STARTED"
@@ -121,22 +120,12 @@ export const useCreateWorklog = () => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.worklogs.list() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() }); // Invalidate dashboard cache
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() });
       if (data.teamId) {
         queryClient.invalidateQueries({
           queryKey: queryKeys.teams.worklogs(data.teamId),
         });
       }
-      toast.success(
-        data.userId && data.userId !== data.creatorId
-          ? "Task assigned successfully"
-          : "Worklog created successfully",
-      );
-    },
-    onError: (error) => {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to create worklog",
-      );
     },
   });
 };
@@ -202,9 +191,6 @@ export const useUpdateWorklogStatus = () => {
           context.previousWorklogs,
         );
       }
-      toast.error(
-        err instanceof Error ? err.message : "Failed to update worklog status",
-      );
     },
     onSettled: () => {
       // Always refetch to ensure server state consistency
@@ -266,9 +252,6 @@ export const useUpdateWorklogDeadline = () => {
           context.previousWorklogs,
         );
       }
-      toast.error(
-        err instanceof Error ? err.message : "Failed to update deadline",
-      );
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.worklogs.list() });
@@ -305,24 +288,15 @@ export const useDeleteWorklog = (teamId?: string) => {
       }
       return { success: true, worklogId, worklogTitle };
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       // Invalidate both global and team-specific worklog lists
       queryClient.invalidateQueries({ queryKey: queryKeys.worklogs.all() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() }); // Invalidate dashboard cache
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() });
       if (teamId) {
         queryClient.invalidateQueries({
           queryKey: queryKeys.teams.worklogs(teamId),
         });
       }
-      toast.success(`Successfully deleted "${data.worklogTitle}"`);
-    },
-    onError: (error) => {
-      if (error instanceof Error && error.message === "User cancelled") {
-        return;
-      }
-      toast.error(
-        error instanceof Error ? error.message : "Failed to delete worklog",
-      );
     },
   });
 };

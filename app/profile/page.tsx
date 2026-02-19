@@ -1,12 +1,15 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
+import { useSharedSession } from "@/components/providers";
+import { Lobster_Two } from "next/font/google";
+import { signOut } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
 import { useSidebarStats, useMounted, useContentTheme } from "@/lib/hooks";
 import { Button } from "@/components/ui/button";
 import {
+  FaHome,
   FaSignOutAlt,
   FaEnvelope,
   FaCalendar,
@@ -15,17 +18,20 @@ import {
   FaUserTie,
   FaBell,
   FaSearch,
-  FaPlus,
-  FaClipboardList,
-  FaCheckCircle,
   FaBars,
   FaChevronLeft,
   FaChevronRight,
 } from "react-icons/fa";
 import { AnimatePresence, motion } from "framer-motion";
 
+const lobster = Lobster_Two({
+  weight: ["400", "700"],
+  subsets: ["latin"],
+  display: "swap",
+});
+
 export default function ProfilePage() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useSharedSession();
   const router = useRouter();
   const pathname = usePathname();
   const [contentTheme, setContentTheme] = useContentTheme();
@@ -59,6 +65,13 @@ export default function ProfilePage() {
 
   const sidebarItems = [
     {
+      id: "dashboard",
+      label: "Dashboard",
+      href: "/home",
+      icon: <FaHome />,
+      count: null,
+    },
+    {
       id: "member",
       label: "My Teams",
       href: "/teams/member",
@@ -71,6 +84,7 @@ export default function ProfilePage() {
       href: "/teams/lead",
       icon: <FaUserTie />,
       count: sidebarStatsData?.leadTeamsCount ?? 0,
+      reviewCount: sidebarStatsData?.pendingReviewsCount ?? 0,
     },
     {
       id: "orgs",
@@ -78,20 +92,6 @@ export default function ProfilePage() {
       href: "/teams/organisations",
       icon: <FaUsers />,
       count: sidebarStatsData?.organizationsCount ?? 0,
-    },
-    {
-      id: "worklogs",
-      label: "My Worklogs",
-      href: "/teams/member",
-      icon: <FaClipboardList />,
-      count: sidebarStatsData?.pendingReviewsCount ?? 0,
-    },
-    {
-      id: "pending",
-      label: "Pending Reviews",
-      href: "/teams/lead",
-      icon: <FaCheckCircle />,
-      count: sidebarStatsData?.pendingReviewsCount ?? 0,
     },
   ];
 
@@ -141,7 +141,7 @@ export default function ProfilePage() {
 
   return (
     <div className={pageClassName}>
-      <nav className="flex items-center justify-between rounded-xl bg-[var(--page-bg-dark)] p-5 text-white mb-5">
+      <nav className="flex items-center justify-between rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 p-5 text-white mb-5 shadow-lg border border-white/5">
         <div className="flex items-center gap-4 flex-shrink-0">
           <Button
             variant="ghost"
@@ -155,7 +155,9 @@ export default function ProfilePage() {
           >
             <FaBars />
           </Button>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
+          <h1
+            className={`${lobster.className} text-2xl font-bold text-white tracking-tight`}
+          >
             Worklog
           </h1>
           <div className="flex items-center gap-2 bg-white/10 px-2.5 py-1.5 rounded-lg w-[280px]">
@@ -193,7 +195,8 @@ export default function ProfilePage() {
             onClick={() => signOut({ callbackUrl: "/" })}
             aria-label="Sign out of account"
           >
-            <FaSignOutAlt className="mr-2" /> Sign Out
+            <FaSignOutAlt className="mr-2" />
+            Sign Out
           </Button>
         </div>
       </nav>
@@ -282,8 +285,18 @@ export default function ProfilePage() {
                     }`}
                     aria-live="polite"
                   >
-                    {item.count}
+                    {item.count !== null && item.count}
                   </span>
+                  {"reviewCount" in item &&
+                    item.reviewCount !== undefined &&
+                    item.reviewCount > 0 && (
+                      <span
+                        className="ml-1 rounded-full bg-orange-500 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-lg"
+                        title={`${item.reviewCount} reviews pending`}
+                      >
+                        {item.reviewCount}
+                      </span>
+                    )}
                 </div>
               );
             })}
@@ -297,15 +310,6 @@ export default function ProfilePage() {
               </div>
             )}
           </div>
-
-          <Button
-            variant="ghost"
-            className="mt-auto w-full"
-            onClick={() => router.push("/home")}
-          >
-            <FaPlus className="mr-2" />{" "}
-            {showSidebarLabels ? "Back to Dashboard" : "Back"}
-          </Button>
         </motion.aside>
 
         <main className="flex-1 overflow-auto p-5">

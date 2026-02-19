@@ -52,13 +52,11 @@ export async function GET() {
     ]);
 
     return success({
-      data: {
-        memberTeamsCount,
-        leadTeamsCount,
-        organizationsCount,
-        worklogsCount,
-        pendingReviewsCount,
-      },
+      memberTeamsCount,
+      leadTeamsCount,
+      organizationsCount,
+      worklogsCount,
+      pendingReviewsCount,
     });
   } catch (error) {
     console.error("Get sidebar stats error:", error);

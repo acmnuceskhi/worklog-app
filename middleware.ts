@@ -10,17 +10,15 @@ export { auth as middleware } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
-// Configure middleware to run on all routes except static files
+// Configure middleware to run only on protected routes and API routes
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api/auth (NextAuth API routes - handled separately)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public files with extensions
-     */
-    "/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\.).*)",
+    // Protected pages that need authentication
+    "/home",
+    "/profile",
+    "/teams/:path*",
+    "/organizations/:path*",
+    // Protected API routes (exclude auth routes)
+    "/api/((?!auth).*)",
   ],
 };

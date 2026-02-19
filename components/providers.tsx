@@ -1,11 +1,47 @@
 "use client";
 
-import { SessionProvider } from "next-auth/react";
+import { Session } from "next-auth";
+import { SessionProvider, useSession } from "next-auth/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, createContext, useContext } from "react";
 
-export function Providers({ children }: { children: ReactNode }) {
+// Create a context to share session data across components without multiple useSession() calls
+const SessionContext = createContext<ReturnType<typeof useSession> | null>(
+  null,
+);
+
+/**
+ * Hook to access the shared session state.
+ * Reduces redundant /api/auth/session calls when multiple components need session data.
+ */
+export const useSharedSession = () => {
+  const context = useContext(SessionContext);
+  if (!context) {
+    throw new Error("useSharedSession must be used within SessionProvider");
+  }
+  return context;
+};
+
+/**
+ * Wrapper component to provide session data via context
+ */
+function SessionWrapper({ children }: { children: ReactNode }) {
+  const sessionData = useSession();
+  return (
+    <SessionContext.Provider value={sessionData}>
+      {children}
+    </SessionContext.Provider>
+  );
+}
+
+export function Providers({
+  children,
+  session,
+}: {
+  children: ReactNode;
+  session?: Session | null;
+}) {
   // Create QueryClient with optimized defaults
   const [queryClient] = useState(
     () =>
@@ -35,13 +71,20 @@ export function Providers({ children }: { children: ReactNode }) {
   );
 
   return (
-    <SessionProvider>
-      <QueryClientProvider client={queryClient}>
-        {children}
-        {process.env.NODE_ENV === "development" && (
-          <ReactQueryDevtools initialIsOpen={false} />
-        )}
-      </QueryClientProvider>
+    <SessionProvider
+      session={session}
+      refetchInterval={300} // Poll every 5 minutes instead of 60 seconds
+      refetchOnWindowFocus={false} // Don't poll on window focus to reduce noise
+      refetchWhenOffline={false}
+    >
+      <SessionWrapper>
+        <QueryClientProvider client={queryClient}>
+          {children}
+          {process.env.NODE_ENV === "development" && (
+            <ReactQueryDevtools initialIsOpen={false} />
+          )}
+        </QueryClientProvider>
+      </SessionWrapper>
     </SessionProvider>
   );
 }

@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
-import { EditorContent, useEditor } from "@tiptap/react";
+import { useEffect, useCallback } from "react";
+import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import { Button } from "@/components/ui/button";
+import { FaBold, FaItalic, FaListUl, FaListOl, FaLink } from "react-icons/fa";
 
 interface RichTextEditorProps {
   value: string;
@@ -10,9 +12,6 @@ interface RichTextEditorProps {
   placeholder?: string;
   id?: string;
 }
-
-const toolbarButtonBase =
-  "px-2 py-1 text-xs font-semibold rounded border border-amber-500/40 text-amber-500 hover:bg-amber-500/10";
 
 export function RichTextEditor({
   value,
@@ -35,6 +34,19 @@ export function RichTextEditor({
     },
   });
 
+  const setLink = useCallback(() => {
+    if (!editor) return;
+    const previousUrl = editor.getAttributes("link").href;
+    const url = window.prompt("URL", previousUrl);
+
+    if (url === null) return;
+    if (url === "") {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      return;
+    }
+    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+  }, [editor]);
+
   useEffect(() => {
     if (!editor) {
       return;
@@ -52,47 +64,57 @@ export function RichTextEditor({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap gap-2" role="toolbar" aria-label="Editor">
-        <button
+      <div className="flex flex-wrap items-center gap-1 border-b border-white/10 p-2 bg-white/5">
+        <Button
           type="button"
-          className={toolbarButtonBase}
+          variant={editor.isActive("bold") ? "secondary" : "ghost"}
+          size="sm"
           onClick={() => editor.chain().focus().toggleBold().run()}
-          aria-pressed={editor.isActive("bold")}
+          className="h-8 w-8 p-0"
+          aria-label="Toggle Bold"
         >
-          Bold
-        </button>
-        <button
+          <FaBold className="h-3 w-3" />
+        </Button>
+        <Button
           type="button"
-          className={toolbarButtonBase}
+          variant={editor.isActive("italic") ? "secondary" : "ghost"}
+          size="sm"
           onClick={() => editor.chain().focus().toggleItalic().run()}
-          aria-pressed={editor.isActive("italic")}
+          className="h-8 w-8 p-0"
+          aria-label="Toggle Italic"
         >
-          Italic
-        </button>
-        <button
+          <FaItalic className="h-3 w-3" />
+        </Button>
+        <Button
           type="button"
-          className={toolbarButtonBase}
+          variant={editor.isActive("bulletList") ? "secondary" : "ghost"}
+          size="sm"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
-          aria-pressed={editor.isActive("bulletList")}
+          className="h-8 w-8 p-0"
+          aria-label="Toggle Bullet List"
         >
-          Bullets
-        </button>
-        <button
+          <FaListUl className="h-3 w-3" />
+        </Button>
+        <Button
           type="button"
-          className={toolbarButtonBase}
+          variant={editor.isActive("orderedList") ? "secondary" : "ghost"}
+          size="sm"
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          aria-pressed={editor.isActive("orderedList")}
+          className="h-8 w-8 p-0"
+          aria-label="Toggle Ordered List"
         >
-          Numbered
-        </button>
-        <button
+          <FaListOl className="h-3 w-3" />
+        </Button>
+        <Button
           type="button"
-          className={toolbarButtonBase}
-          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-          aria-pressed={editor.isActive("codeBlock")}
+          variant={editor.isActive("link") ? "secondary" : "ghost"}
+          size="sm"
+          onClick={setLink}
+          className="h-8 w-8 p-0"
+          aria-label="Toggle Link"
         >
-          Code
-        </button>
+          <FaLink className="h-3 w-3" />
+        </Button>
       </div>
       <EditorContent
         id={id}

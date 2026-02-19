@@ -13,7 +13,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/forms/form-field";
 import { ErrorState } from "@/components/states/error-state";
 import { StarRating } from "@/components/ui/star-rating";
-import { FaStar, FaCheck } from "react-icons/fa";
+import { FaStar, FaCheck, FaTimes } from "react-icons/fa";
+import { toast } from "sonner";
+import { useCreateRating, useUpdateRating } from "@/lib/hooks/use-ratings";
+import { useUpdateWorklogStatus } from "@/lib/hooks/use-worklogs";
 
 interface RatingModalProps {
   open: boolean;
@@ -44,9 +47,14 @@ export function RatingModal({
     existingRating?.value || 0,
   );
   const [comment, setComment] = React.useState(existingRating?.comment || "");
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [markAsGraded, setMarkAsGraded] = React.useState(false);
+
+  const { mutateAsync: createRating } = useCreateRating();
+  const { mutateAsync: updateRating } = useUpdateRating(
+    existingRating?.id || "",
+  );
+  const { mutateAsync: updateWorklogStatus } = useUpdateWorklogStatus();
 
   // Reset form when modal opens/closes or existing rating changes
   React.useEffect(() => {
@@ -67,65 +75,49 @@ export function RatingModal({
       return;
     }
 
-    try {
-      setIsSubmitting(true);
+    const processRating = async () => {
       setError(null);
 
       if (isEditing) {
-        // Update existing rating
-        const response = await fetch(`/api/ratings/${existingRating.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            value: ratingValue,
-            comment: comment || undefined,
-          }),
+        await updateRating({
+          value: ratingValue,
+          comment: comment || undefined,
         });
-
-        if (!response.ok) {
-          const result = await response.json();
-          throw new Error(result.error || "Failed to update rating");
-        }
       } else {
-        // Create new rating
-        const response = await fetch(`/api/worklogs/${worklogId}/ratings`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            value: ratingValue,
-            comment: comment || undefined,
-          }),
+        await createRating({
+          worklogId,
+          value: ratingValue,
+          comment: comment || undefined,
         });
-
-        if (!response.ok) {
-          const result = await response.json();
-          throw new Error(result.error || "Failed to create rating");
-        }
       }
 
       // Optionally mark as graded
       if (markAsGraded && canMarkAsGraded) {
-        const statusResponse = await fetch(
-          `/api/worklogs/${worklogId}/status`,
-          {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ status: "GRADED" }),
-          },
-        );
-
-        if (!statusResponse.ok) {
-          console.error("Failed to mark as graded, but rating was saved");
-        }
+        await updateWorklogStatus({
+          worklogId,
+          newStatus: "GRADED",
+        });
       }
 
-      onOpenChange(false);
-      onSuccess?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setIsSubmitting(false);
-    }
+      return { success: true };
+    };
+
+    toast.promise(processRating(), {
+      loading: isEditing ? "Updating rating..." : "Submitting rating...",
+      success: () => {
+        onOpenChange(false);
+        onSuccess?.();
+        return isEditing
+          ? "Rating updated successfully"
+          : "Rating submitted successfully";
+      },
+      error: (err) => {
+        const message =
+          err instanceof Error ? err.message : "Failed to save rating";
+        setError(message);
+        return message;
+      },
+    });
   };
 
   const remainingChars = MAX_COMMENT_LENGTH - comment.length;
@@ -200,30 +192,21 @@ export function RatingModal({
           {/* Actions */}
           <div className="flex gap-3 pt-2">
             <Button
-              variant="outline"
-              className="flex-1 border-slate-600"
+              variant="secondary"
+              className="flex-1"
               onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
             >
+              <FaTimes className="mr-2" />
               Cancel
             </Button>
             <Button
               variant="primary"
               className="flex-1 font-medium"
               onClick={handleSubmit}
-              disabled={ratingValue === 0 || isSubmitting}
+              disabled={ratingValue === 0}
             >
-              {isSubmitting ? (
-                <>
-                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-black/30 border-t-black mr-2" />{" "}
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <FaCheck className="mr-2" />
-                  {isEditing ? "Update Rating" : "Submit Rating"}
-                </>
-              )}
+              <FaCheck className="mr-2" />
+              {isEditing ? "Update Rating" : "Submit Rating"}
             </Button>
           </div>
         </div>

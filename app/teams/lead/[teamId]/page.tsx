@@ -351,37 +351,57 @@ function TeamDetailsPageContent({
   const isDeadlinePassed = (deadline: string) =>
     new Date(deadline) < new Date();
 
-  const handleRemoveMember = (memberId: string, memberName: string) => {
-    removeMemberMutation.mutate({ memberId, memberName });
+  const handleRemoveMember = async (memberId: string, memberName: string) => {
+    toast.promise(removeMemberMutation.mutateAsync({ memberId, memberName }), {
+      loading: `Removing ${memberName}...`,
+      success: `Member ${memberName} removed successfully`,
+      error: (err) =>
+        err instanceof Error ? err.message : `Failed to remove ${memberName}`,
+    });
   };
 
-  const handleDeleteWorklog = (worklogId: string, worklogTitle: string) => {
-    deleteWorklogMutation.mutate({ worklogId, worklogTitle });
+  const handleDeleteWorklog = async (
+    worklogId: string,
+    worklogTitle: string,
+  ) => {
+    toast.promise(
+      deleteWorklogMutation.mutateAsync({ worklogId, worklogTitle }),
+      {
+        loading: `Deleting ${worklogTitle}...`,
+        success: `Worklog deleted successfully`,
+        error: (err) =>
+          err instanceof Error ? err.message : `Failed to delete worklog`,
+      },
+    );
   };
 
   const handleAssignTask = async () => {
     if (newTask.title && newTask.description && newTask.assignedTo) {
-      try {
-        await createWorklogMutation.mutateAsync({
+      const assignProcess = async () => {
+        return await createWorklogMutation.mutateAsync({
           title: newTask.title,
           description: newTask.description,
           teamId,
-          userId: newTask.assignedTo, // This is userId from Select
+          userId: newTask.assignedTo,
           deadline: newTask.deadline || undefined,
         });
+      };
 
-        // Reset form and close modal on success
-        setNewTask({
-          title: "",
-          description: "",
-          assignedTo: "",
-          deadline: "",
-        });
-        setShowModal(false);
-      } catch (error) {
-        // Error handled by hook
-        console.error("Failed to assign task:", error);
-      }
+      toast.promise(assignProcess(), {
+        loading: "Assigning task...",
+        success: () => {
+          setNewTask({
+            title: "",
+            description: "",
+            assignedTo: "",
+            deadline: "",
+          });
+          setShowModal(false);
+          return "Task assigned successfully";
+        },
+        error: (err) =>
+          err instanceof Error ? err.message : "Failed to assign task",
+      });
     } else {
       toast.error(
         "Please fill in all required fields (Title, Description, Member)",

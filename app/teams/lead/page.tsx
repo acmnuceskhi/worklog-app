@@ -77,7 +77,7 @@ export default function LeadTeamsPage() {
         </div>
         <Button onClick={() => setShowWizard(true)} variant="primary" size="lg">
           <FaPlus />
-          Create New Team
+          Create Team
         </Button>
       </div>
 
@@ -88,7 +88,7 @@ export default function LeadTeamsPage() {
           description="Create a team to start collaborating with members and tracking their worklogs"
           icon={<FaUsers className="h-8 w-8" />}
           action={{
-            label: "Create Your First Team",
+            label: "Create Team",
             onClick: () => setShowWizard(true),
           }}
         />

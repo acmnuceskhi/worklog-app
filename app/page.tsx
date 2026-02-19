@@ -5,17 +5,24 @@ import { useRouter } from "next/navigation";
 import { Share_Tech_Mono } from "next/font/google"; // Techy font
 import { FcGoogle } from "react-icons/fc";
 import { FaGithub } from "react-icons/fa";
-import { signIn, useSession } from "next-auth/react";
+import { signIn } from "next-auth/react";
+import { useSharedSession } from "@/components/providers";
+import { Button } from "@/components/ui/button";
 import styles from "./page.module.css";
 
 const shareTechMono = Share_Tech_Mono({ weight: "400", subsets: ["latin"] });
 
 export default function Home() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { data: session, status } = useSharedSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const mounted = typeof window !== "undefined";
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsMounted(true);
+  }, []);
 
   // Redirect to home if already logged in
   useEffect(() => {
@@ -38,8 +45,22 @@ export default function Home() {
   };
 
   // Prevent hydration mismatch by waiting for client mount
-  if (!mounted || status === "loading") {
-    return null;
+  if (!isMounted) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.blob1}></div>
+        <div className={styles.blob2}></div>
+      </div>
+    );
+  }
+
+  // Handle loading state
+  if (status === "loading") {
+    return (
+      <div className={styles.redirectContainer}>
+        <p className={styles.redirectText}>Initializing...</p>
+      </div>
+    );
   }
 
   // If already authenticated, show loading while redirecting
@@ -82,9 +103,13 @@ export default function Home() {
             onChange={(e) => setPassword(e.target.value)}
             className={styles.input}
           />
-          <button onClick={handleLogin} className={styles.loginButton}>
+          <Button
+            onClick={handleLogin}
+            className={styles.loginButton}
+            aria-label="Login to account"
+          >
             Login
-          </button>
+          </Button>
 
           <div className={styles.divider}>
             <div className={styles.dividerLine}></div>
@@ -93,14 +118,22 @@ export default function Home() {
           </div>
 
           <div className={styles.socialContainer}>
-            <button onClick={handleGoogleLogin} className={styles.socialButton}>
+            <Button
+              onClick={handleGoogleLogin}
+              className={styles.socialButton}
+              aria-label="Sign in with Google"
+            >
               <FcGoogle size={20} />
               Google
-            </button>
-            <button onClick={handleGithubLogin} className={styles.socialButton}>
+            </Button>
+            <Button
+              onClick={handleGithubLogin}
+              className={styles.socialButton}
+              aria-label="Sign in with GitHub"
+            >
               <FaGithub size={20} />
               GitHub
-            </button>
+            </Button>
           </div>
         </div>
       </div>

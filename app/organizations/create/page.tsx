@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/forms/form-field";
-import { ErrorState } from "@/components/states/error-state";
+import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -40,11 +40,14 @@ export default function CreateOrganizationPage() {
   });
 
   const onSubmit = async (data: OrganizationFormData) => {
-    createOrganization.mutate(data, {
-      onSuccess: () => {
-        // Navigate to organizations list on success
+    toast.promise(createOrganization.mutateAsync(data), {
+      loading: "Creating organization...",
+      success: () => {
         router.push("/teams/organisations");
+        return "Organization created successfully";
       },
+      error: (err: unknown) =>
+        err instanceof Error ? err.message : "Failed to create organization",
     });
   };
 
@@ -107,19 +110,6 @@ export default function CreateOrganizationPage() {
 
           <form onSubmit={handleSubmit(onSubmit)}>
             <CardContent className="space-y-6">
-              {/* Server Error Display */}
-              {createOrganization.error && (
-                <ErrorState
-                  title="Failed to create organization"
-                  message={
-                    createOrganization.error instanceof Error
-                      ? createOrganization.error.message
-                      : "Failed to create organization"
-                  }
-                  className="py-2"
-                />
-              )}
-
               {/* Organization Name Field */}
               <FormField
                 label="Organization Name"
@@ -162,25 +152,12 @@ export default function CreateOrganizationPage() {
                 variant="outline"
                 className="flex-1 border-white/20 text-white/70 hover:bg-white/10 hover:text-white"
                 onClick={() => router.back()}
-                disabled={createOrganization.isPending}
               >
                 <FaArrowLeft className="mr-2 h-4 w-4" />
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                disabled={createOrganization.isPending}
-                variant="primary"
-                className="flex-1"
-              >
-                {createOrganization.isPending ? (
-                  <>
-                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white mr-2" />
-                    Creating...
-                  </>
-                ) : (
-                  "Create Organization"
-                )}
+              <Button type="submit" variant="primary" className="flex-1">
+                Create Organization
               </Button>
             </CardFooter>
           </form>

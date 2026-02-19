@@ -3,6 +3,7 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { FaPlus } from "react-icons/fa";
 
 /* ──────────────────────────────────────────────────────────────────
  * EmptyState
@@ -63,10 +64,12 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     {action && (
       <Button
         variant="primary"
-        size="sm"
+        size="default"
         className="mt-2"
         onClick={action.onClick}
+        aria-label={action.label}
       >
+        <FaPlus className="mr-2" />
         {action.label}
       </Button>
     )}
