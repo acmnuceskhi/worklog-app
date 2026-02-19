@@ -13,9 +13,10 @@ import {
   FaBars,
   FaChevronLeft,
   FaChevronRight,
+  FaSignOutAlt,
 } from "react-icons/fa";
 import { useRouter, usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -148,21 +149,21 @@ export default function TeamsLayout({
   const sidebarItems = [
     {
       id: "member",
-      label: "Member Teams",
+      label: "My Teams",
       href: "/teams/member",
       icon: <FaUsers />,
       count: sidebarStats.memberTeamsCount,
     },
     {
       id: "lead",
-      label: "Lead Teams",
+      label: "Teams I Lead",
       href: "/teams/lead",
       icon: <FaUserTie />,
       count: sidebarStats.leadTeamsCount,
     },
     {
       id: "orgs",
-      label: "My Organisations",
+      label: "My Organizations",
       href: "/teams/organisations",
       icon: <FaUsers />,
       count: sidebarStats.organizationsCount,
@@ -245,7 +246,12 @@ export default function TeamsLayout({
         </div>
 
         <div className="flex gap-3">
-          <Button variant="ghost" size="sm" className="border border-white/20">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="border border-white/20"
+            aria-label="Notifications"
+          >
             <FaBell />
           </Button>
           <Button
@@ -255,11 +261,18 @@ export default function TeamsLayout({
             onClick={() =>
               setContentTheme(contentTheme === "light" ? "dark" : "light")
             }
+            aria-label={`Switch to ${contentTheme === "light" ? "dark" : "light"} mode`}
           >
             {contentTheme === "light" ? "🌙" : "☀️"}
           </Button>
-          <Button variant="danger" size="sm" onClick={() => router.push("/")}>
-            Logout
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => signOut({ callbackUrl: "/" })}
+            aria-label="Sign out of account"
+          >
+            <FaSignOutAlt className="mr-2" />
+            Sign Out
           </Button>
         </div>
       </nav>
@@ -364,7 +377,7 @@ export default function TeamsLayout({
           </div>
 
           <Button
-            variant="success"
+            variant="ghost"
             className="mt-auto w-full"
             onClick={() => router.push("/home")}
           >
@@ -384,7 +397,7 @@ export default function TeamsLayout({
             <div className="h-full flex flex-col">
               <h3 className="mt-0">Send Invites</h3>
               <Button
-                variant="success"
+                variant="primary"
                 className="w-full"
                 onClick={() => setShowInviteModal(true)}
               >
@@ -432,7 +445,7 @@ export default function TeamsLayout({
                       </p>
                       <div className="flex gap-1.5">
                         <Button
-                          variant="success"
+                          variant="primary"
                           size="sm"
                           className="flex-1 text-xs"
                           onClick={() => handleAcceptInvite(idx)}
@@ -485,7 +498,7 @@ export default function TeamsLayout({
               </FormField>
               <div className="flex gap-2">
                 <Button
-                  variant="success"
+                  variant="primary"
                   className="flex-1"
                   onClick={handleSendInvite}
                 >

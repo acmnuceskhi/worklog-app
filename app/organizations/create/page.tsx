@@ -61,7 +61,7 @@ export default function CreateOrganizationPage() {
               className="flex items-center gap-1 px-3 py-1 text-sm text-white/70"
             >
               <FaUsers className="h-4 w-4" />
-              Member Teams
+              My Teams
             </Button>
             <Button
               variant="ghost"
@@ -69,7 +69,7 @@ export default function CreateOrganizationPage() {
               className="flex items-center gap-1 px-3 py-1 text-sm text-white/70"
             >
               <FaUserTie className="h-4 w-4" />
-              Lead Teams
+              Teams I Lead
             </Button>
             <Button
               variant="ghost"
@@ -77,11 +77,11 @@ export default function CreateOrganizationPage() {
               className="flex items-center gap-1 px-3 py-1 text-sm bg-white/10 text-white"
             >
               <FaBuilding className="h-4 w-4" />
-              My Organisations
+              My Organizations
             </Button>
           </div>
         </div>
-        <Button variant="success" onClick={() => router.push("/home")}>
+        <Button variant="ghost" onClick={() => router.push("/home")}>
           Back to Dashboard
         </Button>
       </nav>

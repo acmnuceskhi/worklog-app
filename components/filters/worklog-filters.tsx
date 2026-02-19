@@ -93,7 +93,7 @@ export function WorklogFilters({
             <SelectContent className="bg-slate-900 border-slate-700">
               <SelectItem value="all">All statuses</SelectItem>
               <SelectItem value="STARTED">Started</SelectItem>
-              <SelectItem value="HALF_DONE">Half done</SelectItem>
+              <SelectItem value="HALF_DONE">Halfway Done</SelectItem>
               <SelectItem value="COMPLETED">Completed</SelectItem>
               <SelectItem value="REVIEWED">Reviewed</SelectItem>
               <SelectItem value="GRADED">Graded</SelectItem>

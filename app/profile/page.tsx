@@ -60,21 +60,21 @@ export default function ProfilePage() {
   const sidebarItems = [
     {
       id: "member",
-      label: "Member Teams",
+      label: "My Teams",
       href: "/teams/member",
       icon: <FaUsers />,
       count: sidebarStatsData?.memberTeamsCount ?? 0,
     },
     {
       id: "lead",
-      label: "Lead Teams",
+      label: "Teams I Lead",
       href: "/teams/lead",
       icon: <FaUserTie />,
       count: sidebarStatsData?.leadTeamsCount ?? 0,
     },
     {
       id: "orgs",
-      label: "My Organisations",
+      label: "My Organizations",
       href: "/teams/organisations",
       icon: <FaUsers />,
       count: sidebarStatsData?.organizationsCount ?? 0,
@@ -168,7 +168,12 @@ export default function ProfilePage() {
         </div>
 
         <div className="flex gap-3 flex-shrink-0">
-          <Button variant="ghost" size="sm" className="border border-white/20">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="border border-white/20"
+            aria-label="Notifications"
+          >
             <FaBell />
           </Button>
           <Button
@@ -178,6 +183,7 @@ export default function ProfilePage() {
             onClick={() =>
               setContentTheme(contentTheme === "dark" ? "light" : "dark")
             }
+            aria-label={`Switch to ${contentTheme === "light" ? "dark" : "light"} mode`}
           >
             {contentTheme === "light" ? "🌙" : "☀️"}
           </Button>
@@ -185,6 +191,7 @@ export default function ProfilePage() {
             variant="danger"
             size="sm"
             onClick={() => signOut({ callbackUrl: "/" })}
+            aria-label="Sign out of account"
           >
             <FaSignOutAlt className="mr-2" /> Sign Out
           </Button>
@@ -292,7 +299,7 @@ export default function ProfilePage() {
           </div>
 
           <Button
-            variant="success"
+            variant="ghost"
             className="mt-auto w-full"
             onClick={() => router.push("/home")}
           >
@@ -334,13 +341,13 @@ export default function ProfilePage() {
                   {sidebarLoading
                     ? "..."
                     : (sidebarStatsData?.memberTeamsCount ?? 0)}{" "}
-                  member teams
+                  teams joined
                 </span>
                 <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
                   {sidebarLoading
                     ? "..."
                     : (sidebarStatsData?.leadTeamsCount ?? 0)}{" "}
-                  lead teams
+                  teams leading
                 </span>
                 <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
                   {sidebarLoading

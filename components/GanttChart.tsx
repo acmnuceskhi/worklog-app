@@ -197,7 +197,7 @@ export function GanttChart({ tasks }: GanttChartProps) {
             })
           ) : (
             <p className="text-center text-gray-400 py-8">
-              No tasks assigned yet
+              Worklogs will appear here once they&apos;re created
             </p>
           )}
         </CardContent>

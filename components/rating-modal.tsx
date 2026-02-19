@@ -208,7 +208,7 @@ export function RatingModal({
               Cancel
             </Button>
             <Button
-              variant="warning"
+              variant="primary"
               className="flex-1 font-medium"
               onClick={handleSubmit}
               disabled={ratingValue === 0 || isSubmitting}

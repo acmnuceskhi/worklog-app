@@ -312,6 +312,7 @@ export const MultiStepWizard: React.FC<MultiStepWizardProps> = ({
           )}
           <Button
             type="button"
+            variant="primary"
             onClick={handleNext}
             disabled={isSubmitting}
             aria-label={isLastStep ? "Submit form" : "Go to next step"}

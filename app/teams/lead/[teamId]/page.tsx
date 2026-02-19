@@ -2,7 +2,7 @@
 
 import React, { use } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FaPlus } from "react-icons/fa";
+import { FaPlus, FaTrash } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
 import { ErrorState } from "@/components/states/error-state";
 import {
@@ -490,17 +490,21 @@ function TeamDetailsPageContent({
                       </td>
                       <td className="py-3 px-2">
                         <Button
-                          variant="ghost"
+                          variant="danger"
                           size="sm"
                           onClick={() =>
                             handleRemoveMember(member.id, member.name)
                           }
                           disabled={removeMemberMutation.isPending}
-                          className="text-red-400 hover:bg-red-500/10"
                         >
-                          {removeMemberMutation.isPending
-                            ? "Removing..."
-                            : "Remove"}
+                          {removeMemberMutation.isPending ? (
+                            "Removing..."
+                          ) : (
+                            <>
+                              <FaTrash className="mr-2" />
+                              Remove
+                            </>
+                          )}
                         </Button>
                       </td>
                     </tr>
@@ -684,23 +688,30 @@ function TeamDetailsPageContent({
                     </span>
                     <Button
                       type="button"
-                      variant="outline"
-                      className="border-red-400/30 text-red-300 hover:bg-red-500/20 ml-auto"
+                      variant="danger"
+                      size="sm"
                       onClick={() =>
                         handleDeleteWorklog(worklog.id, worklog.title)
                       }
                       disabled={deleteWorklogMutation.isPending}
                     >
-                      {deleteWorklogMutation.isPending
-                        ? "Deleting..."
-                        : "Delete"}
+                      {deleteWorklogMutation.isPending ? (
+                        "Deleting..."
+                      ) : (
+                        <>
+                          <FaTrash className="mr-2" />
+                          Delete
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted">No worklogs submitted yet.</p>
+            <p className="text-sm text-muted">
+              Worklogs from team members will appear here.
+            </p>
           )}
         </CardContent>
       </Card>

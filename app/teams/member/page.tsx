@@ -46,9 +46,9 @@ function MemberTeamsPageContent() {
     <div className="p-5 min-h-full space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-white">Member Teams</h1>
+          <h1 className="text-2xl font-semibold text-white">My Teams</h1>
           <p className="text-muted">
-            Teams you are part of this semester and their leads.
+            Teams you&apos;re a member of and their team leads.
           </p>
         </div>
         {!isLoading && !isError && (
@@ -120,8 +120,8 @@ function MemberTeamsPageContent() {
             </div>
           ) : (
             <EmptyState
-              title="No teams joined yet"
-              description="Accept an invitation to get started with your first worklog."
+              title="Welcome to your teams!"
+              description="You'll see teams here once you accept invitations from team leaders."
               icon={<FaUsers className="h-8 w-8" />}
             />
           )}

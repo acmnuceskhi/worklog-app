@@ -56,10 +56,10 @@ export default function LeadTeamsPage() {
         <div>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
             <FaUsers className="text-blue-400" />
-            My Teams (Team Lead)
+            Teams I Lead
           </h1>
           <p className="text-muted mt-1">
-            Manage teams you own and create new ones
+            Manage your teams, review worklogs, and invite new members
           </p>
           {teams.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2 text-xs">
@@ -84,8 +84,8 @@ export default function LeadTeamsPage() {
       {/* Teams Grid */}
       {teams.length === 0 ? (
         <EmptyState
-          title="No teams yet"
-          description="Create your first team to start managing worklogs and members"
+          title="Ready to lead your first team?"
+          description="Create a team to start collaborating with members and tracking their worklogs"
           icon={<FaUsers className="h-8 w-8" />}
           action={{
             label: "Create Your First Team",

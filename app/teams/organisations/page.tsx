@@ -140,8 +140,8 @@ export default function OrganisationsPage() {
         {/* Organizations Grid */}
         {organizations.length === 0 ? (
           <EmptyState
-            title="No organizations yet"
-            description="Create your first organization to get started"
+            title="Start building your organization"
+            description="Create an organization to group your teams and manage them at scale"
             icon={<FaBuilding className="h-8 w-8" />}
             action={{
               label: "Create Organization",

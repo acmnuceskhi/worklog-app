@@ -3,6 +3,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { FaTrash } from "react-icons/fa";
 
 /* ──────────────────────────────────────────────────────────────────
  * CrudActions
@@ -64,6 +65,7 @@ export const CrudActions: React.FC<CrudActionsProps> = ({
         onClick={onDelete}
         disabled={isDeleting}
       >
+        <FaTrash className="mr-2" />
         {isDeleting ? "Deleting…" : "Delete"}
       </Button>
     )}

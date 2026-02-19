@@ -231,7 +231,7 @@ function ContributionFlashcardPageContent({
           string,
           Array<{ value: string; label: string }>
         > = {
-          STARTED: [{ value: "HALF_DONE", label: "Half Done" }],
+          STARTED: [{ value: "HALF_DONE", label: "Halfway Done" }],
           HALF_DONE: [{ value: "COMPLETED", label: "Completed" }],
           COMPLETED: [],
         };
@@ -739,19 +739,19 @@ function ContributionFlashcardPageContent({
               </FormField>
 
               <FormField
-                label="GitHub Link (optional)"
+                label="GitHub Link"
                 htmlFor="githubLink"
                 error={errors.githubLink?.message}
               >
                 <Input
                   id="githubLink"
                   {...register("githubLink")}
-                  placeholder="https://github.com/owner/repo/pull/123"
+                  placeholder="https://github.com/owner/repo/pull/123 (optional)"
                   className="bg-white/5 border-white/20 text-white placeholder:text-white/50"
                 />
               </FormField>
 
-              <FormField label="Progress Status">
+              <FormField label="Current Progress">
                 <Select
                   value={watch("progressStatus") || "STARTED"}
                   onValueChange={(value) =>
@@ -762,14 +762,14 @@ function ContributionFlashcardPageContent({
                   }
                 >
                   <SelectTrigger className="bg-white/5 border-white/20 text-white">
-                    <SelectValue placeholder="Select status" />
+                    <SelectValue placeholder="Select your progress" />
                   </SelectTrigger>
                   <SelectContent className="bg-[var(--panel-strong)] border-white/10">
                     <SelectItem value="STARTED" className="text-white/80">
-                      Started
+                      Just Started
                     </SelectItem>
                     <SelectItem value="HALF_DONE" className="text-white/80">
-                      Half done
+                      Halfway Done
                     </SelectItem>
                     <SelectItem value="COMPLETED" className="text-white/80">
                       Completed
@@ -807,7 +807,7 @@ function ContributionFlashcardPageContent({
                 </FormField>
               )}
 
-              <FormField label="Upload Evidence" htmlFor="files">
+              <FormField label="Attach Files" htmlFor="files">
                 <div
                   onDrop={handleDrop}
                   onDragOver={handleDragOver}
@@ -829,7 +829,7 @@ function ContributionFlashcardPageContent({
                     </button>
                   </p>
                   <p className="text-center text-xs text-white/60 mt-1">
-                    Images and PDFs only. Drafts do not include attachments.
+                    Add images or PDFs to support your worklog.
                   </p>
                   <Input
                     ref={fileInputRef}
@@ -987,7 +987,7 @@ function ContributionFlashcardPageContent({
                               {worklog.progressStatus === "STARTED" &&
                                 "Started"}
                               {worklog.progressStatus === "HALF_DONE" &&
-                                "Half Done"}
+                                "Halfway Done"}
                               {worklog.progressStatus === "COMPLETED" &&
                                 "Completed"}
                               {!worklog.progressStatus && "Started"}

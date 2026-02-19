@@ -13,6 +13,7 @@ import {
   FaBars,
   FaChevronLeft,
   FaChevronRight,
+  FaSignOutAlt,
 } from "react-icons/fa";
 import { signOut, useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
@@ -154,21 +155,21 @@ export default function DashboardPage() {
   const sidebarItems = [
     {
       id: "member",
-      label: "Member Teams",
+      label: "My Teams",
       href: "/teams/member",
       icon: <FaUsers />,
       count: sidebarStatsData?.memberTeamsCount ?? 0,
     },
     {
       id: "lead",
-      label: "Lead Teams",
+      label: "Teams I Lead",
       href: "/teams/lead",
       icon: <FaUserTie />,
       count: sidebarStatsData?.leadTeamsCount ?? 0,
     },
     {
       id: "orgs",
-      label: "My Organisations",
+      label: "My Organizations",
       href: "/teams/organisations",
       icon: <FaUsers />,
       count: sidebarStatsData?.organizationsCount ?? 0,
@@ -278,6 +279,7 @@ export default function DashboardPage() {
             variant="ghost"
             size="sm"
             className="border border-white/20 text-white"
+            aria-label="Notifications"
           >
             <FaBell />
           </Button>
@@ -311,16 +313,19 @@ export default function DashboardPage() {
             onClick={() =>
               setContentTheme(contentTheme === "light" ? "dark" : "light")
             }
+            aria-label={`Switch to ${contentTheme === "light" ? "dark" : "light"} mode`}
           >
             {contentTheme === "light" ? "🌙" : "☀️"}
           </Button>
           <Button
-            variant="ghost"
+            variant="danger"
             size="sm"
             className="border border-white/20 text-white"
             onClick={() => signOut({ callbackUrl: "/" })}
+            aria-label="Sign out of account"
           >
-            Logout
+            <FaSignOutAlt className="mr-2" />
+            Sign Out
           </Button>
         </div>
       </nav>
@@ -428,7 +433,7 @@ export default function DashboardPage() {
           </div>
 
           <Button
-            variant="success"
+            variant="primary"
             className="mt-auto w-full flex gap-2 items-center justify-center"
             onClick={() => setShowCreateTeam(true)}
           >
@@ -441,9 +446,9 @@ export default function DashboardPage() {
             className={`${cardClassName} flex flex-col gap-4 md:flex-row md:items-center md:justify-between`}
           >
             <div>
-              <h2 className="text-xl font-semibold">Welcome back 👋</h2>
+              <h2 className="text-xl font-semibold">Welcome back!</h2>
               <p className="text-muted">
-                Quick access to your teams, tasks, and recent activity.
+                Here&apos;s what&apos;s happening with your teams and work.
               </p>
               <Button variant="primary">View My Teams</Button>
             </div>
@@ -453,13 +458,13 @@ export default function DashboardPage() {
                 <div className="text-lg font-semibold text-white">
                   {teams.length}
                 </div>
-                <div className="text-white/60">Visible Teams</div>
+                <div className="text-white/60">My Teams</div>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white/80">
                 <div className="text-lg font-semibold text-white">
                   {sidebarStatsData?.pendingReviewsCount ?? 0}
                 </div>
-                <div className="text-white/60">Pending Reviews</div>
+                <div className="text-white/60">Reviews Pending</div>
               </div>
             </div>
           </section>
@@ -468,7 +473,8 @@ export default function DashboardPage() {
             <h3>Featured Teams</h3>
             {teams.length === 0 ? (
               <p className="text-muted">
-                No teams yet. Create your first team to get started!
+                Ready to get started? Create your first team to begin
+                collaborating!
               </p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -518,7 +524,8 @@ export default function DashboardPage() {
             <h3>Recent Worklogs</h3>
             {allWorklogs.length === 0 ? (
               <p className="text-muted">
-                No worklogs yet. Start by creating your first worklog!
+                Your worklogs will appear here once you start tracking your
+                progress.
               </p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -668,7 +675,7 @@ export default function DashboardPage() {
                 Cancel
               </Button>
               <Button
-                variant="success"
+                variant="primary"
                 onClick={() => {
                   alert(
                     `Team Created!\nName: ${teamName}\nDescription: ${teamDesc}\nEmails: ${inviteEmails.join(

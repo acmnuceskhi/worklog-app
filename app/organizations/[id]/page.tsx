@@ -506,7 +506,7 @@ export default function OrganizationDashboardPage({
               className="flex items-center gap-1"
             >
               <FaUsers className="h-4 w-4" />
-              Member Teams
+              My Teams
             </Button>
             <Button
               variant="ghost"
@@ -515,7 +515,7 @@ export default function OrganizationDashboardPage({
               className="flex items-center gap-1"
             >
               <FaUserTie className="h-4 w-4" />
-              Lead Teams
+              Teams I Lead
             </Button>
             <Button
               variant="ghost"
@@ -524,11 +524,11 @@ export default function OrganizationDashboardPage({
               className="flex items-center gap-1 bg-white/10 text-white"
             >
               <FaBuilding className="h-4 w-4" />
-              My Organisations
+              My Organizations
             </Button>
           </div>
         </div>
-        <Button variant="success" onClick={() => router.push("/home")}>
+        <Button variant="ghost" onClick={() => router.push("/home")}>
           Back to Dashboard
         </Button>
       </nav>
@@ -562,10 +562,7 @@ export default function OrganizationDashboardPage({
             </div>
 
             <div className="flex items-center gap-3">
-              <Button
-                onClick={() => setShowCreateTeam(true)}
-                className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
-              >
+              <Button variant="primary" onClick={() => setShowCreateTeam(true)}>
                 <FaPlus className="mr-2" /> Create Team
               </Button>
               <Button
@@ -642,7 +639,10 @@ export default function OrganizationDashboardPage({
                   <p className="text-muted mb-4">
                     No teams match these filters
                   </p>
-                  <Button onClick={() => setShowCreateTeam(true)}>
+                  <Button
+                    onClick={() => setShowCreateTeam(true)}
+                    variant="primary"
+                  >
                     <FaPlus className="mr-2" /> Create Your First Team
                   </Button>
                 </div>
@@ -907,7 +907,7 @@ export default function OrganizationDashboardPage({
                   Cancel
                 </Button>
                 <Button
-                  variant="success"
+                  variant="primary"
                   className="flex-1"
                   onClick={handleCreateTeam}
                   disabled={!newTeamName.trim() || isCreatingTeam}
