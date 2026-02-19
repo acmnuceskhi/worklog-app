@@ -121,6 +121,7 @@ export const useCreateWorklog = () => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.worklogs.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() }); // Invalidate dashboard cache
       if (data.teamId) {
         queryClient.invalidateQueries({
           queryKey: queryKeys.teams.worklogs(data.teamId),
@@ -208,6 +209,7 @@ export const useUpdateWorklogStatus = () => {
     onSettled: () => {
       // Always refetch to ensure server state consistency
       queryClient.invalidateQueries({ queryKey: queryKeys.worklogs.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() }); // Invalidate dashboard cache
     },
   });
 };
@@ -270,6 +272,7 @@ export const useUpdateWorklogDeadline = () => {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.worklogs.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() }); // Invalidate dashboard cache
     },
   });
 };
@@ -305,6 +308,7 @@ export const useDeleteWorklog = (teamId?: string) => {
     onSuccess: (data) => {
       // Invalidate both global and team-specific worklog lists
       queryClient.invalidateQueries({ queryKey: queryKeys.worklogs.all() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() }); // Invalidate dashboard cache
       if (teamId) {
         queryClient.invalidateQueries({
           queryKey: queryKeys.teams.worklogs(teamId),

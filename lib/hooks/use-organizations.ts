@@ -102,6 +102,7 @@ export const useCreateOrganization = () => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.organizations.list(),
       });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() }); // Invalidate dashboard cache
       queryClient.invalidateQueries({
         queryKey: queryKeys.user.sidebarStats(),
       });

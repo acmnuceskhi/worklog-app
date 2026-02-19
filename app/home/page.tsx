@@ -22,7 +22,13 @@ import { DeadlineStatusBadge } from "@/components/worklog/deadline-status-badge"
 import { DeadlineCountdown } from "@/components/worklog/deadline-countdown";
 import { toast } from "sonner";
 import { formatLocalDate, getDeadlineStatus } from "@/lib/deadline-utils";
-import { useDashboard, useMounted, useContentTheme } from "@/lib/hooks";
+import {
+  useDashboard,
+  useMounted,
+  useContentTheme,
+  usePrefetchOwnedTeams,
+  usePrefetchMemberTeams,
+} from "@/lib/hooks";
 import { LoadingState } from "@/components/states/loading-state";
 
 export default function DashboardPage() {
@@ -32,6 +38,10 @@ export default function DashboardPage() {
 
   // TanStack Query hooks for data fetching
   const { data: dashboardData, isLoading } = useDashboard();
+
+  // Prefetch hooks for performance optimization
+  const prefetchOwnedTeams = usePrefetchOwnedTeams();
+  const prefetchMemberTeams = usePrefetchMemberTeams();
 
   // Extract data from combined dashboard response
   const sidebarStatsData = dashboardData?.sidebarStats;
@@ -207,12 +217,19 @@ export default function DashboardPage() {
   }`;
   const handleNavigate = useCallback(
     (href: string) => {
+      // Prefetch data for the destination page
+      if (href === "/teams/member") {
+        prefetchMemberTeams();
+      } else if (href === "/teams/lead") {
+        prefetchOwnedTeams();
+      }
+
       router.push(href);
       if (isMobile) {
         setIsSidebarOpen(false);
       }
     },
-    [router, isMobile],
+    [router, isMobile, prefetchMemberTeams, prefetchOwnedTeams],
   );
 
   const removeEmail = (email: string) => {

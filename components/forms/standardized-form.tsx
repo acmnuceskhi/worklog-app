@@ -19,11 +19,16 @@ import { cn } from "@/lib/utils";
  *   </StandardizedForm>
  * ────────────────────────────────────────────────────────────────── */
 
-export interface StandardizedFormProps extends React.FormHTMLAttributes<HTMLFormElement> {
+export interface StandardizedFormProps extends Omit<
+  React.FormHTMLAttributes<HTMLFormElement>,
+  "onSubmit"
+> {
   /** Show loading overlay while the form is being submitted */
   isSubmitting?: boolean;
   /** Text shown alongside the spinner during submission */
   submittingText?: string;
+  /** Form submit handler */
+  onSubmit?: (event: SubmitEvent) => void;
 }
 
 export const StandardizedForm = React.forwardRef<
@@ -43,7 +48,7 @@ export const StandardizedForm = React.forwardRef<
   ) => {
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
-      onSubmit?.(e);
+      onSubmit?.(e as unknown as SubmitEvent);
     };
 
     return (

@@ -84,7 +84,8 @@ export const useDashboard = () => {
 
       throw new Error("Invalid dashboard response format");
     },
-    staleTime: 30000, // 30 seconds - refresh dashboard every 30s
-    gcTime: 300000, // 5 minutes - keep cached for 5 minutes after stale
+    staleTime: 2 * 60 * 1000, // Increased to 2 minutes - dashboard doesn't need 30s updates
+    gcTime: 10 * 60 * 1000, // 10 minutes cache
+    refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 };

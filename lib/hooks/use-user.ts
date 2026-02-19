@@ -86,7 +86,7 @@ export const useSidebarStats = () => {
       return hasPending ? 10 * 1000 : 30 * 1000; // 10s or 30s
     },
     refetchIntervalInBackground: false,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false, // Disable window focus refetch since we poll
     refetchOnReconnect: true,
   });
 };

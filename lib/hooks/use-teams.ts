@@ -165,6 +165,7 @@ export const useCreateTeam = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.teams.list() });
       queryClient.invalidateQueries({ queryKey: queryKeys.teams.owned() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() }); // Invalidate dashboard cache
       queryClient.invalidateQueries({
         queryKey: queryKeys.user.sidebarStats(),
       });
@@ -324,6 +325,7 @@ export const useDeleteTeam = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.teams.all() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() }); // Invalidate dashboard cache
       queryClient.invalidateQueries({
         queryKey: queryKeys.user.sidebarStats(),
       });
