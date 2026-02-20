@@ -32,6 +32,7 @@ export const queryKeys = {
     list: () => ["teams", "list"] as const,
     owned: () => ["teams", "owned"] as const,
     member: () => ["teams", "member"] as const,
+    invitations: () => ["teams", "invitations"] as const,
     detail: (id: string) => ["teams", id] as const,
     members: (id: string) => ["teams", id, "members"] as const,
     worklogs: (id: string) => ["teams", id, "worklogs"] as const,

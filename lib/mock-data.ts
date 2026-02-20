@@ -187,6 +187,20 @@ export const mockTeamMembers: MockTeamMember[] = isDevelopment
         invitedAt: new Date("2026-01-26"),
         joinedAt: new Date("2026-01-27"),
       },
+      {
+        id: "mock-pending-invitation-1",
+        teamId: "mock-team-1",
+        email: "alice@techcorp.com", // Mock current user email
+        status: "PENDING",
+        invitedAt: new Date("2026-02-15"),
+      },
+      {
+        id: "mock-pending-invitation-2",
+        teamId: "mock-team-2",
+        email: "alice@techcorp.com", // Mock current user email
+        status: "PENDING",
+        invitedAt: new Date("2026-02-18"),
+      },
     ]
   : [];
 

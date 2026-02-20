@@ -33,6 +33,7 @@ import {
 import { LoadingState } from "@/components/states/loading-state";
 import { EmptyState } from "@/components/states/empty-state";
 import { TeamCreationWizard } from "@/components/teams/team-creation-wizard";
+import { InvitationsPanel } from "@/components/invitations-panel";
 const lobster = Lobster_Two({
   weight: ["400", "700"],
   subsets: ["latin"],
@@ -620,6 +621,8 @@ export default function DashboardPage() {
             )}
           </section>
         </main>
+
+        <InvitationsPanel />
       </div>
 
       <TeamCreationWizard

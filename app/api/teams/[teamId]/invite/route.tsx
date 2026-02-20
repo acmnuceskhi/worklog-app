@@ -1,15 +1,9 @@
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { Resend } from "resend";
-import { TeamInvitationEmail } from "@/components/team-invitation-email";
+import { emailService } from "@/lib/email/service";
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { validateRequest, teamInviteMultipleSchema } from "@/lib/validations";
-
-// Only initialize if API key exists
-const resend = process.env.RESEND_API_KEY
-  ? new Resend(process.env.RESEND_API_KEY)
-  : null;
 
 export async function POST(
   request: NextRequest,
@@ -49,6 +43,9 @@ export async function POST(
       where: {
         id: teamId,
         ownerId: session.user.id,
+      },
+      include: {
+        organization: true,
       },
     });
 
@@ -101,39 +98,31 @@ export async function POST(
         const acceptUrl = `${baseUrl}/api/invitations/${token}/accept`;
         const rejectUrl = `${baseUrl}/api/invitations/${token}/reject`;
 
-        // Send invitation email (only if RESEND_API_KEY is configured)
-        let emailData = null;
-        if (resend) {
-          const { data, error: emailError } = await resend.emails.send({
-            from: "Worklog App <noreply@worklog-app.com>",
-            to: [email],
-            subject: `You're invited to join ${team.name} on Worklog App`,
-            react: TeamInvitationEmail({
-              teamName: team.name,
-              inviterName:
-                session.user.name || session.user.email || "Team Owner",
-              acceptUrl,
-              rejectUrl,
-            }),
-          });
+        // Send invitation email using standardized service
+        const emailResult = await emailService.sendTeamInvitation({
+          teamName: team.name,
+          inviterName: session.user.name || session.user.email || "Team Owner",
+          acceptUrl,
+          rejectUrl,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+          recipientEmail: email,
+          recipientName: user?.name ?? undefined,
+          organizationName: team.organization?.name,
+        });
 
-          if (emailError) {
-            console.error("Failed to send invitation email:", emailError);
-            errors.push({ email, error: emailError.message });
-            continue; // Skip to next email
-          }
-          emailData = data;
-        } else {
-          // Email service not configured, but invitation is created
-          console.warn(
-            "RESEND_API_KEY not configured, invitation created but email not sent",
-          );
+        if (!emailResult.success) {
+          console.error("Failed to send invitation email:", emailResult.error);
+          errors.push({
+            email,
+            error: emailResult.error || "Email sending failed",
+          });
+          continue; // Skip to next email
         }
 
         results.push({
           email,
           teamMemberId: teamMember.id,
-          emailId: emailData?.id,
+          emailId: emailResult.emailId,
         });
       } catch (error) {
         errors.push({

@@ -113,6 +113,12 @@ export const teamInviteMultipleSchema = z.object({
     .min(1, "At least one email is required"),
 });
 
+export const organizationInviteMultipleSchema = z.object({
+  emails: z
+    .array(z.string().email("Invalid email format"))
+    .min(1, "At least one email is required"),
+});
+
 /**
  * Worklog Schemas
  */

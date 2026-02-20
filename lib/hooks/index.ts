@@ -39,6 +39,14 @@ export {
   type TeamMember,
 } from "./use-teams";
 
+// Team invitation hooks
+export {
+  useTeamInvitations,
+  useAcceptInvitation,
+  useRejectInvitation,
+  type TeamInvitation,
+} from "./use-team-invitations";
+
 // Worklog hooks
 export {
   useWorklogs,

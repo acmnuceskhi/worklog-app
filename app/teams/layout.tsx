@@ -8,7 +8,6 @@ import {
   FaUserTie,
   FaBell,
   FaSearch,
-  FaPlus,
   FaBars,
   FaChevronLeft,
   FaChevronRight,
@@ -18,17 +17,12 @@ import { useRouter, usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useSharedSession } from "@/components/providers";
 import { AnimatePresence, motion } from "framer-motion";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { useMounted, useContentTheme, useSidebarStats } from "@/lib/hooks";
-import { FormField } from "@/components/forms/form-field";
-import { LoadingState } from "@/components/states/loading-state";
+import { InvitationsPanel } from "@/components/invitations-panel";
+import { TeamLeaderInvitationsPanel } from "@/components/team-leader-invitations-panel";
+import { OrganizationInvitationsPanel } from "@/components/organization-invitations-panel";
+import { LoadingState } from "@/components/states";
 
 const lobsterTwo = Lobster_Two({
   weight: ["400", "700"],
@@ -46,15 +40,6 @@ export default function TeamsLayout({
   useSharedSession();
   const [contentTheme, setContentTheme] = useContentTheme();
   const mounted = useMounted();
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [sentInvites, setSentInvites] = useState<string[]>([]);
-  const [receivedInvites, setReceivedInvites] = useState<
-    { from: string; team: string }[]
-  >([
-    { from: "Alice", team: "Design Masters" },
-    { from: "Bob", team: "Dev Team" },
-  ]);
   const [query, setQuery] = useState("");
 
   // TanStack Query hook for sidebar stats
@@ -63,9 +48,6 @@ export default function TeamsLayout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-
-  const isLeadPage = pathname.includes("/lead");
-  const isMemberPage = pathname.includes("/member");
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 960px)");
@@ -83,21 +65,10 @@ export default function TeamsLayout({
     return () => mediaQuery.removeEventListener("change", update);
   }, []);
 
-  const handleSendInvite = () => {
-    if (inviteEmail.trim()) {
-      setSentInvites([...sentInvites, inviteEmail]);
-      setInviteEmail("");
-      setShowInviteModal(false);
-    }
-  };
-
-  const handleAcceptInvite = (idx: number) => {
-    setReceivedInvites(receivedInvites.filter((_, i) => i !== idx));
-  };
-
-  const handleDeclineInvite = (idx: number) => {
-    setReceivedInvites(receivedInvites.filter((_, i) => i !== idx));
-  };
+  // Determine which invitation panel to show based on current page/role
+  const isLeadPage = pathname.includes("/lead");
+  const isMemberPage = pathname.includes("/member");
+  const isOrganizationsPage = pathname.includes("/organisations");
 
   const sidebarItems = [
     {
@@ -143,8 +114,6 @@ export default function TeamsLayout({
       ? "fixed top-[88px] left-[12px] bottom-[12px] h-auto shadow-[0_24px_80px_rgba(2,6,23,0.4)]"
       : ""
   } ${isSidebarCollapsed && !isMobile ? "w-[72px]" : "w-56"}`;
-  const invitesClassName =
-    "w-[300px] p-4 rounded-xl flex-shrink-0 bg-[var(--nav-bg)] text-yellow-300 max-[960px]:w-full";
   const handleNavigate = useCallback(
     (href: string) => {
       router.push(href);
@@ -340,130 +309,11 @@ export default function TeamsLayout({
           {children}
         </main>
 
-        <aside className={`${invitesClassName} flex flex-col`}>
-          {isLeadPage ? (
-            <div className="h-full flex flex-col">
-              <h3 className="mt-0">Send Invites</h3>
-              <Button
-                variant="primary"
-                className="w-full"
-                onClick={() => setShowInviteModal(true)}
-              >
-                <FaPlus className="mr-2" /> Invite
-              </Button>
-
-              <div className="flex-1 overflow-y-auto flex flex-col gap-2">
-                {sentInvites.length > 0 ? (
-                  sentInvites.map((email, idx) => (
-                    <div
-                      key={idx}
-                      className="bg-amber-500/10 border border-amber-400/30 p-2 rounded-lg text-xs"
-                    >
-                      <p className="m-0 font-semibold text-amber-200">
-                        {email}
-                      </p>
-                      <p className="mt-1 mb-0 text-amber-200/70 text-xs">
-                        Pending...
-                      </p>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-muted text-center m-auto">
-                    No invites sent
-                  </p>
-                )}
-              </div>
-            </div>
-          ) : isMemberPage ? (
-            <div className="h-full flex flex-col">
-              <h3 className="mt-0">Invitations</h3>
-
-              <div className="flex-1 overflow-y-auto flex flex-col gap-3">
-                {receivedInvites.length > 0 ? (
-                  receivedInvites.map((invite, idx) => (
-                    <div
-                      key={idx}
-                      className="bg-white/5 border border-white/10 p-2.5 rounded-lg border-l-4 border-l-amber-400/70"
-                    >
-                      <p className="m-0 font-semibold text-amber-200">
-                        {invite.team}
-                      </p>
-                      <p className="my-1 mb-2 text-white/70 text-xs">
-                        From: {invite.from}
-                      </p>
-                      <div className="flex gap-1.5">
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          className="flex-1 text-xs"
-                          onClick={() => handleAcceptInvite(idx)}
-                        >
-                          Accept
-                        </Button>
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          className="flex-1 text-xs"
-                          onClick={() => handleDeclineInvite(idx)}
-                        >
-                          Decline
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-muted text-center m-auto">
-                    No invitations
-                  </p>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div>
-              <h3>Invitations</h3>
-            </div>
-          )}
-        </aside>
+        {/* Role-based invitation panels */}
+        {isMemberPage && <InvitationsPanel />}
+        {isLeadPage && <TeamLeaderInvitationsPanel />}
+        {isOrganizationsPage && <OrganizationInvitationsPanel />}
       </div>
-
-      {/* Send Invite Dialog */}
-      {isLeadPage && (
-        <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
-          <DialogContent className="bg-white/5 border-white/10 backdrop-blur-md">
-            <DialogHeader>
-              <DialogTitle className="text-amber-200">
-                Invite Team Member
-              </DialogTitle>
-            </DialogHeader>
-            <div className="flex flex-col gap-4">
-              <FormField label="Email Address">
-                <Input
-                  placeholder="member@example.com"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  className="bg-white/5 border-white/20 text-white placeholder:text-white/50"
-                />
-              </FormField>
-              <div className="flex gap-2">
-                <Button
-                  variant="primary"
-                  className="flex-1"
-                  onClick={handleSendInvite}
-                >
-                  Send Invite
-                </Button>
-                <Button
-                  variant="danger"
-                  className="flex-1"
-                  onClick={() => setShowInviteModal(false)}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
     </div>
   );
 }
