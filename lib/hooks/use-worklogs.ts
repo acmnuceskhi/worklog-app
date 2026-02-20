@@ -5,6 +5,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
+import { isDevelopment, mockWorklogs, mockUsers } from "@/lib/mock-data";
+import { toLocalDateString } from "@/lib/deadline-utils";
 
 export type ProgressStatus =
   | "STARTED"
@@ -43,6 +45,16 @@ export const useWorklogs = () => {
   return useQuery({
     queryKey: queryKeys.worklogs.list(),
     queryFn: async () => {
+      // In development, return mock data if available
+      if (isDevelopment && mockWorklogs.length > 0) {
+        return mockWorklogs.map((w) => ({
+          ...w,
+          deadline: w.deadline ? toLocalDateString(w.deadline) : undefined,
+          createdAt: w.createdAt.toISOString(),
+          updatedAt: w.updatedAt.toISOString(),
+        })) as WorklogPreview[];
+      }
+
       const response = await fetch("/api/worklogs");
       if (!response.ok) {
         throw new Error("Failed to fetch worklogs");
@@ -61,6 +73,30 @@ export const useTeamWorklogs = (teamId: string) => {
   return useQuery({
     queryKey: queryKeys.teams.worklogs(teamId),
     queryFn: async () => {
+      // In development, return mock data for the team
+      if (isDevelopment) {
+        const mockTeamWorklogs = mockWorklogs.filter(
+          (w) => w.teamId === teamId,
+        );
+        if (mockTeamWorklogs.length > 0) {
+          return mockTeamWorklogs.map((w) => {
+            const user = mockUsers.find((u) => u.id === w.userId);
+            return {
+              ...w,
+              deadline: w.deadline ? toLocalDateString(w.deadline) : undefined,
+              createdAt: w.createdAt.toISOString(),
+              updatedAt: w.updatedAt.toISOString(),
+              user: user
+                ? {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                  }
+                : undefined,
+            };
+          }) as WorklogPreview[];
+        }
+      }
       const response = await fetch(`/api/teams/${teamId}/worklogs`);
       if (!response.ok) {
         throw new Error("Failed to fetch team worklogs");

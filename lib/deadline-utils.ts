@@ -20,12 +20,24 @@ const MS_PER_DAY = 24 * MS_PER_HOUR;
 export function parseDeadline(input?: string | Date | null): Date | null {
   if (!input) return null;
   if (input instanceof Date) return input;
+
+  // Handle ISO strings that represent local dates (not UTC)
   const parsed = new Date(input);
+
+  // If the input looks like a date-only string (YYYY-MM-DD), treat it as local date at start of day
+  if (typeof input === "string" && /^\d{4}-\d{2}-\d{2}$/.test(input)) {
+    const [year, month, day] = input.split("-").map(Number);
+    return new Date(year, month - 1, day); // Month is 0-indexed
+  }
+
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-export function toUtcIso(date: Date): string {
-  return date.toISOString();
+export function toLocalDateString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export function formatLocalDate(date: Date, withTime: boolean = false): string {
@@ -107,11 +119,27 @@ export function getDeadlineStatus(params: {
 export function getCountdownLabel(params: {
   deadline?: string | Date | null;
   now?: Date;
+  status?: string | null;
+  completedAt?: string | Date | null;
 }): { label: string; isOverdue: boolean } {
   const now = params.now ?? new Date();
   const deadline = parseDeadline(params.deadline);
+  const completedAt = parseDeadline(params.completedAt);
+  const status = params.status?.toLowerCase() ?? "";
+
   if (!deadline) {
     return { label: "No deadline", isOverdue: false };
+  }
+
+  // Check if worklog is completed
+  const isCompleted = status.includes("completed") || status === "graded";
+  if (isCompleted) {
+    const completionTime = completedAt ?? now;
+    const onTime = completionTime.getTime() <= deadline.getTime();
+    return {
+      label: onTime ? "Completed on time" : "Completed late",
+      isOverdue: !onTime,
+    };
   }
 
   const diff = deadline.getTime() - now.getTime();

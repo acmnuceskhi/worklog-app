@@ -1,6 +1,6 @@
 import * as React from "react";
-import { format } from "date-fns";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { format, isValid } from "date-fns";
+import { Calendar as CalendarIcon, AlertCircle } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -15,39 +15,90 @@ interface DatePickerProps {
   value?: Date;
   onChange?: (date: Date | undefined) => void;
   placeholder?: string;
+  error?: string;
+  disabled?: boolean;
+  className?: string;
 }
 
 export function DatePicker({
   value,
   onChange,
   placeholder = "Pick a date",
+  error,
+  disabled = false,
+  className,
 }: DatePickerProps) {
+  const [open, setOpen] = React.useState(false);
+
+  const handleSelect = (date: Date | undefined) => {
+    if (date && !isValid(date)) {
+      // Handle invalid date, but react-day-picker should prevent this
+      return;
+    }
+    onChange?.(date);
+    setOpen(false);
+  };
+
+  const isError = !!error;
+  const displayValue =
+    value && isValid(value) ? format(value, "PPP") : placeholder;
+
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          data-empty={!value}
+    <div className={cn("relative", className)}>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            disabled={disabled}
+            data-empty={!value}
+            aria-label={`Select date. Current selection: ${displayValue}`}
+            aria-invalid={isError}
+            aria-describedby={isError ? "date-picker-error" : undefined}
+            className={cn(
+              "w-full justify-start text-left font-normal transition-all duration-300",
+              "bg-blue-900/80 border-amber-500/40 text-amber-400",
+              "hover:bg-blue-800/90 hover:border-amber-400/60 hover:text-amber-300",
+              "focus:ring-2 focus:ring-amber-500/50 focus:border-amber-400",
+              "data-[empty=true]:text-amber-500/60",
+              "backdrop-blur-sm shadow-lg shadow-blue-900/50",
+              "hover:shadow-amber-500/20 hover:shadow-xl",
+              isError && "border-red-500/60 focus:ring-red-500/50",
+              disabled && "opacity-50 cursor-not-allowed",
+            )}
+          >
+            <CalendarIcon className="mr-3 h-5 w-5 text-amber-400" />
+            <span className="truncate">{displayValue}</span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
           className={cn(
-            "w-full justify-start text-left font-normal bg-blue-900 border-amber-500/30 text-amber-500 hover:bg-blue-800 hover:text-amber-400 data-[empty=true]:text-amber-500/50",
+            "w-auto p-0 bg-blue-950/95 border-amber-500/30 backdrop-blur-md",
+            "shadow-2xl shadow-amber-500/10 rounded-lg",
+            "animate-in fade-in-0 zoom-in-95 duration-200",
           )}
+          align="start"
+          sideOffset={4}
         >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {value ? format(value, "PPP") : <span>{placeholder}</span>}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        className="w-auto p-0 bg-blue-950 border-amber-500/30"
-        align="start"
-      >
-        <Calendar
-          mode="single"
-          selected={value}
-          onSelect={onChange}
-          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-          initialFocus
-        />
-      </PopoverContent>
-    </Popover>
+          <Calendar
+            mode="single"
+            selected={value}
+            onSelect={handleSelect}
+            // Removed disabled dates to allow past dates
+            initialFocus
+            className="rounded-lg"
+          />
+        </PopoverContent>
+      </Popover>
+      {isError && (
+        <div
+          id="date-picker-error"
+          className="flex items-center mt-2 text-sm text-red-400"
+          role="alert"
+        >
+          <AlertCircle className="mr-2 h-4 w-4" />
+          {error}
+        </div>
+      )}
+    </div>
   );
 }

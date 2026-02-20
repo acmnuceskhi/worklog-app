@@ -5,6 +5,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
+import {
+  isDevelopment,
+  getMockTeamsForUser,
+  getMockOrganizationsForUser,
+} from "@/lib/mock-data";
 
 interface OwnedTeamsData {
   ownedTeams: Array<{ id: string; name: string }>;
@@ -27,6 +32,17 @@ export const useUserPermissions = () => {
   return useQuery({
     queryKey: queryKeys.user.permissions(),
     queryFn: async () => {
+      // In development, return mock data for user permissions
+      if (isDevelopment) {
+        const mockOwnedTeams = getMockTeamsForUser("mock-team-owner-1");
+        const mockOwnedOrgs = getMockOrganizationsForUser("mock-org-owner-1");
+
+        return {
+          ownedTeams: mockOwnedTeams.map((t) => ({ id: t.id, name: t.name })),
+          ownedOrgs: mockOwnedOrgs.map((o) => ({ id: o.id, name: o.name })),
+        } as OwnedTeamsData;
+      }
+
       const [ownedTeamsRes, ownedOrgsRes] = await Promise.all([
         fetch("/api/teams/owned"),
         fetch("/api/organizations"),

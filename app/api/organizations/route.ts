@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getCurrentUser, unauthorized, badRequest } from "@/lib/auth-utils";
 import { validateRequest, organizationCreateSchema } from "@/lib/validations";
+import {
+  isDevelopment,
+  mockTeams,
+  getMockOrganizationsForUser,
+} from "@/lib/mock-data";
 
 /**
  * GET /api/organizations
@@ -15,6 +20,29 @@ import { validateRequest, organizationCreateSchema } from "@/lib/validations";
  */
 export async function GET() {
   try {
+    // In development, return mock data
+    if (isDevelopment) {
+      const mockOwnedOrgs = getMockOrganizationsForUser("mock-org-owner-1"); // Using mock-org-owner-1 as current user
+      if (mockOwnedOrgs.length > 0) {
+        // Get teams for each organization
+        const result = mockOwnedOrgs.map((org) => ({
+          ...org,
+          createdAt: org.createdAt.toISOString(),
+          updatedAt: org.updatedAt.toISOString(),
+          teams: mockTeams
+            .filter((t) => t.organizationId === org.id)
+            .map((t) => ({
+              id: t.id,
+              name: t.name,
+            })),
+          _count: {
+            teams: mockTeams.filter((t) => t.organizationId === org.id).length,
+          },
+        }));
+        return NextResponse.json({ data: result });
+      }
+    }
+
     const user = await getCurrentUser();
     if (!user) {
       return unauthorized();

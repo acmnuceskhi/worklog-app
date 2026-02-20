@@ -137,8 +137,7 @@ export const worklogCreateSchema = z.object({
     ),
   deadline: z
     .string()
-    .datetime("Invalid deadline format")
-    .or(z.date())
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Deadline must be in YYYY-MM-DD format")
     .optional(),
   progressStatus: z.enum(["STARTED", "HALF_DONE", "COMPLETED"]).optional(),
   attachments: z

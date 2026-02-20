@@ -149,10 +149,18 @@ export default function DashboardPage() {
   };
 
   // Combine member and owned teams for display (memoized for performance)
-  const teams = useMemo(
-    () => [...(memberTeams || []), ...(ownedTeams || [])],
-    [memberTeams, ownedTeams],
-  );
+  // Deduplicate teams by ID to prevent React key conflicts
+  const teams = useMemo(() => {
+    const allTeams = [...(memberTeams || []), ...(ownedTeams || [])];
+    const seen = new Set<string>();
+    return allTeams.filter((team) => {
+      if (seen.has(team.id)) {
+        return false;
+      }
+      seen.add(team.id);
+      return true;
+    });
+  }, [memberTeams, ownedTeams]);
 
   const sidebarItems = [
     {
@@ -601,7 +609,10 @@ export default function DashboardPage() {
                       />
                     </div>
                     <div className="mt-2">
-                      <DeadlineCountdown deadline={worklog.deadline} />
+                      <DeadlineCountdown
+                        deadline={worklog.deadline}
+                        status={worklog.progressStatus}
+                      />
                     </div>
                   </div>
                 ))}

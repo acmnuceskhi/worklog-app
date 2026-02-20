@@ -4,7 +4,7 @@ import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeadlineCountdown } from "@/components/worklog/deadline-countdown";
 import { DeadlineStatusBadge } from "@/components/worklog/deadline-status-badge";
-import { formatLocalDate } from "@/lib/deadline-utils";
+import { formatLocalDate, parseDeadline } from "@/lib/deadline-utils";
 import styles from "./GanttChart.module.css";
 
 interface TaskData {
@@ -55,7 +55,8 @@ export function GanttChart({ tasks }: GanttChartProps) {
     date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
   const getDaysLeft = (deadline: string) => {
-    const deadlineDate = new Date(deadline);
+    const deadlineDate = parseDeadline(deadline);
+    if (!deadlineDate) return 0;
     return Math.ceil(
       (deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
     );
@@ -63,24 +64,24 @@ export function GanttChart({ tasks }: GanttChartProps) {
 
   // Get status color class
   const getStatusColorClass = (task: TaskData) => {
-    if (task.status === "Completed") return styles.completed;
+    if (task.status === "Graded") return styles.completed;
     if (task.progress >= 75) return styles.highProgress;
     if (task.progress >= 50) return styles.mediumProgress;
     return styles.lowProgress;
   };
 
   // Stats
-  const completedTasks = tasks.filter((t) => t.status === "Completed").length;
+  const completedTasks = tasks.filter((t) => t.status === "Graded").length;
   const totalProgress =
     tasks.length > 0
       ? Math.round(tasks.reduce((sum, t) => sum + t.progress, 0) / tasks.length)
       : 0;
   const overdueTasks = tasks.filter(
-    (t) => getDaysLeft(t.deadline) < 0 && t.status !== "Completed",
+    (t) => getDaysLeft(t.deadline) < 0 && t.status !== "Graded",
   ).length;
   const dueSoonTasks = tasks.filter((t) => {
     const daysLeft = getDaysLeft(t.deadline);
-    return daysLeft >= 0 && daysLeft <= 3 && t.status !== "Completed";
+    return daysLeft >= 0 && daysLeft <= 3 && t.status !== "Graded";
   }).length;
 
   return (
@@ -128,7 +129,6 @@ export function GanttChart({ tasks }: GanttChartProps) {
         <CardContent className="space-y-3 max-h-[700px] overflow-y-auto">
           {tasks.length > 0 ? (
             tasks.map((task) => {
-              const daysLeft = getDaysLeft(task.deadline);
               const colorClass = getStatusColorClass(task);
 
               return (
@@ -148,22 +148,12 @@ export function GanttChart({ tasks }: GanttChartProps) {
                           deadline={task.deadline}
                           status={task.status}
                         />
-                        <DeadlineCountdown deadline={task.deadline} />
+                        <DeadlineCountdown
+                          deadline={task.deadline}
+                          status={task.status}
+                        />
                       </div>
                     </div>
-                    {daysLeft < 0 && task.status !== "Completed" ? (
-                      <span className="text-xs text-red-400 font-semibold flex-shrink-0">
-                        {Math.abs(daysLeft)}d overdue
-                      </span>
-                    ) : daysLeft <= 3 && task.status !== "Completed" ? (
-                      <span className="text-xs text-amber-400 font-semibold flex-shrink-0">
-                        {daysLeft}d left
-                      </span>
-                    ) : (
-                      <span className="text-xs text-green-400 font-semibold flex-shrink-0">
-                        {daysLeft}d left
-                      </span>
-                    )}
                   </div>
 
                   {/* Status Bar */}

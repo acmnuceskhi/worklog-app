@@ -6,6 +6,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
+import { isDevelopment, getMockRatingsForWorklog } from "@/lib/mock-data";
 
 export interface Rating {
   id: string;
@@ -29,6 +30,18 @@ export const useWorklogRatings = (worklogId: string) => {
   return useQuery({
     queryKey: queryKeys.ratings.byWorklog(worklogId),
     queryFn: async () => {
+      // In development, return mock ratings for the worklog
+      if (isDevelopment) {
+        const mockWorklogRatings = getMockRatingsForWorklog(worklogId);
+        if (mockWorklogRatings.length > 0) {
+          return mockWorklogRatings.map((r) => ({
+            ...r,
+            createdAt: r.createdAt.toISOString(),
+            updatedAt: r.createdAt.toISOString(), // Mock updatedAt as createdAt
+          })) as Rating[];
+        }
+      }
+
       const response = await fetch(`/api/worklogs/${worklogId}/ratings`);
       if (!response.ok) {
         throw new Error("Failed to fetch ratings");

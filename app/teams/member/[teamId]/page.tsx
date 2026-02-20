@@ -58,7 +58,7 @@ import {
 import {
   formatLocalDate,
   getDeadlineStatus,
-  toUtcIso,
+  toLocalDateString,
 } from "@/lib/deadline-utils";
 
 const AUTO_SAVE_DELAY_MS = 2000;
@@ -172,6 +172,9 @@ function ContributionFlashcardPageContent({
   // Use custom hooks for data fetching
   const { data: team, isLoading, error, refetch } = useTeam(teamId);
   const { data: worklogsData = [], isLoading: worklogsLoading } = useWorklogs();
+  const teamWorklogs = worklogsData.filter(
+    (worklog) => worklog.teamId === teamId,
+  );
   const statusUpdateMutation = useUpdateWorklogStatus();
   const createWorklogMutation = useCreateWorklog();
   const deadlineUpdateMutation = useUpdateWorklogDeadline();
@@ -219,7 +222,7 @@ function ContributionFlashcardPageContent({
 
   // Compute recent worklogs with proper formatting
   const recentWorklogs = useMemo(() => {
-    return (worklogsData || []).slice(0, 5).map((worklog) => ({
+    return (teamWorklogs || []).slice(0, 5).map((worklog) => ({
       id: worklog.id,
       title: worklog.title,
       description: stripHtml(worklog.description || ""),
@@ -227,7 +230,7 @@ function ContributionFlashcardPageContent({
       deadline: worklog.deadline ?? null,
       progressStatus: worklog.progressStatus ?? null,
     }));
-  }, [worklogsData]);
+  }, [teamWorklogs]);
 
   // Memoized helper function to get valid status transitions
   const getValidStatusTransitions = useMemo(
@@ -243,6 +246,8 @@ function ContributionFlashcardPageContent({
           STARTED: [{ value: "HALF_DONE", label: "Halfway Done" }],
           HALF_DONE: [{ value: "COMPLETED", label: "Completed" }],
           COMPLETED: [],
+          REVIEWED: [],
+          GRADED: [],
         };
         return transitions[status] || [];
       },
@@ -571,8 +576,7 @@ function ContributionFlashcardPageContent({
         description: editorValue,
         githubLink: values.githubLink || undefined,
         teamId,
-        deadline:
-          rawDeadline instanceof Date ? rawDeadline.toISOString() : rawDeadline,
+        deadline: rawDeadline,
         attachments,
       };
 
@@ -769,9 +773,13 @@ function ContributionFlashcardPageContent({
                         : undefined
                     }
                     onChange={(date) =>
-                      setValue("deadline", date ? toUtcIso(date) : undefined, {
-                        shouldValidate: true,
-                      })
+                      setValue(
+                        "deadline",
+                        date ? toLocalDateString(date) : undefined,
+                        {
+                          shouldValidate: true,
+                        },
+                      )
                     }
                     placeholder="Select deadline"
                   />
@@ -938,7 +946,10 @@ function ContributionFlashcardPageContent({
                             deadline={worklog.deadline}
                             status={worklog.progressStatus}
                           />
-                          <DeadlineCountdown deadline={worklog.deadline} />
+                          <DeadlineCountdown
+                            deadline={worklog.deadline}
+                            status={worklog.progressStatus}
+                          />
                         </div>
                       )}
                     </div>
@@ -957,7 +968,9 @@ function ContributionFlashcardPageContent({
                             (statusUpdateMutation.isPending &&
                               statusUpdateMutation.variables?.worklogId ===
                                 worklog.id) ||
-                            worklog.progressStatus === "COMPLETED"
+                            worklog.progressStatus === "COMPLETED" ||
+                            worklog.progressStatus === "REVIEWED" ||
+                            worklog.progressStatus === "GRADED"
                           }
                         >
                           <SelectTrigger
@@ -977,6 +990,9 @@ function ContributionFlashcardPageContent({
                                 "Halfway Done"}
                               {worklog.progressStatus === "COMPLETED" &&
                                 "Completed"}
+                              {worklog.progressStatus === "REVIEWED" &&
+                                "Reviewed"}
+                              {worklog.progressStatus === "GRADED" && "Graded"}
                               {!worklog.progressStatus && "Started"}
                             </SelectItem>
                             {getValidStatusTransitions(
@@ -1073,7 +1089,7 @@ function ContributionFlashcardPageContent({
                       prev
                         ? {
                             ...prev,
-                            deadline: date ? toUtcIso(date) : null,
+                            deadline: date ? toLocalDateString(date) : null,
                           }
                         : prev,
                     )
@@ -1081,7 +1097,10 @@ function ContributionFlashcardPageContent({
                 />
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <DeadlineStatusBadge deadline={editingWorklog.deadline} />
-                  <DeadlineCountdown deadline={editingWorklog.deadline} />
+                  <DeadlineCountdown
+                    deadline={editingWorklog.deadline}
+                    status={editingWorklog.progressStatus}
+                  />
                 </div>
               </div>
               <div className="flex justify-end gap-2">

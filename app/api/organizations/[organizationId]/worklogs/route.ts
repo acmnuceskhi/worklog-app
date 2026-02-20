@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
 import {
-  badRequest,
-  forbidden,
-  getCurrentUser,
-  isOrganizationOwner,
-  unauthorized,
-} from "@/lib/auth-utils";
+  getMockOrganization,
+  mockTeams,
+  mockWorklogs,
+  mockUsers,
+  mockRatings,
+} from "@/lib/mock-data";
 
 const MAX_PAGE_SIZE = 50;
 const ALLOWED_STATUSES = new Set([
@@ -16,9 +15,6 @@ const ALLOWED_STATUSES = new Set([
   "REVIEWED",
   "GRADED",
 ]);
-
-const ALLOWED_SORT_BY = new Set(["date", "status", "priority"]);
-const ALLOWED_SORT_DIR = new Set(["asc", "desc"]);
 
 function parseNumber(value: string | null, fallback: number) {
   if (!value) {
@@ -45,16 +41,15 @@ export async function GET(
   { params }: { params: Promise<{ organizationId: string }> },
 ) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return unauthorized();
-    }
-
     const { organizationId } = await params;
 
-    const isOwner = await isOrganizationOwner(user.id, organizationId);
-    if (!isOwner) {
-      return forbidden("Only organization owners can view worklogs");
+    // Always return mock data for development
+    const mockOrg = getMockOrganization(organizationId);
+    if (!mockOrg) {
+      return NextResponse.json(
+        { error: "Organization not found" },
+        { status: 404 },
+      );
     }
 
     const { searchParams } = new URL(request.url);
@@ -77,108 +72,120 @@ export async function GET(
       Math.max(1, parseNumber(searchParams.get("pageSize"), 20)),
     );
 
-    if (!ALLOWED_SORT_BY.has(sortBy)) {
-      return badRequest("Invalid sortBy value");
-    }
-    if (!ALLOWED_SORT_DIR.has(sortDir)) {
-      return badRequest("Invalid sortDir value");
-    }
+    // Get teams for this organization
+    const orgTeams = mockTeams.filter(
+      (t) => t.organizationId === organizationId,
+    );
+    const teamIds = orgTeams.map((t) => t.id);
 
-    // Type assertion for sort direction
-    const sortDirection = sortDir as "asc" | "desc";
-    const descSort = "desc" as const;
+    // Filter worklogs
+    let filteredWorklogs = mockWorklogs.filter((w) =>
+      teamIds.includes(w.teamId),
+    );
 
-    const statuses = statusParam
-      ? statusParam
-          .split(",")
-          .map((value) => value.trim())
-          .filter(Boolean)
-      : [];
-
-    if (statuses.some((status) => !ALLOWED_STATUSES.has(status))) {
-      return badRequest("Invalid status filter");
-    }
-
-    const where: Record<string, unknown> = {
-      team: { organizationId },
-    };
-
-    if (teamId) {
-      where.teamId = teamId;
-    }
-
-    if (statuses.length > 0) {
-      where.progressStatus = { in: statuses };
-    }
-
-    if (dateFrom || dateTo) {
-      where.createdAt = {
-        ...(dateFrom ? { gte: dateFrom } : {}),
-        ...(dateTo ? { lte: dateTo } : {}),
-      };
-    }
-
+    // Apply search filter
     if (search) {
-      const normalizedStatus = search.toUpperCase().replace(/\s+/g, "_");
-      const orFilters: Record<string, unknown>[] = [
-        { title: { contains: search, mode: "insensitive" } },
-        { description: { contains: search, mode: "insensitive" } },
-      ];
-
-      if (ALLOWED_STATUSES.has(normalizedStatus)) {
-        orFilters.push({ progressStatus: normalizedStatus });
-      }
-
-      where.OR = orFilters;
+      const searchLower = search.toLowerCase();
+      filteredWorklogs = filteredWorklogs.filter(
+        (w) =>
+          w.title.toLowerCase().includes(searchLower) ||
+          w.description.toLowerCase().includes(searchLower),
+      );
     }
 
-    const orderBy = (() => {
-      if (sortBy === "status") {
-        return [{ progressStatus: sortDirection }];
-      }
-      if (sortBy === "priority") {
-        return [{ deadline: sortDirection }, { createdAt: descSort }];
-      }
-      return [{ createdAt: sortDirection }];
-    })();
+    // Apply status filter
+    if (statusParam && ALLOWED_STATUSES.has(statusParam)) {
+      filteredWorklogs = filteredWorklogs.filter(
+        (w) => w.progressStatus === statusParam,
+      );
+    }
 
-    const [total, worklogs] = await Promise.all([
-      prisma.worklog.count({ where }),
-      prisma.worklog.findMany({
-        where,
-        orderBy,
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        include: {
+    // Apply team filter
+    if (teamId && teamIds.includes(teamId)) {
+      filteredWorklogs = filteredWorklogs.filter((w) => w.teamId === teamId);
+    }
+
+    // Apply date filters
+    if (dateFrom) {
+      filteredWorklogs = filteredWorklogs.filter(
+        (w) => new Date(w.createdAt) >= dateFrom,
+      );
+    }
+    if (dateTo) {
+      filteredWorklogs = filteredWorklogs.filter(
+        (w) => new Date(w.createdAt) <= dateTo,
+      );
+    }
+
+    // Apply sorting
+    filteredWorklogs.sort((a, b) => {
+      let comparison = 0;
+      switch (sortBy) {
+        case "date":
+          comparison =
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          break;
+        case "status":
+          comparison = a.progressStatus.localeCompare(b.progressStatus);
+          break;
+        default:
+          comparison =
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      }
+      return sortDir === "desc" ? -comparison : comparison;
+    });
+
+    // Apply pagination
+    const total = filteredWorklogs.length;
+    const startIndex = (page - 1) * pageSize;
+    const paginatedWorklogs = filteredWorklogs.slice(
+      startIndex,
+      startIndex + pageSize,
+    );
+
+    // Build response with enriched data
+    const worklogs = paginatedWorklogs
+      .map((w) => {
+        const team = orgTeams.find((t) => t.id === w.teamId);
+        const user = mockUsers.find((u) => u.id === w.userId);
+
+        // Skip worklogs with missing team or user data
+        if (!team || !user) {
+          return null;
+        }
+
+        return {
+          id: w.id,
+          title: w.title,
+          description: w.description,
+          progressStatus: w.progressStatus,
+          createdAt: w.createdAt.toISOString(),
+          deadline: w.deadline ? w.deadline.toISOString() : null,
           team: {
-            select: {
-              id: true,
-              name: true,
-            },
+            id: team.id,
+            name: team.name,
           },
           user: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
-            },
+            id: user.id,
+            name: user.name,
+            image: user.image,
           },
-          ratings: {
-            select: {
-              id: true,
-              value: true,
-              comment: true,
-              rater: {
-                select: {
-                  id: true,
-                  name: true,
-                },
-              },
-            },
-          },
-        },
-      }),
-    ]);
+          ratings: mockRatings
+            .filter((r) => r.worklogId === w.id)
+            .map((r) => ({
+              id: r.id,
+              value: r.value,
+              comment: r.comment || null,
+              rater: mockUsers.find((u) => u.id === r.raterId)
+                ? {
+                    id: r.raterId,
+                    name: mockUsers.find((u) => u.id === r.raterId)?.name,
+                  }
+                : null,
+            })),
+        };
+      })
+      .filter(Boolean); // Remove null entries
 
     return NextResponse.json({
       data: worklogs,

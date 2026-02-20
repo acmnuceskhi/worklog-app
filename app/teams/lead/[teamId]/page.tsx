@@ -45,7 +45,7 @@ import {
 import {
   formatLocalDate,
   getDeadlineStatus,
-  toUtcIso,
+  toLocalDateString,
 } from "@/lib/deadline-utils";
 import { type ProgressStatus } from "@/lib/hooks/use-worklogs";
 
@@ -228,7 +228,7 @@ function TeamDetailsPageContent({
       assignedTo: worklog.user?.name || worklog.user?.email || "Unknown",
       title: worklog.title,
       status: getStatusLabel(worklog.progressStatus as ProgressStatus),
-      deadline: worklog.deadline || new Date().toISOString(), // Fallback for null deadline
+      deadline: worklog.deadline || toLocalDateString(new Date()), // Fallback for null deadline
       progress: getProgressValue(worklog.progressStatus as ProgressStatus),
     }));
   }, [worklogs]);
@@ -684,7 +684,10 @@ function TeamDetailsPageContent({
                           deadline={worklog.deadline}
                           status={worklog.progressStatus}
                         />
-                        <DeadlineCountdown deadline={worklog.deadline} />
+                        <DeadlineCountdown
+                          deadline={worklog.deadline}
+                          status={worklog.progressStatus}
+                        />
                       </div>
                     )}
                   </div>
@@ -814,7 +817,7 @@ function TeamDetailsPageContent({
                 onChange={(date) =>
                   setNewTask({
                     ...newTask,
-                    deadline: date ? toUtcIso(date) : "",
+                    deadline: date ? toLocalDateString(date) : "",
                   })
                 }
                 placeholder="Select deadline"

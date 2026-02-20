@@ -5,6 +5,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
+import { isDevelopment } from "@/lib/mock-data";
 
 export interface Organization {
   id: string;
@@ -14,6 +15,13 @@ export interface Organization {
   ownerId: string;
   createdAt: string;
   updatedAt: string;
+  teams?: {
+    id: string;
+    name: string;
+  }[];
+  _count?: {
+    teams: number;
+  };
 }
 
 export interface OrgListData {
@@ -27,6 +35,16 @@ export const useOrganizations = () => {
   return useQuery({
     queryKey: queryKeys.organizations.list(),
     queryFn: async () => {
+      // In development, use the API which now returns mock data
+      if (isDevelopment) {
+        const response = await fetch("/api/organizations");
+        if (!response.ok) {
+          throw new Error("Failed to fetch organizations");
+        }
+        const payload = await response.json();
+        return (payload.data || payload.organizations || []) as Organization[];
+      }
+
       const response = await fetch("/api/organizations");
       if (!response.ok) {
         throw new Error("Failed to fetch organizations");

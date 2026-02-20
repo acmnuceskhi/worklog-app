@@ -6,6 +6,7 @@
  */
 
 import { QueryClient } from "@tanstack/react-query";
+import { toLocalDateString } from "./deadline-utils";
 
 /**
  * Create a test-specific QueryClient with disabled defaults
@@ -136,7 +137,7 @@ export const testData = {
     description: "A test worklog entry",
     githubLink: "https://github.com/test/repo/commit/abc123",
     progressStatus: "STARTED" as const,
-    deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    deadline: toLocalDateString(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
     userId: "user-789",
     teamId: "team-123",
     createdAt: new Date().toISOString(),

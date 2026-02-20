@@ -6,11 +6,15 @@ import { getCountdownLabel, parseDeadline } from "@/lib/deadline-utils";
 
 interface DeadlineCountdownProps {
   deadline?: string | Date | null;
+  status?: string | null;
+  completedAt?: string | Date | null;
   className?: string;
 }
 
 export function DeadlineCountdown({
   deadline,
+  status,
+  completedAt,
   className,
 }: DeadlineCountdownProps) {
   const normalized = useMemo(() => parseDeadline(deadline), [deadline]);
@@ -24,7 +28,17 @@ export function DeadlineCountdown({
   const { label, isOverdue } = getCountdownLabel({
     deadline: normalized,
     now,
+    status,
+    completedAt,
   });
+
+  // Don't show countdown for completed worklogs - status badge already shows completion info
+  const isCompleted =
+    status?.toLowerCase().includes("completed") ||
+    status?.toLowerCase() === "graded";
+  if (isCompleted) {
+    return null;
+  }
 
   if (!normalized) {
     return null;
