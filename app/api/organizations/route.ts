@@ -2,11 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getCurrentUser, unauthorized, badRequest } from "@/lib/auth-utils";
 import { validateRequest, organizationCreateSchema } from "@/lib/validations";
-import {
-  isDevelopment,
-  mockTeams,
-  getMockOrganizationsForUser,
-} from "@/lib/mock-data";
+import { isDevelopment, mockTeams, mockOrganizations } from "@/lib/mock-data";
 
 /**
  * GET /api/organizations
@@ -20,9 +16,44 @@ import {
  */
 export async function GET() {
   try {
-    // In development, return mock data
+    // In development mode without auth, return mock data
     if (isDevelopment) {
-      const mockOwnedOrgs = getMockOrganizationsForUser("mock-org-owner-1"); // Using mock-org-owner-1 as current user
+      const defaultUserId = "mock-org-owner-1";
+      const mockOwnedOrgs = mockOrganizations.filter(
+        (o) => o.ownerId === defaultUserId,
+      );
+
+      const result = mockOwnedOrgs.map((org) => ({
+        id: org.id,
+        name: org.name,
+        description: org.description || null,
+        credits: org.credits,
+        ownerId: org.ownerId,
+        createdAt: org.createdAt.toISOString(),
+        updatedAt: org.updatedAt.toISOString(),
+        teams: mockTeams
+          .filter((t) => t.organizationId === org.id)
+          .map((t) => ({
+            id: t.id,
+            name: t.name,
+          })),
+        _count: {
+          teams: mockTeams.filter((t) => t.organizationId === org.id).length,
+        },
+      }));
+      return NextResponse.json({ data: result });
+    }
+
+    const user = await getCurrentUser();
+    if (!user) {
+      return unauthorized();
+    }
+
+    // In development with auth, return mock data for the authenticated user
+    if (isDevelopment) {
+      const mockOwnedOrgs = mockOrganizations.filter(
+        (o) => o.ownerId === user.id,
+      );
       if (mockOwnedOrgs.length > 0) {
         // Get teams for each organization
         const result = mockOwnedOrgs.map((org) => ({
@@ -41,11 +72,6 @@ export async function GET() {
         }));
         return NextResponse.json({ data: result });
       }
-    }
-
-    const user = await getCurrentUser();
-    if (!user) {
-      return unauthorized();
     }
 
     // Batch fetch organizations and teams in parallel

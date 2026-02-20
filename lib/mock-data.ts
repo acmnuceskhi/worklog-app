@@ -139,7 +139,7 @@ export const mockTeams: MockTeam[] = isDevelopment
         project: "Worklog App",
         credits: 150,
         organizationId: "mock-org-1",
-        ownerId: "mock-team-owner-1",
+        ownerId: "mock-org-owner-1",
         createdAt: new Date("2026-01-20"),
         updatedAt: new Date("2026-02-15"),
       },
@@ -150,9 +150,20 @@ export const mockTeams: MockTeam[] = isDevelopment
         project: "Worklog App",
         credits: 200,
         organizationId: "mock-org-1",
-        ownerId: "mock-team-owner-1",
+        ownerId: "mock-org-owner-1",
         createdAt: new Date("2026-01-25"),
         updatedAt: new Date("2026-02-18"),
+      },
+      {
+        id: "mock-team-3",
+        name: "QA & Testing",
+        description: "Quality assurance and testing team",
+        project: "Worklog App",
+        credits: 100,
+        organizationId: "mock-org-1",
+        ownerId: "mock-team-owner-1",
+        createdAt: new Date("2026-02-01"),
+        updatedAt: new Date("2026-02-19"),
       },
     ]
   : [];
@@ -160,6 +171,7 @@ export const mockTeams: MockTeam[] = isDevelopment
 // Mock team members
 export const mockTeamMembers: MockTeamMember[] = isDevelopment
   ? [
+      // Frontend team members
       {
         id: "mock-member-1-team-1",
         teamId: "mock-team-1",
@@ -179,6 +191,16 @@ export const mockTeamMembers: MockTeamMember[] = isDevelopment
         joinedAt: new Date("2026-01-23"),
       },
       {
+        id: "mock-org-owner-team-1",
+        teamId: "mock-team-1",
+        userId: "mock-org-owner-1",
+        email: "alice@techcorp.com",
+        status: "ACCEPTED",
+        invitedAt: new Date("2026-01-20"),
+        joinedAt: new Date("2026-01-20"),
+      },
+      // Backend team members
+      {
         id: "mock-member-1-team-2",
         teamId: "mock-team-2",
         userId: "mock-member-1",
@@ -188,18 +210,33 @@ export const mockTeamMembers: MockTeamMember[] = isDevelopment
         joinedAt: new Date("2026-01-27"),
       },
       {
-        id: "mock-pending-invitation-1",
-        teamId: "mock-team-1",
-        email: "alice@techcorp.com", // Mock current user email
-        status: "PENDING",
-        invitedAt: new Date("2026-02-15"),
-      },
-      {
-        id: "mock-pending-invitation-2",
+        id: "mock-org-owner-team-2",
         teamId: "mock-team-2",
-        email: "alice@techcorp.com", // Mock current user email
+        userId: "mock-org-owner-1",
+        email: "alice@techcorp.com",
+        status: "ACCEPTED",
+        invitedAt: new Date("2026-01-25"),
+        joinedAt: new Date("2026-01-25"),
+      },
+      // QA team members
+      {
+        id: "mock-member-2-team-3",
+        teamId: "mock-team-3",
+        userId: "mock-member-2",
+        email: "diana@techcorp.com",
+        status: "ACCEPTED",
+        invitedAt: new Date("2026-02-02"),
+        joinedAt: new Date("2026-02-02"),
+      },
+      // Pending invitation for alice to join QA team (for InvitationsPanel dev testing)
+      {
+        id: "mock-pending-invite-alice-team-3",
+        teamId: "mock-team-3",
+        userId: undefined,
+        email: "alice@techcorp.com",
+        token: "mock-invite-token-alice-team-3",
         status: "PENDING",
-        invitedAt: new Date("2026-02-18"),
+        invitedAt: new Date("2026-02-25"),
       },
     ]
   : [];
@@ -207,6 +244,43 @@ export const mockTeamMembers: MockTeamMember[] = isDevelopment
 // Mock worklogs with various states
 export const mockWorklogs: MockWorklog[] = isDevelopment
   ? [
+      // Organization owner worklogs
+      {
+        id: "mock-worklog-org-1",
+        title: "Plan Q1 development roadmap",
+        description:
+          "Review team performance metrics and plan quarterly development priorities for all teams",
+        progressStatus: "COMPLETED",
+        deadline: new Date("2026-02-20"),
+        userId: "mock-org-owner-1",
+        teamId: "mock-team-1",
+        createdAt: new Date("2026-02-15"),
+        updatedAt: new Date("2026-02-20"),
+      },
+      {
+        id: "mock-worklog-org-2",
+        title: "Organize sprint planning meeting",
+        description:
+          "Conduct sprint planning with team leads to define sprint goals and deliverables",
+        progressStatus: "COMPLETED",
+        deadline: new Date("2026-02-18"),
+        userId: "mock-org-owner-1",
+        teamId: "mock-team-2",
+        createdAt: new Date("2026-02-10"),
+        updatedAt: new Date("2026-02-18"),
+      },
+      {
+        id: "mock-worklog-org-3",
+        title: "Review code quality metrics",
+        description:
+          "Analyze code coverage, test compatibility, and performance metrics across projects",
+        progressStatus: "HALF_DONE",
+        deadline: new Date("2026-02-25"),
+        userId: "mock-org-owner-1",
+        teamId: "mock-team-1",
+        createdAt: new Date("2026-02-18"),
+        updatedAt: new Date("2026-02-20"),
+      },
       // Team 1 worklogs
       {
         id: "mock-worklog-1",

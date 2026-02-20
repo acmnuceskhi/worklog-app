@@ -44,6 +44,15 @@ export const deadlineReminderEmailSchema = baseEmailSchema.extend({
   priority: z.enum(["low", "medium", "high", "urgent"]),
 });
 
+// Organization invitation email validation
+export const organizationInvitationEmailSchema = baseEmailSchema.extend({
+  organizationName: z.string().min(1, "Organization name is required"),
+  inviterName: z.string().min(1, "Inviter name is required"),
+  acceptUrl: z.string().url("Accept URL must be a valid URL"),
+  rejectUrl: z.string().url("Reject URL must be a valid URL"),
+  expiresAt: z.date(),
+});
+
 // Generic email validation for custom emails
 export const genericEmailSchema = z.object({
   to: z.array(z.string().email()).min(1, "At least one recipient is required"),
@@ -63,6 +72,9 @@ export type TeamInvitationEmailData = z.infer<typeof teamInvitationEmailSchema>;
 export type WorklogReviewEmailData = z.infer<typeof worklogReviewEmailSchema>;
 export type DeadlineReminderEmailData = z.infer<
   typeof deadlineReminderEmailSchema
+>;
+export type OrganizationInvitationEmailData = z.infer<
+  typeof organizationInvitationEmailSchema
 >;
 export type GenericEmailData = z.infer<typeof genericEmailSchema>;
 export type EmailServiceConfig = z.infer<typeof emailServiceConfigSchema>;

@@ -8,18 +8,44 @@ import {
   forbidden,
 } from "@/lib/api-utils";
 import { isTeamMember, isTeamOwner } from "@/lib/auth-utils";
+import { isDevelopment, mockTeamMembers, mockUsers } from "@/lib/mock-data";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> },
 ) {
   try {
+    const { teamId } = await params;
+
+    // In development mode, return mock members for the team
+    if (isDevelopment) {
+      const members = mockTeamMembers
+        .filter((tm) => tm.teamId === teamId)
+        .map((tm) => {
+          const user = tm.userId
+            ? mockUsers.find((u) => u.id === tm.userId)
+            : undefined;
+          return {
+            id: tm.id,
+            teamId: tm.teamId,
+            userId: tm.userId || null,
+            email: tm.email,
+            status: tm.status,
+            invitedAt: tm.invitedAt.toISOString(),
+            joinedAt: tm.joinedAt ? tm.joinedAt.toISOString() : null,
+            user: user
+              ? { id: user.id, name: user.name, email: user.email }
+              : null,
+          };
+        });
+      return apiResponse(members);
+    }
+
     const session = await auth();
     if (!session?.user?.id) {
       return unauthorized();
     }
 
-    const { teamId } = await params;
     const userId = session.user.id;
 
     // Check access: must be owner or member of the team

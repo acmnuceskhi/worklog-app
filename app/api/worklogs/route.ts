@@ -8,6 +8,7 @@ import {
   handleApiError,
 } from "@/lib/api-utils";
 import { validateRequest, worklogCreateSchema } from "@/lib/validations";
+import { isDevelopment, mockWorklogs, mockUsers } from "@/lib/mock-data";
 
 /**
  * GET /api/worklogs
@@ -15,6 +16,37 @@ import { validateRequest, worklogCreateSchema } from "@/lib/validations";
  */
 export async function GET() {
   try {
+    // In development mode, return mock worklogs for the default user
+    if (isDevelopment) {
+      const defaultUserId = "mock-org-owner-1";
+      const userWorklogs = mockWorklogs
+        .filter((w) => w.userId === defaultUserId)
+        .map((w) => {
+          const user = mockUsers.find((u) => u.id === w.userId);
+          return {
+            id: w.id,
+            title: w.title,
+            description: w.description,
+            githubLink: w.githubLink || null,
+            progressStatus: w.progressStatus,
+            deadline: w.deadline ? w.deadline.toISOString() : null,
+            userId: w.userId,
+            teamId: w.teamId,
+            createdAt: w.createdAt.toISOString(),
+            updatedAt: w.updatedAt.toISOString(),
+            user: user
+              ? { id: user.id, name: user.name, email: user.email }
+              : null,
+            ratings: [],
+          };
+        })
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        );
+      return apiResponse(userWorklogs);
+    }
+
     const user = await getCurrentUser();
     if (!user) {
       return unauthorized();

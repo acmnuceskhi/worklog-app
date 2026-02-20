@@ -51,6 +51,7 @@ model User {
   ownedOrganizations Organization[] @relation("OrganizationOwner")
   ownedTeams         Team[]         @relation("TeamOwner")
   memberships        TeamMember[]
+  organizationInvitations OrganizationInvitation[]
   worklogs           Worklog[]
   ratings            Rating[]
 
@@ -65,6 +66,7 @@ model Organization {
   ownerId     String   @map("owner_id")
   owner       User     @relation("OrganizationOwner", fields: [ownerId], references: [id])
   teams       Team[]
+  invitations OrganizationInvitation[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -112,6 +114,28 @@ model TeamMember {
   @@index([userId, status]) // Composite index for efficient filtering by both userId and status
   @@index([teamId, status]) // Optimize fetching team members by status
   @@map("team_members")
+}
+
+model OrganizationInvitation {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  userId         String?  @map("user_id")
+  email          String
+  token          String?  @unique // Invitation token
+  status         MemberStatus @default(PENDING)
+  invitedAt      DateTime @default(now())
+  joinedAt       DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user          User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@unique([organizationId, email])
+  @@index([userId])
+  @@index([status])
+  @@index([userId, status])
+  @@index([organizationId, status])
+  @@map("organization_invitations")
 }
 
 enum MemberStatus {

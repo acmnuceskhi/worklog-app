@@ -5,7 +5,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { isDevelopment } from "@/lib/mock-data";
+import { mockOrganizations, mockTeams, mockTeamMembers } from "@/lib/mock-data";
 
 export interface Organization {
   id: string;
@@ -35,16 +35,27 @@ export const useOrganizations = () => {
   return useQuery({
     queryKey: queryKeys.organizations.list(),
     queryFn: async () => {
-      // In development, use the API which now returns mock data
-      if (isDevelopment) {
-        const response = await fetch("/api/organizations");
-        if (!response.ok) {
-          throw new Error("Failed to fetch organizations");
-        }
-        const payload = await response.json();
-        return (payload.data || payload.organizations || []) as Organization[];
+      // In development, return mock data directly without any network call
+      if (process.env.NODE_ENV === "development") {
+        const defaultUserId = "mock-org-owner-1";
+        return mockOrganizations
+          .filter((o) => o.ownerId === defaultUserId)
+          .map((o) => ({
+            id: o.id,
+            name: o.name,
+            description: o.description || undefined,
+            credits: o.credits,
+            ownerId: o.ownerId,
+            createdAt: o.createdAt.toISOString(),
+            updatedAt: o.updatedAt.toISOString(),
+            teams: mockTeams
+              .filter((t) => t.organizationId === o.id)
+              .map((t) => ({ id: t.id, name: t.name })),
+            _count: {
+              teams: mockTeams.filter((t) => t.organizationId === o.id).length,
+            },
+          })) as Organization[];
       }
-
       const response = await fetch("/api/organizations");
       if (!response.ok) {
         throw new Error("Failed to fetch organizations");

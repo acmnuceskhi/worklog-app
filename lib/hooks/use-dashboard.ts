@@ -1,14 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import {
-  isDevelopment,
   mockTeams,
   mockTeamMembers,
   mockWorklogs,
+  mockOrganizations,
   mockUsers,
-  getMockTeamsForUser,
-  getMockOrganizationsForUser,
-  getMockWorklogsForUser,
 } from "@/lib/mock-data";
 
 export interface DashboardData {
@@ -79,50 +76,56 @@ export const useDashboard = () => {
   return useQuery({
     queryKey: queryKeys.dashboard.all(),
     queryFn: async (): Promise<DashboardData> => {
-      // In development, return mock dashboard data
-      if (isDevelopment) {
-        const mockOwnedTeams = getMockTeamsForUser("mock-team-owner-1");
-        const mockMemberTeams = mockTeams.filter((t) =>
+      // In development, return mock data directly without API call
+      if (process.env.NODE_ENV === "development") {
+        const defaultUserId = "mock-org-owner-1";
+
+        const ownedTeams = mockTeams.filter((t) => t.ownerId === defaultUserId);
+        const memberTeams = mockTeams.filter((t) =>
           mockTeamMembers.some(
             (tm) =>
               tm.teamId === t.id &&
-              tm.userId === "mock-member-1" &&
+              tm.userId === defaultUserId &&
               tm.status === "ACCEPTED",
           ),
         );
-        const mockUserWorklogs = getMockWorklogsForUser("mock-member-1");
+        const userWorklogs = mockWorklogs.filter(
+          (w) => w.userId === defaultUserId,
+        );
+        const ownedOrgs = mockOrganizations.filter(
+          (o) => o.ownerId === defaultUserId,
+        );
 
         return {
           sidebarStats: {
-            memberTeamsCount: mockMemberTeams.length,
-            leadTeamsCount: mockOwnedTeams.length,
-            organizationsCount:
-              getMockOrganizationsForUser("mock-org-owner-1").length,
-            worklogsCount: mockUserWorklogs.length,
-            pendingReviewsCount: mockUserWorklogs.filter(
+            memberTeamsCount: memberTeams.length,
+            leadTeamsCount: ownedTeams.length,
+            organizationsCount: ownedOrgs.length,
+            worklogsCount: userWorklogs.length,
+            pendingReviewsCount: userWorklogs.filter(
               (w) => w.progressStatus === "COMPLETED",
             ).length,
-            hasPendingItems: mockUserWorklogs.some(
+            hasPendingItems: userWorklogs.some(
               (w) => w.progressStatus === "COMPLETED",
             ),
           },
-          worklogs: mockUserWorklogs.map((w) => ({
+          worklogs: userWorklogs.map((w) => ({
             id: w.id,
             title: w.title,
             description: w.description,
-            githubLink: w.githubLink,
+            githubLink: w.githubLink || null,
             progressStatus: w.progressStatus,
-            deadline: w.deadline,
+            deadline: w.deadline || null,
             createdAt: w.createdAt,
             updatedAt: w.updatedAt,
             teamId: w.teamId,
             userId: w.userId,
           })),
-          memberTeams: mockMemberTeams.map((t) => ({
+          memberTeams: memberTeams.map((t) => ({
             id: t.id,
             name: t.name,
-            description: t.description,
-            project: t.project,
+            description: t.description || null,
+            project: t.project || null,
             owner: {
               name: mockUsers.find((u) => u.id === t.ownerId)?.name || null,
               email: mockUsers.find((u) => u.id === t.ownerId)?.email || "",
@@ -131,9 +134,8 @@ export const useDashboard = () => {
               ? {
                   id: t.organizationId,
                   name:
-                    getMockOrganizationsForUser("mock-org-owner-1").find(
-                      (o) => o.id === t.organizationId,
-                    )?.name || "",
+                    mockOrganizations.find((o) => o.id === t.organizationId)
+                      ?.name || "",
                 }
               : null,
             _count: {
@@ -143,25 +145,20 @@ export const useDashboard = () => {
               worklogs: mockWorklogs.filter((w) => w.teamId === t.id).length,
             },
           })),
-          ownedTeams: mockOwnedTeams.map((t) => ({
+          ownedTeams: ownedTeams.map((t) => ({
             id: t.id,
             name: t.name,
-            description: t.description,
+            description: t.description || null,
             credits: t.credits,
-            project: t.project,
+            project: t.project || null,
             createdAt: t.createdAt,
             updatedAt: t.updatedAt,
-            owner: {
-              name: mockUsers.find((u) => u.id === t.ownerId)?.name || null,
-              email: mockUsers.find((u) => u.id === t.ownerId)?.email || "",
-            },
             organization: t.organizationId
               ? {
                   id: t.organizationId,
                   name:
-                    getMockOrganizationsForUser("mock-org-owner-1").find(
-                      (o) => o.id === t.organizationId,
-                    )?.name || "",
+                    mockOrganizations.find((o) => o.id === t.organizationId)
+                      ?.name || "",
                 }
               : null,
             _count: {
@@ -171,9 +168,10 @@ export const useDashboard = () => {
               worklogs: mockWorklogs.filter((w) => w.teamId === t.id).length,
             },
           })),
-        } as DashboardData;
+        };
       }
 
+      // Production: fetch from API
       const response = await fetch("/api/dashboard");
       if (!response.ok) {
         throw new Error("Failed to fetch dashboard data");
@@ -182,15 +180,14 @@ export const useDashboard = () => {
         | { data?: DashboardData }
         | DashboardData;
 
-      // Type-safe extraction with proper validation
       if (payload && typeof payload === "object" && "data" in payload) {
         return (payload as { data: DashboardData }).data;
       }
 
-      throw new Error("Invalid dashboard response format");
+      return payload as DashboardData;
     },
-    staleTime: 2 * 60 * 1000, // Increased to 2 minutes - dashboard doesn't need 30s updates
-    gcTime: 10 * 60 * 1000, // 10 minutes cache
-    refetchOnWindowFocus: false, // Don't refetch on window focus
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 };

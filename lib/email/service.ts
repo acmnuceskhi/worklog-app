@@ -2,16 +2,19 @@ import { Resend } from "resend";
 import { teamInvitationTemplate } from "../../components/emails/TeamInvitationEmail";
 import { worklogReviewTemplate } from "../../components/emails/WorklogReviewEmail";
 import { deadlineReminderTemplate } from "../../components/emails/DeadlineReminderEmail";
+import { organizationInvitationTemplate } from "../../components/emails/OrganizationInvitationEmail";
 import {
   TeamInvitationEmailData,
   WorklogReviewEmailData,
   DeadlineReminderEmailData,
+  OrganizationInvitationEmailData,
 } from "../validations/email-validations";
 
 // Type aliases for email data
 export type TeamInvitationData = TeamInvitationEmailData;
 export type WorklogReviewData = WorklogReviewEmailData;
 export type DeadlineReminderData = DeadlineReminderEmailData;
+export type OrganizationInvitationData = OrganizationInvitationEmailData;
 
 // Email result type
 export interface EmailResult {
@@ -98,6 +101,54 @@ export class EmailService {
       };
     } catch (error) {
       console.error("Error sending team invitation email:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
+
+  /**
+   * Send an organization invitation email
+   */
+  public async sendOrganizationInvitation(
+    invitationData: OrganizationInvitationData,
+  ): Promise<EmailResult> {
+    if (!this.isConfigured()) {
+      console.warn(
+        "Email service not configured - invitation created but email not sent",
+      );
+      return {
+        success: false,
+        error: "Email service not configured",
+      };
+    }
+
+    try {
+      const template = organizationInvitationTemplate;
+      const subject = template.subject(invitationData);
+
+      const { data, error } = await this.resend!.emails.send({
+        from: this.getFromAddress(),
+        to: [invitationData.recipientEmail],
+        subject,
+        react: template.component(invitationData),
+      });
+
+      if (error) {
+        console.error("Failed to send organization invitation email:", error);
+        return {
+          success: false,
+          error: error.message,
+        };
+      }
+
+      return {
+        success: true,
+        emailId: data?.id,
+      };
+    } catch (error) {
+      console.error("Error sending organization invitation email:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",

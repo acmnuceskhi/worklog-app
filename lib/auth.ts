@@ -43,6 +43,14 @@ const config = {
     updateAge: 24 * 60 * 60, // Re-issue JWT every 24 hours
   },
   callbacks: {
+    authorized({ auth: session }) {
+      // In development, bypass authentication so mock data pages are accessible
+      if (process.env.NODE_ENV === "development") {
+        return true;
+      }
+      // In production, require a valid session
+      return !!session;
+    },
     jwt: async ({ token, user }) => {
       // Attach user ID when user first signs in
       if (user) {

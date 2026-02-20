@@ -5,8 +5,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { isDevelopment, mockWorklogs, mockUsers } from "@/lib/mock-data";
-import { toLocalDateString } from "@/lib/deadline-utils";
+import { mockWorklogs, mockUsers } from "@/lib/mock-data";
 
 export type ProgressStatus =
   | "STARTED"
@@ -45,16 +44,35 @@ export const useWorklogs = () => {
   return useQuery({
     queryKey: queryKeys.worklogs.list(),
     queryFn: async () => {
-      // In development, return mock data if available
-      if (isDevelopment && mockWorklogs.length > 0) {
-        return mockWorklogs.map((w) => ({
-          ...w,
-          deadline: w.deadline ? toLocalDateString(w.deadline) : undefined,
-          createdAt: w.createdAt.toISOString(),
-          updatedAt: w.updatedAt.toISOString(),
-        })) as WorklogPreview[];
+      // In development, return mock data directly without any network call
+      if (process.env.NODE_ENV === "development") {
+        const defaultUserId = "mock-org-owner-1";
+        return mockWorklogs
+          .filter((w) => w.userId === defaultUserId)
+          .map((w) => {
+            const user = mockUsers.find((u) => u.id === w.userId);
+            return {
+              id: w.id,
+              title: w.title,
+              description: w.description,
+              githubLink: w.githubLink || undefined,
+              progressStatus: w.progressStatus as ProgressStatus,
+              deadline: w.deadline ? w.deadline.toISOString() : undefined,
+              userId: w.userId,
+              teamId: w.teamId,
+              createdAt: w.createdAt.toISOString(),
+              updatedAt: w.updatedAt.toISOString(),
+              user: user
+                ? { id: user.id, name: user.name, email: user.email }
+                : undefined,
+              ratings: [],
+            } as WorklogPreview;
+          })
+          .sort(
+            (a, b) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          );
       }
-
       const response = await fetch("/api/worklogs");
       if (!response.ok) {
         throw new Error("Failed to fetch worklogs");
@@ -73,29 +91,33 @@ export const useTeamWorklogs = (teamId: string) => {
   return useQuery({
     queryKey: queryKeys.teams.worklogs(teamId),
     queryFn: async () => {
-      // In development, return mock data for the team
-      if (isDevelopment) {
-        const mockTeamWorklogs = mockWorklogs.filter(
-          (w) => w.teamId === teamId,
-        );
-        if (mockTeamWorklogs.length > 0) {
-          return mockTeamWorklogs.map((w) => {
+      // In development, return mock data directly without any network call
+      if (process.env.NODE_ENV === "development") {
+        return mockWorklogs
+          .filter((w) => w.teamId === teamId)
+          .map((w) => {
             const user = mockUsers.find((u) => u.id === w.userId);
             return {
-              ...w,
-              deadline: w.deadline ? toLocalDateString(w.deadline) : undefined,
+              id: w.id,
+              title: w.title,
+              description: w.description,
+              githubLink: w.githubLink || undefined,
+              progressStatus: w.progressStatus as ProgressStatus,
+              deadline: w.deadline ? w.deadline.toISOString() : undefined,
+              userId: w.userId,
+              teamId: w.teamId,
               createdAt: w.createdAt.toISOString(),
               updatedAt: w.updatedAt.toISOString(),
               user: user
-                ? {
-                    id: user.id,
-                    name: user.name,
-                    email: user.email,
-                  }
+                ? { id: user.id, name: user.name, email: user.email }
                 : undefined,
-            };
-          }) as WorklogPreview[];
-        }
+              ratings: [],
+            } as WorklogPreview;
+          })
+          .sort(
+            (a, b) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          );
       }
       const response = await fetch(`/api/teams/${teamId}/worklogs`);
       if (!response.ok) {

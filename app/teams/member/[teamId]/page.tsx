@@ -47,8 +47,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { worklogCreateSchema } from "@/lib/validations";
 import { toast } from "sonner";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { useSharedSession } from "@/components/providers";
 import {
   useTeam,
+  useTeamMembers,
   useWorklogs,
   useUpdateWorklogStatus,
   useCreateWorklog,
@@ -168,9 +170,11 @@ function ContributionFlashcardPageContent({
   params: Promise<{ teamId: string }>;
 }) {
   const { teamId } = use(params);
+  const { data: session } = useSharedSession();
 
   // Use custom hooks for data fetching
   const { data: team, isLoading, error, refetch } = useTeam(teamId);
+  const { data: teamMembers = [] } = useTeamMembers(teamId);
   const { data: worklogsData = [], isLoading: worklogsLoading } = useWorklogs();
   const teamWorklogs = worklogsData.filter(
     (worklog) => worklog.teamId === teamId,
@@ -275,6 +279,13 @@ function ContributionFlashcardPageContent({
 
   useEffect(() => {
     let isActive = true;
+
+    // In development, derive permission from mock data without network calls
+    if (process.env.NODE_ENV === "development") {
+      setCanSetDeadline(true); // mock-org-owner-1 owns the mock teams
+      return;
+    }
+
     const loadPermissions = async () => {
       try {
         const [ownedTeamsRes, ownedOrgsRes] = await Promise.all([
@@ -483,6 +494,30 @@ function ContributionFlashcardPageContent({
         <div className="text-center">
           <h2 className="text-xl font-semibold mb-2">Team Not Found</h2>
           <p>The requested team could not be found.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // In development, always use mock user ID to avoid auth dependency
+  const effectiveUserId =
+    process.env.NODE_ENV === "development"
+      ? "mock-org-owner-1"
+      : session?.user?.id;
+
+  // Check if user is a member of this team
+  const isMember = teamMembers.some(
+    (member) =>
+      member.userId === effectiveUserId && member.status === "ACCEPTED",
+  );
+  const isOwner = team.ownerId === effectiveUserId;
+
+  if (!isMember && !isOwner) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+          <p>You are not a member of this team.</p>
         </div>
       </div>
     );

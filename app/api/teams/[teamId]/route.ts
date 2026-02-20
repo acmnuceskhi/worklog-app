@@ -10,6 +10,13 @@ import {
   notFound,
   badRequest,
 } from "@/lib/api-utils";
+import {
+  isDevelopment,
+  mockTeams,
+  mockTeamMembers,
+  mockOrganizations,
+  mockUsers,
+} from "@/lib/mock-data";
 
 // GET /api/teams/[teamId] - Get team details
 export async function GET(
@@ -17,12 +24,66 @@ export async function GET(
   { params }: { params: Promise<{ teamId: string }> },
 ) {
   try {
+    const { teamId } = await params;
+
+    // In development mode, return mock data directly
+    if (isDevelopment) {
+      const team = mockTeams.find((t) => t.id === teamId);
+      if (!team) return notFound("Team not found");
+
+      const owner = mockUsers.find((u) => u.id === team.ownerId);
+      const organization = mockOrganizations.find(
+        (o) => o.id === team.organizationId,
+      );
+      const members = mockTeamMembers
+        .filter((tm) => tm.teamId === teamId && tm.status === "ACCEPTED")
+        .map((tm) => {
+          const user = mockUsers.find((u) => u.id === tm.userId);
+          return {
+            id: tm.id,
+            email: tm.email,
+            status: tm.status,
+            user: user
+              ? {
+                  id: user.id,
+                  name: user.name,
+                  email: user.email,
+                  image: user.image ?? null,
+                }
+              : null,
+          };
+        });
+
+      return apiResponse({
+        id: team.id,
+        name: team.name,
+        description: team.description || null,
+        credits: team.credits,
+        project: team.project || null,
+        ownerId: team.ownerId,
+        organizationId: team.organizationId || null,
+        createdAt: team.createdAt.toISOString(),
+        updatedAt: team.updatedAt.toISOString(),
+        _count: { worklogs: 0 },
+        owner: owner
+          ? {
+              id: owner.id,
+              name: owner.name,
+              email: owner.email,
+              image: owner.image ?? null,
+            }
+          : null,
+        organization: organization
+          ? { id: organization.id, name: organization.name }
+          : null,
+        members,
+      });
+    }
+
     const session = await auth();
     if (!session?.user?.id) {
       return unauthorized();
     }
-
-    const { teamId } = await params;
 
     // Get basic team info first
     const team = await prisma.team.findUnique({

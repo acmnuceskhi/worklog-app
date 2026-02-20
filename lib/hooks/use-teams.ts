@@ -6,15 +6,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import {
-  isDevelopment,
   mockTeams,
   mockTeamMembers,
-  mockUsers,
   mockOrganizations,
   mockWorklogs,
-  getMockTeamsForUser,
-  getMockTeam,
-  getMockTeamMembers,
+  mockUsers,
 } from "@/lib/mock-data";
 
 export interface Team {
@@ -63,15 +59,6 @@ export const useTeams = () => {
   return useQuery({
     queryKey: queryKeys.teams.list(),
     queryFn: async () => {
-      // In development, return mock data if available
-      if (isDevelopment && mockTeams.length > 0) {
-        return mockTeams.map((t) => ({
-          ...t,
-          createdAt: t.createdAt.toISOString(),
-          updatedAt: t.updatedAt.toISOString(),
-        })) as Team[];
-      }
-
       const response = await fetch("/api/teams");
       if (!response.ok) {
         throw new Error("Failed to fetch teams");
@@ -90,18 +77,42 @@ export const useOwnedTeams = () => {
   return useQuery({
     queryKey: queryKeys.teams.owned(),
     queryFn: async () => {
-      // In development, return mock teams owned by current user
-      if (isDevelopment) {
-        const mockOwnedTeams = getMockTeamsForUser("mock-team-owner-1"); // Using mock-team-owner-1 as current user
-        if (mockOwnedTeams.length > 0) {
-          return mockOwnedTeams.map((t) => ({
-            ...t,
+      // In development, return mock data directly without any network call
+      if (process.env.NODE_ENV === "development") {
+        const defaultUserId = "mock-org-owner-1";
+        return mockTeams
+          .filter((t) => t.ownerId === defaultUserId)
+          .map((t) => ({
+            id: t.id,
+            name: t.name,
+            description: t.description || null,
+            project: t.project || null,
+            credits: t.credits,
+            organizationId: t.organizationId || null,
+            ownerId: t.ownerId,
             createdAt: t.createdAt.toISOString(),
             updatedAt: t.updatedAt.toISOString(),
+            owner: {
+              name: mockUsers.find((u) => u.id === t.ownerId)?.name || null,
+              email: mockUsers.find((u) => u.id === t.ownerId)?.email || "",
+            },
+            organization: t.organizationId
+              ? {
+                  id: t.organizationId,
+                  name:
+                    mockOrganizations.find((o) => o.id === t.organizationId)
+                      ?.name || "",
+                }
+              : null,
+            _count: {
+              members: mockTeamMembers.filter(
+                (tm) => tm.teamId === t.id && tm.status === "ACCEPTED",
+              ).length,
+              worklogs: mockWorklogs.filter((w) => w.teamId === t.id).length,
+            },
+            role: "owner",
           })) as Team[];
-        }
       }
-
       const response = await fetch("/api/teams/owned");
       if (!response.ok) {
         throw new Error("Failed to fetch owned teams");
@@ -120,25 +131,47 @@ export const useMemberTeams = () => {
   return useQuery({
     queryKey: queryKeys.teams.member(),
     queryFn: async () => {
-      // In development, return mock teams where current user is a member
-      if (isDevelopment) {
-        const mockMemberTeams = mockTeams.filter((t) =>
+      // In development, return mock data directly without any network call
+      if (process.env.NODE_ENV === "development") {
+        const defaultUserId = "mock-org-owner-1";
+        const memberTeams = mockTeams.filter((t) =>
           mockTeamMembers.some(
             (tm) =>
               tm.teamId === t.id &&
-              tm.userId === "mock-member-1" &&
+              tm.userId === defaultUserId &&
               tm.status === "ACCEPTED",
           ),
         );
-        if (mockMemberTeams.length > 0) {
-          return mockMemberTeams.map((t) => ({
-            ...t,
-            createdAt: t.createdAt.toISOString(),
-            updatedAt: t.updatedAt.toISOString(),
-          })) as Team[];
-        }
+        return memberTeams.map((t) => ({
+          id: t.id,
+          name: t.name,
+          description: t.description || null,
+          project: t.project || null,
+          credits: t.credits,
+          organizationId: t.organizationId || null,
+          ownerId: t.ownerId,
+          createdAt: t.createdAt.toISOString(),
+          updatedAt: t.updatedAt.toISOString(),
+          owner: {
+            name: mockUsers.find((u) => u.id === t.ownerId)?.name || null,
+            email: mockUsers.find((u) => u.id === t.ownerId)?.email || "",
+          },
+          organization: t.organizationId
+            ? {
+                id: t.organizationId,
+                name:
+                  mockOrganizations.find((o) => o.id === t.organizationId)
+                    ?.name || "",
+              }
+            : undefined,
+          _count: {
+            members: mockTeamMembers.filter(
+              (tm) => tm.teamId === t.id && tm.status === "ACCEPTED",
+            ).length,
+            worklogs: mockWorklogs.filter((w) => w.teamId === t.id).length,
+          },
+        })) as Team[];
       }
-
       const response = await fetch("/api/teams/member");
       if (!response.ok) {
         throw new Error("Failed to fetch member teams");
@@ -157,54 +190,61 @@ export const useTeam = (teamId: string) => {
   return useQuery({
     queryKey: queryKeys.teams.detail(teamId),
     queryFn: async () => {
-      // In development, return mock team data if available
-      if (isDevelopment) {
-        const mockTeam = getMockTeam(teamId);
-        if (mockTeam) {
-          // Get mock owner
-          const mockOwner = mockUsers.find((u) => u.id === mockTeam.ownerId);
+      // In development, return mock data directly without any network call
+      if (process.env.NODE_ENV === "development") {
+        const team = mockTeams.find((t) => t.id === teamId);
+        if (!team) throw new Error("Team not found");
 
-          // Get mock organization
-          const mockOrganization = mockTeam.organizationId
-            ? mockOrganizations.find((o) => o.id === mockTeam.organizationId)
-            : null;
+        const owner = mockUsers.find((u) => u.id === team.ownerId);
+        const organization = mockOrganizations.find(
+          (o) => o.id === team.organizationId,
+        );
+        const members = mockTeamMembers
+          .filter((tm) => tm.teamId === teamId && tm.status === "ACCEPTED")
+          .map((tm) => {
+            const user = mockUsers.find((u) => u.id === tm.userId);
+            return {
+              id: tm.id,
+              email: tm.email,
+              status: tm.status,
+              user: user
+                ? {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    image: user.image ?? null,
+                  }
+                : null,
+            };
+          });
 
-          // Get mock members
-          const mockMembers = getMockTeamMembers(teamId)
-            .filter((m) => m.status === "ACCEPTED")
-            .map((m) => ({
-              id: m.id,
-              email: m.email,
-              status: m.status,
-              user: m.userId ? mockUsers.find((u) => u.id === m.userId) : null,
-            }));
-
-          return {
-            ...mockTeam,
-            createdAt: mockTeam.createdAt.toISOString(),
-            updatedAt: mockTeam.updatedAt.toISOString(),
-            owner: mockOwner
-              ? {
-                  id: mockOwner.id,
-                  name: mockOwner.name,
-                  email: mockOwner.email,
-                  image: mockOwner.image,
-                }
-              : null,
-            organization: mockOrganization
-              ? {
-                  id: mockOrganization.id,
-                  name: mockOrganization.name,
-                }
-              : null,
-            members: mockMembers,
-            _count: {
-              worklogs: mockWorklogs.filter((w) => w.teamId === teamId).length,
-            },
-          };
-        }
+        return {
+          id: team.id,
+          name: team.name,
+          description: team.description || null,
+          credits: team.credits,
+          project: team.project || null,
+          ownerId: team.ownerId,
+          organizationId: team.organizationId || null,
+          createdAt: team.createdAt.toISOString(),
+          updatedAt: team.updatedAt.toISOString(),
+          _count: {
+            worklogs: mockWorklogs.filter((w) => w.teamId === teamId).length,
+          },
+          owner: owner
+            ? {
+                id: owner.id,
+                name: owner.name,
+                email: owner.email,
+                image: owner.image ?? null,
+              }
+            : null,
+          organization: organization
+            ? { id: organization.id, name: organization.name }
+            : null,
+          members,
+        };
       }
-
       const response = await fetch(`/api/teams/${teamId}`);
       if (!response.ok) {
         throw new Error("Failed to fetch team");
@@ -224,18 +264,28 @@ export const useTeamMembers = (teamId: string) => {
   return useQuery({
     queryKey: queryKeys.teams.members(teamId),
     queryFn: async () => {
-      // In development, return mock team members if available
-      if (isDevelopment) {
-        const mockMembers = getMockTeamMembers(teamId);
-        if (mockMembers.length > 0) {
-          return mockMembers.map((m) => ({
-            ...m,
-            invitedAt: m.invitedAt.toISOString(),
-            joinedAt: m.joinedAt?.toISOString(),
-          })) as TeamMember[];
-        }
+      // In development, return mock data directly without any network call
+      if (process.env.NODE_ENV === "development") {
+        return mockTeamMembers
+          .filter((tm) => tm.teamId === teamId)
+          .map((tm) => {
+            const user = tm.userId
+              ? mockUsers.find((u) => u.id === tm.userId)
+              : undefined;
+            return {
+              id: tm.id,
+              teamId: tm.teamId,
+              userId: tm.userId || null,
+              email: tm.email,
+              status: tm.status,
+              invitedAt: tm.invitedAt.toISOString(),
+              joinedAt: tm.joinedAt ? tm.joinedAt.toISOString() : null,
+              user: user
+                ? { id: user.id, name: user.name, email: user.email }
+                : null,
+            } as TeamMember;
+          });
       }
-
       const response = await fetch(`/api/teams/${teamId}/members`);
       if (!response.ok) {
         throw new Error("Failed to fetch team members");
