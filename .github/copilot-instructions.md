@@ -91,6 +91,7 @@ model User {
   memberships   TeamMember[]
   worklogs      Worklog[]
   ratings       Rating[]
+  organizationInvitations OrganizationInvitation[]
 
   @@map("users")
 }
@@ -103,6 +104,7 @@ model Organization {
   ownerId     String   @map("owner_id")
   owner       User     @relation("OrganizationOwner", fields: [ownerId], references: [id])
   teams       Team[]
+  invitations OrganizationInvitation[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -150,6 +152,28 @@ model TeamMember {
   @@index([userId, status])
   @@index([teamId, status])
   @@map("team_members")
+}
+
+model OrganizationInvitation {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  userId         String?  @map("user_id")
+  email          String
+  token          String?  @unique // Invitation token
+  status         MemberStatus @default(PENDING)
+  invitedAt      DateTime @default(now())
+  joinedAt       DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user          User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@unique([organizationId, email])
+  @@index([userId])
+  @@index([status])
+  @@index([userId, status])
+  @@index([organizationId, status])
+  @@map("organization_invitations")
 }
 
 model Worklog {
@@ -240,6 +264,7 @@ Based on [official Prisma Auth.js guide](https://www.prisma.io/docs/guides/authj
 - `components/auth-components.tsx`: Reusable authentication components
 - `components/email-template.tsx`: Email template component for testing
 - `components/team-invitation-email.tsx`: React Email template for team invitations
+- `components/emails/OrganizationInvitationEmail.tsx`: React Email template for organization invitations
 - `app/api/dashboard/route.ts`: Optimized dashboard data endpoint (combines sidebar stats, worklogs, and team data in single request)
 - `app/api/sidebar/stats/route.ts`: Real-time sidebar statistics endpoint
 - `app/api/teams/member/route.ts`: Get teams where user is a member
@@ -251,6 +276,7 @@ Based on [official Prisma Auth.js guide](https://www.prisma.io/docs/guides/authj
 - `app/api/teams/[teamId]/worklogs/route.ts`: Get worklogs for specific team
 - `app/api/teams/[teamId]/members/route.ts`: Team member management (GET/POST)
 - `app/api/teams/[teamId]/members/[memberId]/route.ts`: Individual team member management (DELETE)
+- `app/api/organizations/[organizationId]/invite/route.ts`: Organization invitation API endpoint
 - `app/api/organizations/[organizationId]/credits/route.ts`: Organization credits API (GET/PATCH)
 - `app/api/organizations/[organizationId]/worklogs/route.ts`: Get worklogs for specific organization
 - `app/api/worklogs/[worklogId]/status/route.ts`: Worklog status transition API with strict validation
@@ -261,13 +287,15 @@ Based on [official Prisma Auth.js guide](https://www.prisma.io/docs/guides/authj
 - `app/api/send/route.tsx`: Test email sending endpoint (development only)
 - `lib/auth-utils.ts`: Comprehensive RBAC helper functions (isOrganizationOwner, isTeamOwner, etc.)
 - `lib/validations.ts`: Zod validation schemas for all API requests
-- `lib/hooks/`: Complete set of React Query hooks (use-dashboard, use-organizations, use-teams, use-worklogs, use-ratings, use-user, use-content-theme, use-mounted, use-prefetch)
+- `lib/mock-data.ts`: Complete mock data for development (users, teams, organizations, worklogs, ratings)
+- `lib/hooks/`: Complete set of React Query hooks with client-side dev mocks (use-dashboard, use-organizations, use-teams, use-worklogs, use-ratings, use-user, use-content-theme, use-mounted, use-prefetch)
 - `prisma/schema.prisma`: Database schema with Auth.js and hierarchical models
 - `app/debug/`: Development-only debug page for testing team access
 - `app/home/`: Main dashboard page with multi-role navigation
 - `app/profile/`: User profile page with account information and settings
 - `app/teams/`: Role-specific team views and worklog management
 - `api-documentation.md`: Complete API reference documentation
+- `OAUTH_BYPASS_IMPLEMENTATION_PLAN.md`: OAuth bypass implementation plan
 - Environment variables loaded via `dotenv/config` in `prisma.config.ts`
 
 ## Component Organization
@@ -284,6 +312,7 @@ The application follows a modular component architecture:
 - **`components/entities/`**: Reusable entity cards and list components
 - **`components/actions/`**: CRUD action components
 - **`components/auth/`**: Authentication-related components (test user switcher)
+- **`components/emails/`**: Email template components (OrganizationInvitationEmail)
 - **`components/` (root level)**: Core components (auth-components, email templates, providers, rating modal, GanttChart, error-boundary, organization-settings-dialog)
 
 ## Critical Patterns
@@ -374,7 +403,7 @@ const VALID_TRANSITIONS = {
 
 ### Email Invitations
 
-Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https://resend.com/docs/send-with-nextjs) for setup. Create pending TeamMember records, send invitation emails, and update status on acceptance.
+Use Resend Node.js SDK for team and organization invitations. Follow [Resend Next.js guide](https://resend.com/docs/send-with-nextjs) for setup. Create pending TeamMember records, send invitation emails, and update status on acceptance.
 
 **Implementation Details:**
 
@@ -392,6 +421,7 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 - **Environment**: Requires `DATABASE_URL` in `.env` file
 - **Email Setup**: Configure email service for team invitations
 - **OAuth Testing**: Run `npm run test:oauth-bypass` for OAuth bypass testing
+- **Mock Data Development**: All data-fetching hooks include `process.env.NODE_ENV === "development"` guards that return mock data instantly without network calls (see lib/mock-data.ts for mock data structure)
 - **Linting and Formatting**: Use `npm run lint` for ESLint (with Next.js config) and `npx prettier --write .` for code formatting (Prettier integrated to avoid conflicts)
 
 ## UI/UX Best Practices
@@ -412,7 +442,7 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 - **Member Dashboard**: Shows personal worklogs, team list, progress updates
 - **Organization Creation Flow**: Simple form with name and description
 - **Team Creation Flow**: Simple form with project name, optional organization selection, description
-- **Invitation Flow**: Email input field for team member emails (university domain only)
+- **Invitation Flow**: Email input field for team member emails (university domain only) and organization owner emails
 - **Worklog Forms**: Rich text description, optional GitHub link validation, optional images as work evidence, progress status updates
 - **Deadline Setting**: Team owners can set optional deadlines per worklog with visual indicators
 - **Progress Tracking**: Members update STARTED → HALF_DONE → COMPLETED, team owners set REVIEWED, organization owners set GRADED
@@ -423,7 +453,7 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 ## Current State
 
 - ✅ **Authentication Backend**: Fully implemented with Auth.js v5, GitHub OAuth, Google OAuth, and Prisma integration
-- ✅ **Email Workflow**: Complete team invitation system with Resend SDK, secure tokens, and React Email templates
+- ✅ **Email Workflow**: Complete team and organization invitation system with Resend SDK, secure tokens, and React Email templates
 - ✅ **Database Schema**: Organization, Team, TeamMember, Worklog, Rating, WorklogAttachment models implemented with performance indexes and migrations applied
 - ✅ **API Endpoints**: Complete REST API implementation with 15+ endpoints for organizations, teams, worklogs, ratings, invitations, and file uploads
 - ✅ **File Upload System**: Worklog attachments support for images and documents with validation and storage
@@ -437,6 +467,7 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 - **Rating Automation**: Tentative feature for automatic rating reduction on late worklog completions (details not finalized yet)
 - ✅ **Multi-Role UI**: Sidebar navigation structure fully implemented with dynamic behavior for users with multiple roles (Member Teams, Lead Teams, My Organizations)
 - ✅ **Organization Management**: Complete organization CRUD operations, team assignment to organizations, and organization-level worklog/rating management
+- ✅ **Client-Side Dev Mocks**: Comprehensive mock data implementation across all data-fetching hooks (useTeam, useTeamMembers, useMemberTeams, useOwnedTeams, useOrganizations, useWorklogs, useTeamWorklogs, useSidebarStats, useUserPermissions, useWorklogRatings, useOrganizationRatings, useDashboard, useTeamInvitations) with `process.env.NODE_ENV === "development"` guards for 100% frontend mock data visibility without database dependency
 
 **🎉 APPLICATION STATUS: FULLY INTEGRATED AND PRODUCTION READY**
 
@@ -458,6 +489,7 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 - Remove `runtime = "vercel-edge"` from Prisma generator for local development
 - The `styles/` directory is empty and unused - can be safely deleted as all styling is handled through Tailwind CSS and component-scoped styles
 - Database schema includes performance indexes for efficient queries (composite indexes on user+status, team+createdAt, etc.)
+- **Mock Data Development**: All data-fetching hooks use `process.env.NODE_ENV === "development"` guards to return mock data instantly without network calls; never modify these guards or the mock data structure without understanding the full client-side mock system
 
 ## Backend Requirements
 
@@ -473,7 +505,7 @@ Use Resend Node.js SDK for team invitations. Follow [Resend Next.js guide](https
 - **Input validation**: ✅ COMPLETED - Zod schemas for all API request validation in lib/validations.ts (credits, status, ratings, organizations, teams, worklogs).
 - **Deadline management**: ✅ COMPLETED - Deadlines can be set on worklog creation, updated, and deleted; visual indicators fully implemented in GanttChart component and dedicated deadline components.
 - **Authentication with OAuth**: ✅ COMPLETED - Auth.js setup with Prisma adapter, GitHub and Google providers, Node.js runtime compatibility.
-- **Email invites**: ✅ COMPLETED - Send invitations via Resend Node.js SDK, handle pending/accepted/rejected statuses in TeamMember model with secure token validation.
+- **Email invites**: ✅ COMPLETED - Send invitations via Resend Node.js SDK, handle pending/accepted/rejected statuses in TeamMember model with secure token validation. Organization invitations also implemented with dedicated email templates.
 - **Authorization checks**: ✅ COMPLETED - Middleware or per-route validation to ensure users can only access their organizations/teams/worklogs/ratings based on hierarchical permissions.
 - **Input validation and error handling**: ✅ COMPLETED - Use Zod for API request validation, standardize error responses (e.g., 400/403/404).
 - **GitHub link validation (optional)**: ✅ COMPLETED - Zod schema validation for GitHub URLs in worklog creation
