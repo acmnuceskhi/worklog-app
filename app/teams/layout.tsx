@@ -7,7 +7,6 @@ import {
   FaUsers,
   FaUserTie,
   FaBell,
-  FaSearch,
   FaBars,
   FaChevronLeft,
   FaChevronRight,
@@ -41,7 +40,6 @@ export default function TeamsLayout({
   useSharedSession();
   const [contentTheme, setContentTheme] = useContentTheme();
   const mounted = useMounted();
-  const [query, setQuery] = useState("");
 
   // TanStack Query hook for sidebar stats
   const { data: sidebarStatsData, isLoading: sidebarLoading } =
@@ -155,15 +153,6 @@ export default function TeamsLayout({
           >
             Worklog
           </h1>
-          <div className="flex gap-2 items-center bg-white/10 px-2.5 py-1.5 rounded-lg w-70">
-            <FaSearch />
-            <input
-              className="bg-transparent border-none outline-none text-white placeholder-white/70 w-full"
-              placeholder="Search teams..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
         </div>
 
         <div className="flex gap-3 flex-shrink-0">

@@ -26,6 +26,8 @@ import { RatingModal } from "@/components/rating-modal";
 import {
   TeamFilters,
   type TeamFilterState,
+  type TeamSortBy,
+  type TeamSortDir,
 } from "@/components/filters/team-filters";
 import {
   WorklogFilters,
@@ -37,7 +39,7 @@ import { LoadingState } from "@/components/states/loading-state";
 import { EmptyState } from "@/components/states/empty-state";
 import { ErrorState } from "@/components/states/error-state";
 import { TeamCreationWizard } from "@/components/teams/team-creation-wizard";
-import { useDeleteWorklog } from "@/lib/hooks";
+import { useDeleteWorklog, useTeamSearch } from "@/lib/hooks";
 import { PageHeader } from "@/components/ui/page-header";
 
 interface TeamMember {
@@ -139,12 +141,6 @@ const DEFAULT_WORKLOG_FILTERS: WorklogFilterState = {
   sortDir: "desc",
 };
 
-const DEFAULT_TEAM_FILTERS: TeamFilterState = {
-  search: "",
-  sortBy: "name",
-  sortDir: "asc",
-};
-
 function useDebouncedValue<T>(value: T, delay: number) {
   const [debouncedValue, setDebouncedValue] = useState(value);
 
@@ -191,8 +187,8 @@ export default function OrganizationDashboardPage({
   const [worklogFilters, setWorklogFilters] = useState<WorklogFilterState>(
     DEFAULT_WORKLOG_FILTERS,
   );
-  const [teamFilters, setTeamFilters] =
-    useState<TeamFilterState>(DEFAULT_TEAM_FILTERS);
+  const [sortBy, setSortBy] = useState<TeamSortBy>("name");
+  const [sortDir, setSortDir] = useState<TeamSortDir>("asc");
   const [worklogs, setWorklogs] = useState<WorklogListItem[]>([]);
   const [worklogsLoading, setWorklogsLoading] = useState(false);
   const [worklogsError, setWorklogsError] = useState<string | null>(null);
@@ -338,9 +334,39 @@ export default function OrganizationDashboardPage({
     setWorklogPage(1);
   }, []);
 
-  const handleTeamFiltersChange = useCallback((next: TeamFilterState) => {
-    setTeamFilters(next);
-  }, []);
+  // Team search (consistent with lead/member pages)
+  const orgTeams = useMemo(
+    () => organization?.teams || [],
+    [organization?.teams],
+  );
+
+  const {
+    searchQuery: teamSearchQuery,
+    setSearchQuery: setTeamSearchQuery,
+    filteredTeams: searchedTeams,
+  } = useTeamSearch({ teams: orgTeams });
+
+  const filteredTeams = useMemo(() => {
+    const sorted = [...searchedTeams].sort((a, b) => {
+      if (sortBy === "members") {
+        return a._count.members - b._count.members;
+      }
+      if (sortBy === "worklogs") {
+        return a._count.worklogs - b._count.worklogs;
+      }
+      return a.name.localeCompare(b.name);
+    });
+    return sortDir === "desc" ? sorted.reverse() : sorted;
+  }, [searchedTeams, sortBy, sortDir]);
+
+  const handleTeamFiltersChange = useCallback(
+    (next: TeamFilterState) => {
+      setTeamSearchQuery(next.search);
+      setSortBy(next.sortBy);
+      setSortDir(next.sortDir);
+    },
+    [setTeamSearchQuery],
+  );
 
   const resetWorklogFilters = useCallback(() => {
     setWorklogFilters(DEFAULT_WORKLOG_FILTERS);
@@ -348,39 +374,10 @@ export default function OrganizationDashboardPage({
   }, []);
 
   const resetTeamFilters = useCallback(() => {
-    setTeamFilters(DEFAULT_TEAM_FILTERS);
-  }, []);
-
-  const filteredTeams = useMemo(() => {
-    if (!organization) {
-      return [];
-    }
-
-    const search = teamFilters.search.trim().toLowerCase();
-    const filtered = (organization.teams || []).filter((team) => {
-      if (!search) {
-        return true;
-      }
-      const haystack = [team.name, team.description, team.project]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(search);
-    });
-
-    const sorted = [...filtered].sort((a, b) => {
-      const direction = teamFilters.sortDir === "asc" ? 1 : -1;
-      if (teamFilters.sortBy === "members") {
-        return (a._count.members - b._count.members) * direction;
-      }
-      if (teamFilters.sortBy === "worklogs") {
-        return (a._count.worklogs - b._count.worklogs) * direction;
-      }
-      return a.name.localeCompare(b.name) * direction;
-    });
-
-    return sorted;
-  }, [organization, teamFilters]);
+    setTeamSearchQuery("");
+    setSortBy("name");
+    setSortDir("asc");
+  }, [setTeamSearchQuery]);
 
   const handleOpenRating = (worklog: {
     id: string;
@@ -554,20 +551,30 @@ export default function OrganizationDashboardPage({
             <CardContent>
               <div className="mb-4">
                 <TeamFilters
-                  value={teamFilters}
+                  value={{ search: teamSearchQuery, sortBy, sortDir }}
                   onChange={handleTeamFiltersChange}
                   onReset={resetTeamFilters}
                 />
               </div>
               {filteredTeams.length === 0 ? (
                 <EmptyState
-                  title="No teams found"
-                  description="Create a team to start collaborating with members and tracking their worklogs"
+                  title={
+                    teamSearchQuery ? "No matching teams" : "No teams found"
+                  }
+                  description={
+                    teamSearchQuery
+                      ? `No teams matched "${teamSearchQuery}". Try different keywords.`
+                      : "Create a team to start collaborating with members and tracking their worklogs"
+                  }
                   icon={<FaUsers className="h-8 w-8" />}
-                  action={{
-                    label: "Create Team",
-                    onClick: () => setShowCreateTeam(true),
-                  }}
+                  action={
+                    teamSearchQuery
+                      ? { label: "Clear Filters", onClick: resetTeamFilters }
+                      : {
+                          label: "Create Team",
+                          onClick: () => setShowCreateTeam(true),
+                        }
+                  }
                 />
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -1,10 +1,15 @@
 "use client";
 
-import React from "react";
+import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { FaUsers } from "react-icons/fa";
+import { FaUsers, FaSearch } from "react-icons/fa";
 import { ErrorBoundary } from "@/components/error-boundary";
-import { useMemberTeams } from "@/lib/hooks";
+import { useMemberTeams, useTeamSearch } from "@/lib/hooks";
+import {
+  TeamFilters,
+  type TeamSortBy,
+  type TeamSortDir,
+} from "@/components/filters/team-filters";
 import { ErrorState } from "@/components/states/error-state";
 import { EmptyState } from "@/components/states/empty-state";
 import { LoadingState } from "@/components/states/loading-state";
@@ -23,6 +28,33 @@ export default function MemberTeamsPage() {
 function MemberTeamsPageContent() {
   const router = useRouter();
   const { data: teams = [], isLoading, error, refetch } = useMemberTeams();
+
+  // Search + sort
+  const [sortBy, setSortBy] = useState<TeamSortBy>("name");
+  const [sortDir, setSortDir] = useState<TeamSortDir>("asc");
+
+  const { searchQuery, setSearchQuery, filteredTeams } = useTeamSearch({
+    teams,
+  });
+
+  const sortedTeams = useMemo(() => {
+    const sorted = [...filteredTeams].sort((a, b) => {
+      if (sortBy === "members") {
+        return (a._count?.members ?? 0) - (b._count?.members ?? 0);
+      }
+      if (sortBy === "worklogs") {
+        return (a.myWorklogCount ?? 0) - (b.myWorklogCount ?? 0);
+      }
+      return a.name.localeCompare(b.name);
+    });
+    return sortDir === "desc" ? sorted.reverse() : sorted;
+  }, [filteredTeams, sortBy, sortDir]);
+
+  const handleFilterReset = () => {
+    setSearchQuery("");
+    setSortBy("name");
+    setSortDir("asc");
+  };
 
   if (isLoading) {
     return <LoadingState text="Loading your teams..." />;
@@ -61,6 +93,19 @@ function MemberTeamsPageContent() {
         </div>
       </div>
 
+      {/* Search & Sort Filters */}
+      {teams.length > 0 && (
+        <TeamFilters
+          value={{ search: searchQuery, sortBy, sortDir }}
+          onChange={(state) => {
+            setSearchQuery(state.search);
+            setSortBy(state.sortBy);
+            setSortDir(state.sortDir);
+          }}
+          onReset={handleFilterReset}
+        />
+      )}
+
       {/* Teams Grid — EntityList + EntityCard (matches lead/page.tsx) */}
       {teams.length === 0 ? (
         <EmptyState
@@ -68,9 +113,16 @@ function MemberTeamsPageContent() {
           description="You'll see teams here once you accept invitations from team leaders."
           icon={<FaUsers className="h-8 w-8" />}
         />
+      ) : sortedTeams.length === 0 ? (
+        <EmptyState
+          title="No matching teams"
+          description={`No teams matched "${searchQuery}". Try different keywords.`}
+          icon={<FaSearch className="h-8 w-8" />}
+          action={{ label: "Clear Filters", onClick: handleFilterReset }}
+        />
       ) : (
-        <EntityList title="Your Teams" count={teams.length} layout="grid">
-          {teams.map((team) => (
+        <EntityList title="Your Teams" count={sortedTeams.length} layout="grid">
+          {sortedTeams.map((team) => (
             <EntityCard
               key={team.id}
               title={team.name}

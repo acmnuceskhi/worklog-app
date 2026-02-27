@@ -29,6 +29,8 @@ import {
   useContentTheme,
   usePrefetchOwnedTeams,
   usePrefetchMemberTeams,
+  useTeamSearch,
+  useWorklogSearch,
 } from "@/lib/hooks";
 import { LoadingState } from "@/components/states/loading-state";
 import { EmptyState } from "@/components/states/empty-state";
@@ -69,7 +71,6 @@ export default function DashboardPage() {
   );
 
   // State declarations
-  const [query, setQuery] = useState("");
   const [contentTheme, setContentTheme] = useContentTheme();
   const mounted = useMounted();
 
@@ -163,6 +164,23 @@ export default function DashboardPage() {
       return true;
     });
   }, [memberTeams, ownedTeams]);
+
+  // Search hooks — wired to the header search input
+  const {
+    searchQuery,
+    setSearchQuery: setTeamSearchQuery,
+    filteredTeams,
+    hasQuery: hasTeamQuery,
+  } = useTeamSearch({ teams });
+
+  const { setSearchQuery: setWorklogSearchQuery, filteredWorklogs } =
+    useWorklogSearch({ worklogs: allWorklogs });
+
+  // Single search bar drives both team and worklog filters
+  const handleSearchChange = (value: string) => {
+    setTeamSearchQuery(value);
+    setWorklogSearchQuery(value);
+  };
 
   const sidebarItems = [
     {
@@ -271,11 +289,12 @@ export default function DashboardPage() {
             <FaSearch />
             <input
               className="bg-transparent border-none outline-none text-white placeholder-white/70 w-full"
-              placeholder="Search teams..."
-              value={query}
+              placeholder="Search teams & worklogs..."
+              value={searchQuery}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setQuery(e.target.value)
+                handleSearchChange(e.target.value)
               }
+              aria-label="Search teams and worklogs"
             />
           </div>
         </div>
@@ -476,20 +495,41 @@ export default function DashboardPage() {
           </section>
 
           <section className={cardClassName}>
-            <h3>Featured Teams</h3>
-            {teams.length === 0 ? (
+            <div className="flex items-center justify-between mb-1">
+              <h3>Featured Teams</h3>
+              {hasTeamQuery && (
+                <span className="text-sm text-muted">
+                  {filteredTeams.length} result
+                  {filteredTeams.length !== 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
+            {filteredTeams.length === 0 ? (
               <EmptyState
-                title="No teams joined yet"
-                description="Create or join a team to start collaborating and tracking your worklogs"
+                title={
+                  hasTeamQuery ? "No matching teams" : "No teams joined yet"
+                }
+                description={
+                  hasTeamQuery
+                    ? `No teams matched "${searchQuery}". Try different keywords.`
+                    : "Create or join a team to start collaborating and tracking your worklogs"
+                }
                 icon={<FaUsers className="h-8 w-8" />}
-                action={{
-                  label: "Create Team",
-                  onClick: () => setShowTeamWizard(true),
-                }}
+                action={
+                  hasTeamQuery
+                    ? {
+                        label: "Clear Search",
+                        onClick: () => handleSearchChange(""),
+                      }
+                    : {
+                        label: "Create Team",
+                        onClick: () => setShowTeamWizard(true),
+                      }
+                }
               />
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {teams.slice(0, 6).map((team) => (
+                {filteredTeams.slice(0, 6).map((team) => (
                   <div key={team.id} className={teamCardClassName}>
                     <div className="flex gap-2.5 items-center">
                       <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-white text-sm font-semibold flex items-center justify-center">
@@ -524,15 +564,24 @@ export default function DashboardPage() {
           </section>
 
           <section className={cardClassName}>
-            <h3>Recent Worklogs</h3>
-            {allWorklogs.length === 0 ? (
+            <div className="flex items-center justify-between mb-1">
+              <h3>Recent Worklogs</h3>
+              {hasTeamQuery && (
+                <span className="text-sm text-muted">
+                  {filteredWorklogs.length} result
+                  {filteredWorklogs.length !== 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
+            {filteredWorklogs.length === 0 ? (
               <p className="text-muted">
-                Your worklogs will appear here once you start tracking your
-                progress.
+                {hasTeamQuery
+                  ? `No worklogs matched "${searchQuery}".`
+                  : "Your worklogs will appear here once you start tracking your progress."}
               </p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {allWorklogs.slice(0, 6).map((worklog) => (
+                {filteredWorklogs.slice(0, 6).map((worklog) => (
                   <div key={worklog.id} className={teamCardClassName}>
                     <div className="flex gap-2.5 items-center">
                       <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-white text-sm font-semibold flex items-center justify-center">

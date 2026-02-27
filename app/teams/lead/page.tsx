@@ -1,11 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { TeamCreationWizard } from "@/components/teams/team-creation-wizard";
-import { FaPlus, FaUsers, FaCog } from "react-icons/fa";
-import { useOwnedTeams } from "@/lib/hooks";
+import { FaPlus, FaUsers, FaCog, FaSearch } from "react-icons/fa";
+import { useOwnedTeams, useTeamSearch } from "@/lib/hooks";
+import {
+  TeamFilters,
+  type TeamSortBy,
+  type TeamSortDir,
+} from "@/components/filters/team-filters";
 import { toast } from "sonner";
 import { LoadingState } from "@/components/states/loading-state";
 import { ErrorState } from "@/components/states/error-state";
@@ -18,6 +23,35 @@ export default function LeadTeamsPage() {
   const [showWizard, setShowWizard] = useState(false);
 
   const { data: teams = [], isLoading, error, refetch } = useOwnedTeams();
+
+  // Search + sort
+  const [sortBy, setSortBy] = useState<TeamSortBy>("name");
+  const [sortDir, setSortDir] = useState<TeamSortDir>("asc");
+
+  const { searchQuery, setSearchQuery, filteredTeams } = useTeamSearch({
+    teams,
+  });
+
+  // Sort the filtered results
+  const sortedTeams = useMemo(() => {
+    const sorted = [...filteredTeams].sort((a, b) => {
+      if (sortBy === "members") {
+        return (a._count?.members ?? 0) - (b._count?.members ?? 0);
+      }
+      if (sortBy === "worklogs") {
+        return (a._count?.worklogs ?? 0) - (b._count?.worklogs ?? 0);
+      }
+      // Default: sort by name
+      return a.name.localeCompare(b.name);
+    });
+    return sortDir === "desc" ? sorted.reverse() : sorted;
+  }, [filteredTeams, sortBy, sortDir]);
+
+  const handleFilterReset = () => {
+    setSearchQuery("");
+    setSortBy("name");
+    setSortDir("asc");
+  };
 
   const handleTeamCreated = (teamId: string) => {
     // Refetch owned teams after creation
@@ -82,6 +116,19 @@ export default function LeadTeamsPage() {
         </Button>
       </div>
 
+      {/* Search & Sort Filters */}
+      {teams.length > 0 && (
+        <TeamFilters
+          value={{ search: searchQuery, sortBy, sortDir }}
+          onChange={(state) => {
+            setSearchQuery(state.search);
+            setSortBy(state.sortBy);
+            setSortDir(state.sortDir);
+          }}
+          onReset={handleFilterReset}
+        />
+      )}
+
       {/* Teams Grid */}
       {teams.length === 0 ? (
         <EmptyState
@@ -93,9 +140,16 @@ export default function LeadTeamsPage() {
             onClick: () => setShowWizard(true),
           }}
         />
+      ) : sortedTeams.length === 0 ? (
+        <EmptyState
+          title="No matching teams"
+          description={`No teams matched "${searchQuery}". Try different keywords.`}
+          icon={<FaSearch className="h-8 w-8" />}
+          action={{ label: "Clear Filters", onClick: handleFilterReset }}
+        />
       ) : (
-        <EntityList title="Your Teams" count={teams.length} layout="grid">
-          {teams.map((team) => (
+        <EntityList title="Your Teams" count={sortedTeams.length} layout="grid">
+          {sortedTeams.map((team) => (
             <EntityCard
               key={team.id}
               title={team.name}

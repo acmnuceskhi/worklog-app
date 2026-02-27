@@ -84,6 +84,16 @@ export {
   type Rating,
 } from "./use-ratings";
 
+// Search hooks (client-side filtering with debounce)
+export {
+  useTeamSearch,
+  useWorklogSearch,
+  type UseTeamSearchOptions,
+  type UseTeamSearchReturn,
+  type UseWorklogSearchOptions,
+  type UseWorklogSearchReturn,
+} from "./search";
+
 // Client-side hooks (hydration-safe, useSyncExternalStore-based)
 export { useMounted } from "./use-mounted";
 export { useContentTheme } from "./use-content-theme";

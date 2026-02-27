@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export type TeamSortBy = "name" | "members" | "worklogs";
+export type TeamSortBy = "name" | "members" | "worklogs" | "teams";
 export type TeamSortDir = "asc" | "desc";
 
 export interface TeamFilterState {
@@ -20,13 +20,35 @@ export interface TeamFilterState {
   sortDir: TeamSortDir;
 }
 
+/** Single sort option rendered in the dropdown */
+export interface SortOption {
+  value: TeamSortBy;
+  label: string;
+}
+
+const DEFAULT_SORT_OPTIONS: SortOption[] = [
+  { value: "name", label: "Name" },
+  { value: "members", label: "Members" },
+  { value: "worklogs", label: "Worklogs" },
+];
+
 interface TeamFiltersProps {
   value: TeamFilterState;
   onChange: (_: TeamFilterState) => void;
   onReset?: () => void;
+  /** Override the default sort-by options (Name / Members / Worklogs) */
+  sortOptions?: SortOption[];
+  /** Placeholder text for the search input */
+  searchPlaceholder?: string;
 }
 
-export function TeamFilters({ value, onChange, onReset }: TeamFiltersProps) {
+export function TeamFilters({
+  value,
+  onChange,
+  onReset,
+  sortOptions = DEFAULT_SORT_OPTIONS,
+  searchPlaceholder = "Search teams",
+}: TeamFiltersProps) {
   const update = (partial: Partial<TeamFilterState>) => {
     onChange({ ...value, ...partial });
   };
@@ -38,7 +60,7 @@ export function TeamFilters({ value, onChange, onReset }: TeamFiltersProps) {
         <Input
           value={value.search}
           onChange={(event) => update({ search: event.target.value })}
-          placeholder="Search teams"
+          placeholder={searchPlaceholder}
           className="bg-slate-800/60 border-slate-700 text-white"
         />
       </div>
@@ -52,9 +74,11 @@ export function TeamFilters({ value, onChange, onReset }: TeamFiltersProps) {
             <SelectValue placeholder="Sort" />
           </SelectTrigger>
           <SelectContent className="bg-slate-900 border-slate-700">
-            <SelectItem value="name">Name</SelectItem>
-            <SelectItem value="members">Members</SelectItem>
-            <SelectItem value="worklogs">Worklogs</SelectItem>
+            {sortOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

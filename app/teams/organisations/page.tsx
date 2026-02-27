@@ -1,17 +1,61 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import Link from "next/link";
-import { FaBuilding, FaUsers, FaPlus, FaArrowRight } from "react-icons/fa";
+import {
+  FaBuilding,
+  FaUsers,
+  FaPlus,
+  FaArrowRight,
+  FaSearch,
+} from "react-icons/fa";
 import { Button } from "@/components/ui/button";
 import { LoadingState } from "@/components/states/loading-state";
 import { ErrorState } from "@/components/states/error-state";
 import { EmptyState } from "@/components/states/empty-state";
 import { EntityCard } from "@/components/entities/entity-card";
 import { EntityList } from "@/components/entities/entity-list";
-import { useOrganizations } from "@/lib/hooks";
+import { useOrganizations, useTeamSearch } from "@/lib/hooks";
+import {
+  TeamFilters,
+  type TeamSortBy,
+  type TeamSortDir,
+  type SortOption,
+} from "@/components/filters/team-filters";
+
+const ORG_SORT_OPTIONS: SortOption[] = [
+  { value: "name", label: "Name" },
+  { value: "teams", label: "Teams" },
+];
 
 export default function OrganisationsPage() {
   const { data: organizations = [], isLoading, error } = useOrganizations();
+
+  // Search + sort
+  const [sortBy, setSortBy] = useState<TeamSortBy>("name");
+  const [sortDir, setSortDir] = useState<TeamSortDir>("asc");
+
+  const {
+    searchQuery,
+    setSearchQuery,
+    filteredTeams: filteredOrgs,
+  } = useTeamSearch({ teams: organizations });
+
+  const sortedOrgs = useMemo(() => {
+    const sorted = [...filteredOrgs].sort((a, b) => {
+      if (sortBy === "teams") {
+        return (a._count?.teams ?? 0) - (b._count?.teams ?? 0);
+      }
+      return a.name.localeCompare(b.name);
+    });
+    return sortDir === "desc" ? sorted.reverse() : sorted;
+  }, [filteredOrgs, sortBy, sortDir]);
+
+  const handleFilterReset = () => {
+    setSearchQuery("");
+    setSortBy("name");
+    setSortDir("asc");
+  };
 
   if (isLoading) {
     return <LoadingState text="Loading organizations..." fullPage />;
@@ -94,6 +138,23 @@ export default function OrganisationsPage() {
           </div>
         </div>
 
+        {/* Search & Sort Filters */}
+        {organizations.length > 0 && (
+          <div className="mb-8">
+            <TeamFilters
+              value={{ search: searchQuery, sortBy, sortDir }}
+              onChange={(state) => {
+                setSearchQuery(state.search);
+                setSortBy(state.sortBy);
+                setSortDir(state.sortDir);
+              }}
+              onReset={handleFilterReset}
+              sortOptions={ORG_SORT_OPTIONS}
+              searchPlaceholder="Search organizations"
+            />
+          </div>
+        )}
+
         {/* Organizations Grid */}
         {organizations.length === 0 ? (
           <EmptyState
@@ -105,13 +166,20 @@ export default function OrganisationsPage() {
               onClick: () => (window.location.href = "/organizations/create"),
             }}
           />
+        ) : sortedOrgs.length === 0 ? (
+          <EmptyState
+            title="No matching organizations"
+            description={`No organizations matched "${searchQuery}". Try different keywords.`}
+            icon={<FaSearch className="h-8 w-8" />}
+            action={{ label: "Clear Filters", onClick: handleFilterReset }}
+          />
         ) : (
           <EntityList
             title="Your Organizations"
-            count={organizations.length}
+            count={sortedOrgs.length}
             layout="grid"
           >
-            {organizations.map((org) => (
+            {sortedOrgs.map((org) => (
               <Link key={org.id} href={`/organizations/${org.id}`}>
                 <EntityCard
                   title={org.name}
