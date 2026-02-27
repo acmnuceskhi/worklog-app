@@ -8,6 +8,7 @@ import { FaGithub } from "react-icons/fa";
 import { signIn } from "next-auth/react";
 import { useSharedSession } from "@/components/providers";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import styles from "./page.module.css";
 
 const shareTechMono = Share_Tech_Mono({ weight: "400", subsets: ["latin"] });
@@ -32,8 +33,14 @@ export default function Home() {
   }, [status, session, router]);
 
   const handleLogin = () => {
-    if (email && password) router.push("/home");
-    else alert("Please enter email and password");
+    if (!email.trim() || !password.trim()) {
+      toast.error("Missing Credentials", {
+        description: "Please enter both email and password to login.",
+        duration: 2500,
+      });
+      return;
+    }
+    router.push("/home");
   };
 
   const handleGoogleLogin = () => {

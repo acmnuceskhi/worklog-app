@@ -13,6 +13,7 @@ All endpoints require authentication via Auth.js session. Include session cookie
 ### Organizations
 
 #### GET /api/organizations
+
 Get all organizations owned by the current user.
 
 **Authorization**: Authenticated user (returns organizations they own)
@@ -20,6 +21,7 @@ Get all organizations owned by the current user.
 **Development Mode**: Returns mock organizations for user "mock-org-owner-1"
 
 **Response**:
+
 ```json
 {
   "data": [
@@ -46,11 +48,13 @@ Get all organizations owned by the current user.
 ```
 
 #### POST /api/organizations
+
 Create a new organization.
 
 **Authorization**: Authenticated user
 
 **Request Body**:
+
 ```json
 {
   "name": "string (required)",
@@ -63,6 +67,7 @@ Create a new organization.
 ---
 
 #### GET /api/organizations/[organizationId]
+
 Get a specific organization by ID.
 
 **Authorization**: Organization owner only
@@ -72,11 +77,13 @@ Get a specific organization by ID.
 **Response**: Organization object with teams
 
 #### PATCH /api/organizations/[organizationId]
+
 Update an organization.
 
 **Authorization**: Organization owner only
 
 **Request Body**:
+
 ```json
 {
   "name": "string (optional)",
@@ -85,6 +92,7 @@ Update an organization.
 ```
 
 #### DELETE /api/organizations/[organizationId]
+
 Delete an organization.
 
 **Authorization**: Organization owner only
@@ -92,11 +100,13 @@ Delete an organization.
 ---
 
 #### GET /api/organizations/[organizationId]/credits
+
 Get organization credits.
 
 **Authorization**: Organization owner only
 
 **Response**:
+
 ```json
 {
   "id": "string",
@@ -106,11 +116,13 @@ Get organization credits.
 ```
 
 #### PATCH /api/organizations/[organizationId]/credits
+
 Update organization credits.
 
 **Authorization**: Organization owner only
 
 **Request Body**:
+
 ```json
 {
   "action": "add | subtract | set",
@@ -121,11 +133,13 @@ Update organization credits.
 ---
 
 #### POST /api/organizations/[organizationId]/invite
+
 Send organization invitation.
 
 **Authorization**: Organization owner only
 
 **Request Body**:
+
 ```json
 {
   "email": "string"
@@ -137,6 +151,7 @@ Send organization invitation.
 ---
 
 #### GET /api/organizations/[organizationId]/worklogs
+
 Get all worklogs in an organization.
 
 **Authorization**: Organization owner only
@@ -148,6 +163,7 @@ Get all worklogs in an organization.
 ### Teams
 
 #### GET /api/teams
+
 Get all teams owned by the current user.
 
 **Authorization**: Authenticated user
@@ -155,6 +171,7 @@ Get all teams owned by the current user.
 **Development Mode**: Returns mock teams for user "mock-org-owner-1"
 
 **Response**:
+
 ```json
 {
   "data": [
@@ -178,11 +195,13 @@ Get all teams owned by the current user.
 ```
 
 #### POST /api/teams
+
 Create a new team.
 
 **Authorization**: Authenticated user
 
 **Request Body**:
+
 ```json
 {
   "name": "string (required)",
@@ -197,6 +216,7 @@ Create a new team.
 ---
 
 #### GET /api/teams/owned
+
 Get teams owned by the current user.
 
 **Authorization**: Authenticated user
@@ -204,6 +224,7 @@ Get teams owned by the current user.
 **Development Mode**: Returns mock owned teams
 
 **Response**:
+
 ```json
 {
   "data": [
@@ -216,6 +237,7 @@ Get teams owned by the current user.
 ```
 
 #### GET /api/teams/member
+
 Get teams where the current user is a member.
 
 **Authorization**: Authenticated user
@@ -223,6 +245,7 @@ Get teams where the current user is a member.
 **Development Mode**: Returns mock member teams
 
 **Response**:
+
 ```json
 {
   "data": [
@@ -246,6 +269,7 @@ Get teams where the current user is a member.
 ```
 
 #### GET /api/teams/accessible
+
 Get all teams the current user can access (owned + member).
 
 **Authorization**: Authenticated user
@@ -253,6 +277,7 @@ Get all teams the current user can access (owned + member).
 **Response**: Combined array of owned and member teams
 
 #### GET /api/teams/invitations
+
 Get pending team invitations for the current user.
 
 **Authorization**: Authenticated user
@@ -264,6 +289,7 @@ Get pending team invitations for the current user.
 ---
 
 #### GET /api/teams/[teamId]
+
 Get a specific team by ID.
 
 **Authorization**: Team owner or member
@@ -273,11 +299,13 @@ Get a specific team by ID.
 **Response**: Complete team object with owner, organization, and members
 
 #### PATCH /api/teams/[teamId]
+
 Update a team.
 
 **Authorization**: Team owner only
 
 **Request Body**:
+
 ```json
 {
   "name": "string (optional)",
@@ -287,6 +315,7 @@ Update a team.
 ```
 
 #### DELETE /api/teams/[teamId]
+
 Delete a team.
 
 **Authorization**: Team owner only
@@ -294,11 +323,13 @@ Delete a team.
 ---
 
 #### GET /api/teams/[teamId]/credits
+
 Get team credits.
 
 **Authorization**: Team owner only
 
 **Response**:
+
 ```json
 {
   "id": "string",
@@ -308,11 +339,13 @@ Get team credits.
 ```
 
 #### PATCH /api/teams/[teamId]/credits
+
 Update team credits.
 
 **Authorization**: Team owner only
 
 **Request Body**:
+
 ```json
 {
   "action": "add | subtract | set",
@@ -323,11 +356,13 @@ Update team credits.
 ---
 
 #### POST /api/teams/[teamId]/invite
+
 Send team invitation.
 
 **Authorization**: Team owner only
 
 **Request Body**:
+
 ```json
 {
   "email": "string"
@@ -339,6 +374,7 @@ Send team invitation.
 ---
 
 #### GET /api/teams/[teamId]/members
+
 Get team members.
 
 **Authorization**: Team owner or member
@@ -348,11 +384,13 @@ Get team members.
 **Response**: Array of team member objects
 
 #### POST /api/teams/[teamId]/members
+
 Add a member to the team.
 
 **Authorization**: Team owner only
 
 **Request Body**:
+
 ```json
 {
   "email": "string"
@@ -360,6 +398,7 @@ Add a member to the team.
 ```
 
 #### DELETE /api/teams/[teamId]/members/[memberId]
+
 Remove a member from the team.
 
 **Authorization**: Team owner only
@@ -367,6 +406,7 @@ Remove a member from the team.
 ---
 
 #### GET /api/teams/[teamId]/worklogs
+
 Get worklogs for a specific team.
 
 **Authorization**: Team owner or member
@@ -380,6 +420,7 @@ Get worklogs for a specific team.
 ### Worklogs
 
 #### GET /api/worklogs
+
 Get all worklogs for the current user.
 
 **Authorization**: Authenticated user
@@ -389,11 +430,13 @@ Get all worklogs for the current user.
 **Response**: Array of worklog objects with user data
 
 #### POST /api/worklogs
+
 Create a new worklog.
 
 **Authorization**: Authenticated user
 
 **Request Body**:
+
 ```json
 {
   "title": "string (required)",
@@ -409,6 +452,7 @@ Create a new worklog.
 ---
 
 #### GET /api/worklogs/[worklogId]
+
 Get a specific worklog by ID.
 
 **Authorization**: Worklog owner, team member, or organization owner
@@ -416,11 +460,13 @@ Get a specific worklog by ID.
 **Response**: Complete worklog object with attachments
 
 #### PATCH /api/worklogs/[worklogId]
+
 Update a worklog.
 
 **Authorization**: Worklog owner only
 
 **Request Body**:
+
 ```json
 {
   "title": "string (optional)",
@@ -431,6 +477,7 @@ Update a worklog.
 ```
 
 #### DELETE /api/worklogs/[worklogId]
+
 Delete a worklog.
 
 **Authorization**: Worklog owner only
@@ -438,11 +485,13 @@ Delete a worklog.
 ---
 
 #### PATCH /api/worklogs/[worklogId]/status
+
 Update worklog progress status.
 
 **Authorization**: Worklog owner (STARTED→HALF_DONE→COMPLETED), Team owner (COMPLETED→REVIEWED), Organization owner (REVIEWED→GRADED)
 
 **Request Body**:
+
 ```json
 {
   "newStatus": "STARTED | HALF_DONE | COMPLETED | REVIEWED | GRADED"
@@ -454,6 +503,7 @@ Update worklog progress status.
 ---
 
 #### GET /api/worklogs/[worklogId]/ratings
+
 Get ratings for a specific worklog.
 
 **Authorization**: Organization owner only
@@ -463,11 +513,13 @@ Get ratings for a specific worklog.
 **Response**: Array of rating objects
 
 #### POST /api/worklogs/[worklogId]/ratings
+
 Create a rating for a worklog.
 
 **Authorization**: Organization owner only
 
 **Request Body**:
+
 ```json
 {
   "value": "number (1-10)",
@@ -482,6 +534,7 @@ Create a rating for a worklog.
 ### Ratings
 
 #### GET /api/ratings/[ratingId]
+
 Get a specific rating by ID.
 
 **Authorization**: Organization owner only
@@ -489,11 +542,13 @@ Get a specific rating by ID.
 **Response**: Rating object with rater information
 
 #### PATCH /api/ratings/[ratingId]
+
 Update a rating.
 
 **Authorization**: Organization owner (rating creator) only
 
 **Request Body**:
+
 ```json
 {
   "value": "number (1-10) (optional)",
@@ -502,6 +557,7 @@ Update a rating.
 ```
 
 #### DELETE /api/ratings/[ratingId]
+
 Delete a rating.
 
 **Authorization**: Organization owner (rating creator) only
@@ -511,6 +567,7 @@ Delete a rating.
 ### Invitations
 
 #### POST /api/invitations/[token]/accept
+
 Accept an invitation.
 
 **Authorization**: Invitation recipient (via token)
@@ -518,6 +575,7 @@ Accept an invitation.
 **Response**: Success message
 
 #### POST /api/invitations/[token]/reject
+
 Reject an invitation.
 
 **Authorization**: Invitation recipient (via token)
@@ -529,6 +587,7 @@ Reject an invitation.
 ### Dashboard & Sidebar
 
 #### GET /api/dashboard
+
 Get dashboard data for the current user.
 
 **Authorization**: Authenticated user
@@ -536,6 +595,7 @@ Get dashboard data for the current user.
 **Development Mode**: Returns comprehensive mock dashboard data
 
 **Response**:
+
 ```json
 {
   "sidebarStats": {
@@ -551,6 +611,7 @@ Get dashboard data for the current user.
 ```
 
 #### GET /api/sidebar/stats
+
 Get sidebar statistics.
 
 **Authorization**: Authenticated user
@@ -558,6 +619,7 @@ Get sidebar statistics.
 **Development Mode**: Returns mock sidebar statistics
 
 **Response**:
+
 ```json
 {
   "totalWorklogs": "number",
@@ -572,13 +634,14 @@ Get sidebar statistics.
 ### File Uploads
 
 #### POST /api/uploads
+
 Upload files for worklog attachments.
 
 **Authorization**: Authenticated user
 
 **Content-Type**: multipart/form-data
 
-**Files**: image/*, application/pdf
+**Files**: image/\*, application/pdf
 
 **Response**: Array of uploaded file objects
 
@@ -587,11 +650,13 @@ Upload files for worklog attachments.
 ### Email Testing
 
 #### POST /api/send
+
 Send test email (development only).
 
 **Authorization**: None (development only)
 
 **Request Body**:
+
 ```json
 {
   "to": "string",
@@ -605,6 +670,7 @@ Send test email (development only).
 ## Data Models
 
 ### Organization
+
 ```typescript
 {
   id: string;
@@ -620,6 +686,7 @@ Send test email (development only).
 ```
 
 ### Team
+
 ```typescript
 {
   id: string;
@@ -637,6 +704,7 @@ Send test email (development only).
 ```
 
 ### TeamMember
+
 ```typescript
 {
   id: string;
@@ -651,6 +719,7 @@ Send test email (development only).
 ```
 
 ### Worklog
+
 ```typescript
 {
   id: string;
@@ -670,6 +739,7 @@ Send test email (development only).
 ```
 
 ### Rating
+
 ```typescript
 {
   id: string;
@@ -685,6 +755,7 @@ Send test email (development only).
 ```
 
 ### User
+
 ```typescript
 {
   id: string;
@@ -707,6 +778,7 @@ All endpoints return standardized error responses:
 ```
 
 Common HTTP status codes:
+
 - `400` - Bad Request (validation errors)
 - `401` - Unauthorized (authentication required)
 - `403` - Forbidden (insufficient permissions)
@@ -718,6 +790,7 @@ Common HTTP status codes:
 In development environment (`NODE_ENV === "development"`), all API endpoints provide mock data without requiring authentication or database connectivity. This enables full frontend development and testing without backend dependencies.
 
 Mock data includes:
+
 - Default user: "mock-org-owner-1" (Alice Johnson)
 - Sample organizations, teams, members, worklogs, and ratings
 - Realistic data relationships and permissions

@@ -22,6 +22,7 @@ import {
   FaUndo,
   FaRedo,
 } from "react-icons/fa";
+import { toast } from "sonner";
 
 interface RichTextEditorProps {
   value: string;
@@ -57,10 +58,21 @@ export function RichTextEditor({
         bulletList: {
           keepMarks: true,
           keepAttributes: false,
+          HTMLAttributes: {
+            class: "list-disc pl-6 space-y-1",
+          },
         },
         orderedList: {
           keepMarks: true,
           keepAttributes: false,
+          HTMLAttributes: {
+            class: "list-decimal pl-6 space-y-1",
+          },
+        },
+        listItem: {
+          HTMLAttributes: {
+            class: "leading-normal",
+          },
         },
       }),
     ],
@@ -72,25 +84,25 @@ export function RichTextEditor({
     },
     editorProps: {
       attributes: {
-        class: `min-h-40 rounded-md border border-amber-500/30 bg-gradient-to-br from-blue-900/40 to-blue-800/30 px-3 py-2 text-sm text-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-400/50 transition-all duration-200 relative ${
+        class: `min-h-40 rounded-md border border-white/20 bg-white/5 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/40 transition-all duration-200 relative ${
           disabled
             ? "opacity-50 cursor-not-allowed bg-gray-800/20"
-            : "hover:border-amber-400/40"
+            : "hover:border-white/30"
         } ${className}`,
         "data-placeholder": placeholder,
         "data-empty": "true",
         style: `
           --tw-prose-body: rgb(245 245 244);
-          --tw-prose-headings: rgb(253 224 71);
-          --tw-prose-links: rgb(253 224 71);
-          --tw-prose-bold: rgb(253 224 71);
+          --tw-prose-headings: rgb(255 255 255);
+          --tw-prose-links: rgb(255 255 255);
+          --tw-prose-bold: rgb(255 255 255);
           --tw-prose-counters: rgb(156 163 175);
           --tw-prose-bullets: rgb(156 163 175);
           --tw-prose-hr: rgb(75 85 99);
           --tw-prose-quotes: rgb(245 245 244);
-          --tw-prose-quote-borders: rgb(253 224 71);
+          --tw-prose-quote-borders: rgb(255 255 255);
           --tw-prose-captions: rgb(156 163 175);
-          --tw-prose-code: rgb(253 224 71);
+          --tw-prose-code: rgb(255 255 255);
           --tw-prose-pre-code: rgb(245 245 244);
           --tw-prose-pre-bg: rgb(31 41 55);
           --tw-prose-th-borders: rgb(75 85 99);
@@ -229,7 +241,11 @@ export function RichTextEditor({
         };
 
         if (!isValidUrl(url.trim())) {
-          alert("Please enter a valid HTTP or HTTPS URL");
+          toast.error("Invalid URL Format", {
+            description:
+              "Please enter a valid HTTP or HTTPS URL (http:// or https://)",
+            duration: 2500,
+          });
           return;
         }
 
@@ -281,7 +297,11 @@ export function RichTextEditor({
     }
 
     if (!isValidUrl(trimmedUrl)) {
-      alert("Please enter a valid HTTP or HTTPS URL");
+      toast.error("Invalid URL Format", {
+        description:
+          "Please enter a valid HTTP or HTTPS URL (http:// or https://)",
+        duration: 2500,
+      });
       return;
     }
 
@@ -321,9 +341,10 @@ export function RichTextEditor({
       editor.chain().focus().unsetLink().run();
     } else {
       // Fallback: user needs to manually remove link tags
-      alert(
-        "Link extension not available. Please manually remove link HTML tags.",
-      );
+      toast.error("Link Editor Unavailable", {
+        description: "Please manually edit the HTML tags in the editor.",
+        duration: 3000,
+      });
     }
   }, [editor]);
 
@@ -331,7 +352,7 @@ export function RichTextEditor({
   if (!editor) {
     return (
       <div
-        className={`min-h-40 rounded-md border border-amber-500/30 bg-blue-900/40 animate-pulse ${className}`}
+        className={`min-h-40 rounded-md border border-white/20 bg-white/5 animate-pulse ${className}`}
         aria-label="Loading rich text editor"
       />
     );
@@ -530,13 +551,13 @@ export function RichTextEditor({
 
           {/* Custom placeholder */}
           {editor && !editor.getText().trim() && !disabled && (
-            <div className="absolute top-2 left-3 text-amber-400/60 italic pointer-events-none select-none">
+            <div className="absolute top-2 left-3 text-white/40 italic pointer-events-none select-none">
               {placeholder}
             </div>
           )}
 
           {/* Subtle animated border effect */}
-          <div className="absolute inset-0 rounded-b-lg pointer-events-none bg-gradient-to-r from-amber-500/5 via-transparent to-blue-500/5 opacity-0 hover:opacity-100 transition-opacity duration-300" />
+          <div className="absolute inset-0 rounded-b-lg pointer-events-none bg-gradient-to-r from-white/5 via-transparent to-white/5 opacity-0 hover:opacity-100 transition-opacity duration-300" />
         </div>
 
         {/* Enhanced screen reader description */}

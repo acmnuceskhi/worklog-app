@@ -7,6 +7,7 @@ import {
   mockTeamMembers,
   mockUsers,
   mockOrganizations,
+  mockWorklogs,
 } from "@/lib/mock-data";
 import { apiResponse } from "@/lib/api-utils";
 
@@ -48,12 +49,9 @@ export async function GET() {
                   ?.name || "",
             }
           : null,
-        _count: {
-          members: mockTeamMembers.filter(
-            (tm) => tm.teamId === team.id && tm.status === "ACCEPTED",
-          ).length,
-          worklogs: 0,
-        },
+        myWorklogCount: mockWorklogs.filter(
+          (w) => w.teamId === team.id && w.userId === defaultUserId,
+        ).length,
       }));
       return apiResponse(result);
     }
@@ -85,12 +83,6 @@ export async function GET() {
               select: {
                 id: true,
                 name: true,
-              },
-            },
-            _count: {
-              select: {
-                members: true,
-                worklogs: true,
               },
             },
           },
@@ -142,6 +134,7 @@ export async function GET() {
     const teams = teamMemberships.map((membership) => ({
       ...membership.team,
       worklogs: worklogsByTeam.get(membership.team.id) || [],
+      myWorklogCount: (worklogsByTeam.get(membership.team.id) || []).length,
       membershipStatus: membership.status,
       role: "member",
     }));

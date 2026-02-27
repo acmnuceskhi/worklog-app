@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { TeamCreationWizard } from "@/components/teams/team-creation-wizard";
 import { FaPlus, FaUsers, FaCog } from "react-icons/fa";
 import { useOwnedTeams } from "@/lib/hooks";
+import { toast } from "sonner";
 import { LoadingState } from "@/components/states/loading-state";
 import { ErrorState } from "@/components/states/error-state";
 import { EmptyState } from "@/components/states/empty-state";
@@ -130,7 +131,11 @@ export default function LeadTeamsPage() {
                   className="border-white/20 text-white/80 hover:text-white hover:border-white/40"
                   onClick={(e) => {
                     e.stopPropagation();
-                    alert("Team settings coming soon!");
+                    toast.info("Feature Coming Soon", {
+                      description:
+                        "Team settings will be available in the next update.",
+                      duration: 3000,
+                    });
                   }}
                   aria-label={`Settings for ${team.name}`}
                 >

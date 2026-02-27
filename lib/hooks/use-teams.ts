@@ -35,6 +35,8 @@ export interface Team {
     members: number;
     worklogs: number;
   };
+  /** Personal worklog count — only populated for member teams */
+  myWorklogCount?: number;
 }
 
 export interface TeamMember {
@@ -164,12 +166,9 @@ export const useMemberTeams = () => {
                     ?.name || "",
               }
             : undefined,
-          _count: {
-            members: mockTeamMembers.filter(
-              (tm) => tm.teamId === t.id && tm.status === "ACCEPTED",
-            ).length,
-            worklogs: mockWorklogs.filter((w) => w.teamId === t.id).length,
-          },
+          myWorklogCount: mockWorklogs.filter(
+            (w) => w.teamId === t.id && w.userId === defaultUserId,
+          ).length,
         })) as Team[];
       }
       const response = await fetch("/api/teams/member");

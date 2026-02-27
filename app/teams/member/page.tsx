@@ -3,30 +3,15 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { FaUsers } from "react-icons/fa";
-import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { useMemberTeams } from "@/lib/hooks";
 import { ErrorState } from "@/components/states/error-state";
 import { EmptyState } from "@/components/states/empty-state";
+import { LoadingState } from "@/components/states/loading-state";
+import { EntityCard } from "@/components/entities/entity-card";
+import { EntityList } from "@/components/entities/entity-list";
+import { Button } from "@/components/ui/button";
 
-// 10. Add proper TypeScript interfaces for API response types
-
-// 3. Implement loading states using Skeleton components
-function TeamCardSkeleton() {
-  return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-5">
-      <Skeleton className="h-6 w-3/4 mb-3" />
-      <Skeleton className="h-4 w-1/2 mb-2" />
-      <Skeleton className="h-4 w-1/3" />
-      <div className="flex justify-between mt-4">
-        <Skeleton className="h-4 w-16" />
-        <Skeleton className="h-4 w-16" />
-      </div>
-    </div>
-  );
-}
-
-// 12. Add proper error boundaries and fallback UI
 export default function MemberTeamsPage() {
   return (
     <ErrorBoundary>
@@ -35,97 +20,93 @@ export default function MemberTeamsPage() {
   );
 }
 
-// 10. Follow existing code patterns from other pages
 function MemberTeamsPageContent() {
   const router = useRouter();
+  const { data: teams = [], isLoading, error, refetch } = useMemberTeams();
 
-  // 2. Use TanStack Query (React Query) for data fetching
-  const { data: teams, isLoading, isError, error, refetch } = useMemberTeams();
+  if (isLoading) {
+    return <LoadingState text="Loading your teams..." />;
+  }
+
+  if (error) {
+    return (
+      <ErrorState
+        message={
+          error instanceof Error ? error.message : "Failed to load teams"
+        }
+        onRetry={() => refetch()}
+      />
+    );
+  }
 
   return (
-    <div className="p-5 min-h-full space-y-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <div className="p-6 space-y-6">
+      {/* Header — matches lead/page.tsx pattern */}
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-semibold text-white">My Teams</h1>
-          <p className="text-muted">
+          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+            <FaUsers className="text-blue-400" />
+            My Teams
+          </h1>
+          <p className="text-muted mt-1">
             Teams you&apos;re a member of and their team leads.
           </p>
+          {teams.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
+                {teams.length} teams
+              </span>
+            </div>
+          )}
         </div>
-        {!isLoading && !isError && (
-          <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
-            {teams?.length || 0} teams
-          </div>
-        )}
       </div>
 
-      {/* 3. Implement loading states */}
-      {isLoading && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {[...Array(4)].map((_, i) => (
-            <TeamCardSkeleton key={i} />
-          ))}
-        </div>
-      )}
-
-      {/* 4. Add error handling */}
-      {isError && (
-        <ErrorState
-          message={
-            error instanceof Error ? error.message : "An unknown error occurred"
-          }
-          onRetry={() => refetch()}
+      {/* Teams Grid — EntityList + EntityCard (matches lead/page.tsx) */}
+      {teams.length === 0 ? (
+        <EmptyState
+          title="Welcome to your teams!"
+          description="You'll see teams here once you accept invitations from team leaders."
+          icon={<FaUsers className="h-8 w-8" />}
         />
-      )}
-
-      {/* 1. Replace mock data with real API call */}
-      {!isLoading && !isError && (
-        <>
-          {teams && teams.length > 0 ? (
-            // 5. Maintain existing UI design and card-based layout
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-              {teams.map((team) => (
-                // 6. Preserve navigation to individual team pages
-                <div
-                  key={team.id}
-                  className="cursor-pointer rounded-xl border border-white/10 bg-white/5 p-5 text-white backdrop-blur-md shadow-md transition-all hover:-translate-y-0.5 hover:bg-white/10 hover:shadow-lg"
-                  onClick={() => router.push(`/teams/member/${team.id}`)}
-                  role="link"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      router.push(`/teams/member/${team.id}`);
-                    }
+      ) : (
+        <EntityList title="Your Teams" count={teams.length} layout="grid">
+          {teams.map((team) => (
+            <EntityCard
+              key={team.id}
+              title={team.name}
+              subtitle={
+                team.owner?.name || team.owner?.email
+                  ? `Leader: ${team.owner.name || team.owner.email}`
+                  : undefined
+              }
+              avatar={<FaUsers className="text-blue-400" />}
+              stats={[
+                { label: "My Worklogs", value: team.myWorklogCount ?? 0 },
+              ]}
+              onClick={() => router.push(`/teams/member/${team.id}`)}
+              className="border border-white/10 bg-white/5 backdrop-blur-md shadow-lg shadow-black/20 hover:-translate-y-1 hover:shadow-xl"
+            >
+              {team.organization && (
+                <p className="text-sm text-muted line-clamp-1">
+                  Organization: {team.organization.name}
+                </p>
+              )}
+              <div className="mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full border-white/20 text-white/80 hover:text-white hover:border-white/40"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push(`/teams/member/${team.id}`);
                   }}
                 >
-                  {/* 7. Display real data */}
-                  <h3 className="m-0 mb-2 text-lg font-semibold text-white truncate">
-                    {team.name}
-                  </h3>
-                  <p className="m-0 text-muted text-sm truncate">
-                    <strong>Leader:</strong>{" "}
-                    {team.owner?.name || team.owner?.email || "Unknown"}
-                  </p>
-                  {team.organization && (
-                    <p className="m-0 text-muted text-sm truncate">
-                      <strong>Organization:</strong> {team.organization.name}
-                    </p>
-                  )}
-                  {/* 8. Show worklog and member counts */}
-                  <div className="flex justify-between items-center mt-4 text-xs text-white/60">
-                    <span>{team._count?.members || 0} Members</span>
-                    <span>{team._count?.worklogs || 0} Worklogs</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              title="Welcome to your teams!"
-              description="You'll see teams here once you accept invitations from team leaders."
-              icon={<FaUsers className="h-8 w-8" />}
-            />
-          )}
-        </>
+                  View Details
+                </Button>
+              </div>
+            </EntityCard>
+          ))}
+        </EntityList>
       )}
     </div>
   );

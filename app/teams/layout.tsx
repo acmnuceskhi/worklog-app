@@ -23,6 +23,7 @@ import { InvitationsPanel } from "@/components/invitations-panel";
 import { TeamLeaderInvitationsPanel } from "@/components/team-leader-invitations-panel";
 import { OrganizationInvitationsPanel } from "@/components/organization-invitations-panel";
 import { LoadingState } from "@/components/states";
+import { PageHeader } from "@/components/ui/page-header";
 
 const lobsterTwo = Lobster_Two({
   weight: ["400", "700"],
@@ -135,12 +136,14 @@ export default function TeamsLayout({
 
   return (
     <div className={pageClassName}>
-      <nav className="flex items-center justify-between rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 p-5 text-white mb-5 shadow-lg border border-white/5">
+      <PageHeader>
         <div className="flex items-center gap-4 flex-shrink-0">
           <Button
             variant="ghost"
             size="sm"
-            className="border border-white/20 hidden md:inline-flex items-center gap-1.5"
+            className={`border border-white/20 items-center gap-1.5 ${
+              isMobile ? "inline-flex" : "hidden"
+            }`}
             onClick={() => setIsSidebarOpen((prev) => !prev)}
             aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
             aria-expanded={isSidebarOpen}
@@ -163,7 +166,7 @@ export default function TeamsLayout({
           </div>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-shrink-0">
           <Button
             variant="ghost"
             size="sm"
@@ -193,7 +196,7 @@ export default function TeamsLayout({
             Sign Out
           </Button>
         </div>
-      </nav>
+      </PageHeader>
 
       <div className="flex gap-4 flex-1 mt-3 w-full overflow-x-hidden">
         <AnimatePresence>

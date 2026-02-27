@@ -23,6 +23,7 @@ import {
   FaChevronRight,
 } from "react-icons/fa";
 import { AnimatePresence, motion } from "framer-motion";
+import { PageHeader } from "@/components/ui/page-header";
 
 const lobster = Lobster_Two({
   weight: ["400", "700"],
@@ -97,10 +98,10 @@ export default function ProfilePage() {
 
   const sidebarWidth = isMobile ? 260 : isSidebarCollapsed ? 72 : 220;
   const showSidebarLabels = !isSidebarCollapsed || isMobile;
-  const pageClassName = `min-h-screen w-screen p-5 flex flex-col ${
+  const pageClassName = `min-h-screen w-screen p-3 flex flex-col ${
     contentTheme === "light"
       ? "bg-gradient-to-br from-[#fbc2eb] to-[#a6c1ee] text-[var(--color-text)]"
-      : "bg-[var(--page-bg-deep)] text-white"
+      : "bg-[var(--page-bg-dark)] text-white"
   }`;
   const sidebarClassName = `p-4 rounded-xl flex flex-col gap-3 relative z-100 bg-[var(--nav-bg)] text-white ${
     isMobile
@@ -141,7 +142,7 @@ export default function ProfilePage() {
 
   return (
     <div className={pageClassName}>
-      <nav className="flex items-center justify-between rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 p-5 text-white mb-5 shadow-lg border border-white/5">
+      <PageHeader>
         <div className="flex items-center gap-4 flex-shrink-0">
           <Button
             variant="ghost"
@@ -160,11 +161,11 @@ export default function ProfilePage() {
           >
             Worklog
           </h1>
-          <div className="flex items-center gap-2 bg-white/10 px-2.5 py-1.5 rounded-lg w-[280px]">
+          <div className="flex items-center gap-2 bg-white/10 px-2.5 py-1.5 rounded-lg w-70">
             <FaSearch />
             <input
               placeholder="Search teams..."
-              className="bg-transparent border-none text-white placeholder-white/60 flex-1 outline-none"
+              className="bg-transparent border-none outline-none text-white placeholder-white/70 w-full"
             />
           </div>
         </div>
@@ -183,7 +184,7 @@ export default function ProfilePage() {
             size="sm"
             className="border border-white/20"
             onClick={() =>
-              setContentTheme(contentTheme === "dark" ? "light" : "dark")
+              setContentTheme(contentTheme === "light" ? "dark" : "light")
             }
             aria-label={`Switch to ${contentTheme === "light" ? "dark" : "light"} mode`}
           >
@@ -199,7 +200,7 @@ export default function ProfilePage() {
             Sign Out
           </Button>
         </div>
-      </nav>
+      </PageHeader>
 
       <div className="flex gap-4 flex-1 w-full overflow-x-hidden">
         <AnimatePresence>

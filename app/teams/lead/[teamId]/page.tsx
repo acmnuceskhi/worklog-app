@@ -403,9 +403,11 @@ function TeamDetailsPageContent({
           err instanceof Error ? err.message : "Failed to assign task",
       });
     } else {
-      toast.error(
-        "Please fill in all required fields (Title, Description, Member)",
-      );
+      toast.error("Missing Required Fields", {
+        description:
+          "Please fill in all required fields: Title, Description, and Member.",
+        duration: 2500,
+      });
     }
   };
 
@@ -691,19 +693,8 @@ function TeamDetailsPageContent({
                       </div>
                     )}
                   </div>
-                  <p className="text-sm text-muted mt-2">
-                    {(() => {
-                      const strippedDescription =
-                        worklog.description?.replace(/<[^>]*>/g, "") || "";
-                      const truncatedDescription =
-                        strippedDescription.substring(0, 150);
-                      return (
-                        <>
-                          {truncatedDescription}
-                          {strippedDescription.length > 150 && "..."}
-                        </>
-                      );
-                    })()}
+                  <p className="text-sm text-muted mt-2 line-clamp-2">
+                    {worklog.description?.replace(/<[^>]*>/g, "") || ""}
                   </p>
                   <div className="mt-3 flex gap-2">
                     <span className="px-2 py-1 text-xs rounded border border-white/20 bg-white/5 text-white/70">

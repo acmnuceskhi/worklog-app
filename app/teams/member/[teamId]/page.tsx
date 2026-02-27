@@ -282,7 +282,9 @@ function ContributionFlashcardPageContent({
 
     // In development, derive permission from mock data without network calls
     if (process.env.NODE_ENV === "development") {
-      setCanSetDeadline(true); // mock-org-owner-1 owns the mock teams
+      // Only team leads can set deadlines
+      const isTeamLeadInMock = session?.user?.id === "mock-org-owner-1";
+      setCanSetDeadline(isTeamLeadInMock);
       return;
     }
 
@@ -323,7 +325,7 @@ function ContributionFlashcardPageContent({
     return () => {
       isActive = false;
     };
-  }, [teamId]);
+  }, [teamId, session]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -344,6 +346,7 @@ function ContributionFlashcardPageContent({
       }
       if (parsed?.description) {
         setEditorValue(parsed.description);
+        setValue("description", parsed.description, { shouldValidate: false });
       }
       if (parsed?.githubLink !== undefined) {
         setValue("githubLink", parsed.githubLink, { shouldValidate: false });
@@ -594,21 +597,12 @@ function ContributionFlashcardPageContent({
     setSubmitSuccess(null);
     setDraftNotice(null);
 
-    const cleaned = stripHtml(editorValue);
-    if (!cleaned) {
-      setError("description", {
-        type: "validate",
-        message: "Description must not be empty",
-      });
-      return;
-    }
-
     const processSubmission = async () => {
       const attachments = await uploadFiles();
       const rawDeadline = canSetDeadline ? values.deadline : undefined;
       const payload = {
         title: values.title,
-        description: editorValue,
+        description: values.description,
         githubLink: values.githubLink || undefined,
         teamId,
         deadline: rawDeadline,
@@ -730,7 +724,6 @@ function ContributionFlashcardPageContent({
               onSubmit={handleSubmit(onSubmit)}
             >
               <input type="hidden" {...register("teamId")} />
-              <input type="hidden" {...register("description")} />
               <FormField
                 label="Title"
                 htmlFor="title"
@@ -750,7 +743,12 @@ function ContributionFlashcardPageContent({
               >
                 <RichTextEditor
                   value={editorValue}
-                  onChange={setEditorValue}
+                  onChange={(newValue) => {
+                    setEditorValue(newValue);
+                    setValue("description", newValue, {
+                      shouldValidate: true,
+                    });
+                  }}
                   placeholder="Describe your work and any outcomes."
                   id="worklog-description"
                 />
@@ -988,7 +986,7 @@ function ContributionFlashcardPageContent({
                         </div>
                       )}
                     </div>
-                    <p className="text-sm text-muted mt-2">
+                    <p className="text-sm text-muted mt-2 line-clamp-2">
                       {worklog.description}
                     </p>
                     <div className="mt-3 flex gap-2 flex-wrap items-center">

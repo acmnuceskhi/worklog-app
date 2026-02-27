@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/card";
 import { FaBuilding, FaArrowLeft, FaUsers, FaUserTie } from "react-icons/fa";
 import { useCreateOrganization } from "@/lib/hooks";
+import { PageHeader } from "@/components/ui/page-header";
 
 type OrganizationFormData = z.infer<typeof organizationCreateSchema>;
 
@@ -52,42 +53,34 @@ export default function CreateOrganizationPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-3">
       {/* Top Navigation */}
-      <nav className="flex items-center justify-between p-4 bg-white/5 backdrop-blur-sm border-b border-white/10">
-        <div className="flex items-center gap-4">
-          <h1 className="text-xl font-bold text-white">Worklog</h1>
-          <div className="flex items-center gap-2 text-sm text-white/70">
-            <Button
-              variant="ghost"
-              onClick={() => router.push("/teams/member")}
-              className="flex items-center gap-1 px-3 py-1 text-sm text-white/70"
-            >
-              <FaUsers className="h-4 w-4" />
-              My Teams
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => router.push("/teams/lead")}
-              className="flex items-center gap-1 px-3 py-1 text-sm text-white/70"
-            >
-              <FaUserTie className="h-4 w-4" />
-              Teams I Lead
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => router.push("/teams/organisations")}
-              className="flex items-center gap-1 px-3 py-1 text-sm bg-white/10 text-white"
-            >
-              <FaBuilding className="h-4 w-4" />
-              My Organizations
-            </Button>
-          </div>
-        </div>
-        <Button variant="ghost" onClick={() => router.push("/home")}>
-          Back to Dashboard
-        </Button>
-      </nav>
+      <PageHeader
+        title="Worklog"
+        navItems={[
+          {
+            label: "My Teams",
+            href: "/teams/member",
+            icon: <FaUsers className="h-4 w-4" />,
+          },
+          {
+            label: "Teams I Lead",
+            href: "/teams/lead",
+            icon: <FaUserTie className="h-4 w-4" />,
+          },
+          {
+            label: "My Organizations",
+            href: "/teams/organisations",
+            isActive: true,
+            icon: <FaBuilding className="h-4 w-4" />,
+          },
+        ]}
+        rightAction={
+          <Button variant="ghost" onClick={() => router.push("/home")}>
+            Back to Dashboard
+          </Button>
+        }
+      />
 
       {/* Main Content */}
       <div className="flex items-center justify-center p-4 min-h-[calc(100vh-80px)]">

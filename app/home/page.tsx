@@ -34,6 +34,7 @@ import { LoadingState } from "@/components/states/loading-state";
 import { EmptyState } from "@/components/states/empty-state";
 import { TeamCreationWizard } from "@/components/teams/team-creation-wizard";
 import { InvitationsPanel } from "@/components/invitations-panel";
+import { PageHeader } from "@/components/ui/page-header";
 const lobster = Lobster_Two({
   weight: ["400", "700"],
   subsets: ["latin"],
@@ -247,7 +248,7 @@ export default function DashboardPage() {
 
   return (
     <div className={pageClassName}>
-      <nav className="flex items-center justify-between rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 p-5 text-white mb-5 shadow-lg border border-white/5">
+      <PageHeader>
         <div className="flex items-center gap-4 flex-shrink-0">
           <Button
             variant="ghost"
@@ -257,6 +258,7 @@ export default function DashboardPage() {
             }`}
             onClick={() => setIsSidebarOpen((prev) => !prev)}
             aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+            aria-expanded={isSidebarOpen}
           >
             <FaBars />
           </Button>
@@ -265,10 +267,10 @@ export default function DashboardPage() {
           >
             Worklog
           </h1>
-          <div className="flex items-center gap-2 bg-white/10 px-2.5 py-1.5 rounded-lg w-[280px]">
+          <div className="flex items-center gap-2 bg-white/10 px-2.5 py-1.5 rounded-lg w-70">
             <FaSearch />
             <input
-              className="bg-transparent border-none outline-none text-white placeholder-white/70"
+              className="bg-transparent border-none outline-none text-white placeholder-white/70 w-full"
               placeholder="Search teams..."
               value={query}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -278,11 +280,11 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-shrink-0">
           <Button
             variant="ghost"
             size="sm"
-            className="border border-white/20 text-white"
+            className="border border-white/20"
             aria-label="Notifications"
           >
             <FaBell />
@@ -290,7 +292,7 @@ export default function DashboardPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="border border-white/20 text-white relative p-0 overflow-hidden"
+            className="border border-white/20 relative p-0 overflow-hidden"
             onClick={() => router.push("/profile")}
             aria-label="View Profile"
           >
@@ -313,7 +315,7 @@ export default function DashboardPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="border border-white/20 text-white"
+            className="border border-white/20"
             onClick={() =>
               setContentTheme(contentTheme === "light" ? "dark" : "light")
             }
@@ -324,7 +326,6 @@ export default function DashboardPage() {
           <Button
             variant="danger"
             size="sm"
-            className="border border-white/20 text-white"
             onClick={() => signOut({ callbackUrl: "/" })}
             aria-label="Sign out of account"
           >
@@ -332,7 +333,7 @@ export default function DashboardPage() {
             Sign Out
           </Button>
         </div>
-      </nav>
+      </PageHeader>
 
       <div className="flex gap-4 flex-1 mt-3 w-full">
         <AnimatePresence>
@@ -502,15 +503,7 @@ export default function DashboardPage() {
                         <h4 className="text-base font-semibold mb-1">
                           {team.name}
                         </h4>
-                        <p
-                          className="text-sm text-muted mb-2"
-                          style={{
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                          }}
-                        >
+                        <p className="text-sm text-muted mb-2 line-clamp-2">
                           {team.description || team.project || "No description"}
                         </p>
                       </div>
@@ -553,15 +546,7 @@ export default function DashboardPage() {
                         <h4 className="text-base font-semibold mb-1">
                           {worklog.title}
                         </h4>
-                        <p
-                          className="text-sm text-muted mb-2"
-                          style={{
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                          }}
-                        >
+                        <p className="text-sm text-muted mb-2 line-clamp-2">
                           {worklog.progressStatus?.replace("_", " ") ||
                             "Not started"}
                         </p>

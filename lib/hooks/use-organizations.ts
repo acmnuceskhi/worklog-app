@@ -5,7 +5,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { mockOrganizations, mockTeams, mockTeamMembers } from "@/lib/mock-data";
+import { mockOrganizations, mockTeams } from "@/lib/mock-data";
 
 export interface Organization {
   id: string;

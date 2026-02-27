@@ -193,26 +193,36 @@ export function InvitationsPanel() {
   const handleAccept = async (invitationId: string) => {
     try {
       await acceptInvitation.mutateAsync(invitationId);
-      toast.success("Invitation accepted! Welcome to the team.");
+      toast.success("Invitation Accepted", {
+        description: "Welcome to the team!",
+        duration: 3000,
+      });
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to accept invitation. Please try again.",
-      );
+      toast.error("Accept Failed", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to accept invitation. Please try again.",
+        duration: 3500,
+      });
     }
   };
 
   const handleReject = async (invitationId: string) => {
     try {
       await rejectInvitation.mutateAsync(invitationId);
-      toast.success("Invitation declined.");
+      toast.success("Invitation Declined", {
+        description: "The invitation has been declined.",
+        duration: 3000,
+      });
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to decline invitation. Please try again.",
-      );
+      toast.error("Decline Failed", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to decline invitation. Please try again.",
+        duration: 3500,
+      });
     }
   };
 

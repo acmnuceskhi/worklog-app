@@ -69,13 +69,19 @@ export function TeamLeaderInvitationsPanel({
 
   const handleSendInvitations = async () => {
     if (!selectedTeamId) {
-      toast.error("Please select a team");
+      toast.error("Missing Selection", {
+        description: "Please select a team to send invitations to.",
+        duration: 2500,
+      });
       return;
     }
 
     const validEmails = inviteEmails.filter((email) => email.trim() !== "");
     if (validEmails.length === 0) {
-      toast.error("Please enter at least one email address");
+      toast.error("No Email Provided", {
+        description: "Please enter at least one email address.",
+        duration: 2500,
+      });
       return;
     }
 
@@ -85,7 +91,10 @@ export function TeamLeaderInvitationsPanel({
       (email) => !emailRegex.test(email),
     );
     if (invalidEmails.length > 0) {
-      toast.error(`Invalid email format: ${invalidEmails.join(", ")}`);
+      toast.error("Invalid Email Format", {
+        description: invalidEmails.join(", "),
+        duration: 2500,
+      });
       return;
     }
 
@@ -106,18 +115,23 @@ export function TeamLeaderInvitationsPanel({
         throw new Error(error.message || "Failed to send invitations");
       }
 
-      toast.success(
-        `Invitations sent successfully to ${validEmails.length} member(s)!`,
-      );
+      toast.success("Invitations Sent", {
+        description: `Successfully invited ${validEmails.length} member(s).`,
+        duration: 3000,
+      });
 
       // Reset form
       setInviteEmails([""]);
       setSelectedTeamId("");
     } catch (error) {
       console.error("Failed to send invitations:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to send invitations",
-      );
+      toast.error("Invitation Failed", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to send invitations. Please try again.",
+        duration: 3500,
+      });
     } finally {
       setIsSending(false);
     }
