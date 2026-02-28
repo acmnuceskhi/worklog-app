@@ -13,10 +13,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/forms/form-field";
 import { ErrorState } from "@/components/states/error-state";
 import { StarRating } from "@/components/ui/star-rating";
-import { FaStar, FaCheck, FaTimes } from "react-icons/fa";
+import { Star, Check, X, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { useCreateRating, useUpdateRating } from "@/lib/hooks/use-ratings";
 import { useUpdateWorklogStatus } from "@/lib/hooks/use-worklogs";
+import { cn } from "@/lib/utils";
 
 interface RatingModalProps {
   open: boolean;
@@ -124,18 +125,20 @@ export function RatingModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-slate-800 border-slate-700 sm:max-w-md">
+      <DialogContent className="bg-[var(--panel-strong)] border-white/10 sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-white flex items-center gap-2">
-            <FaStar className="text-yellow-400" />
+            <div className="p-1.5 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/20">
+              <Star className="h-4 w-4 text-blue-400" />
+            </div>
             {isEditing ? "Edit Rating" : "Rate Worklog"}
           </DialogTitle>
-          <DialogDescription className="text-slate-400">
+          <DialogDescription className="text-white/60">
             {worklogTitle}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-5 pt-2">
+        <div className="space-y-1 pt-1">
           {error && <ErrorState message={error} className="py-3" />}
 
           {/* Star Rating */}
@@ -147,9 +150,12 @@ export function RatingModal({
             />
           </FormField>
 
+          {/* Visual Divider */}
+          <div className="border-t border-white/5" />
+
           {/* Comment */}
           <FormField
-            label="Comment"
+            label="Feedback"
             htmlFor="rating-comment"
             helpText={`${remainingChars} characters remaining`}
           >
@@ -160,7 +166,7 @@ export function RatingModal({
                 setComment(e.target.value.slice(0, MAX_COMMENT_LENGTH))
               }
               placeholder="Add feedback or comments about this worklog..."
-              className="bg-slate-700/50 border-slate-600 text-white resize-none"
+              className="bg-white/5 border-white/10 text-white placeholder:text-white/30 resize-none focus:border-blue-500/50 focus:ring-blue-500/30"
               rows={4}
               aria-describedby="comment-hint"
             />
@@ -171,32 +177,46 @@ export function RatingModal({
 
           {/* Mark as Graded checkbox */}
           {canMarkAsGraded && (
-            <label className="flex items-center gap-3 p-3 rounded-lg bg-slate-700/30 border border-slate-600 cursor-pointer hover:bg-slate-700/50 transition-colors">
-              <input
-                type="checkbox"
-                checked={markAsGraded}
-                onChange={(e) => setMarkAsGraded(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-500 bg-slate-700 text-green-500 focus:ring-green-500 focus:ring-offset-slate-800"
-              />
-              <div>
-                <span className="text-sm text-white font-medium">
-                  Mark as Graded
-                </span>
-                <p className="text-xs text-slate-400">
-                  Change status from REVIEWED to GRADED after rating
-                </p>
-              </div>
-            </label>
+            <>
+              <div className="border-t border-white/5" />
+              <label
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors",
+                  "bg-white/5 border border-white/10",
+                  "hover:bg-white/10",
+                  markAsGraded && "border-green-500/30 bg-green-500/5",
+                )}
+              >
+                <input
+                  type="checkbox"
+                  checked={markAsGraded}
+                  onChange={(e) => setMarkAsGraded(e.target.checked)}
+                  className="w-4 h-4 rounded border-white/20 bg-white/10 text-green-500 focus:ring-green-500/30 focus:ring-offset-0"
+                />
+                <div className="flex-1">
+                  <span className="text-sm text-white font-medium flex items-center gap-1.5">
+                    Mark as Graded
+                    <ArrowRight className="h-3 w-3 text-white/40" />
+                    <span className="text-green-400 text-xs font-normal">
+                      GRADED
+                    </span>
+                  </span>
+                  <p className="text-xs text-white/40 mt-0.5">
+                    Advance status from REVIEWED → GRADED after saving
+                  </p>
+                </div>
+              </label>
+            </>
           )}
 
           {/* Actions */}
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-3">
             <Button
-              variant="secondary"
+              variant="ghost"
               className="flex-1"
               onClick={() => onOpenChange(false)}
             >
-              <FaTimes className="mr-2" />
+              <X className="mr-2 h-4 w-4" />
               Cancel
             </Button>
             <Button
@@ -205,7 +225,7 @@ export function RatingModal({
               onClick={handleSubmit}
               disabled={ratingValue === 0}
             >
-              <FaCheck className="mr-2" />
+              <Check className="mr-2 h-4 w-4" />
               {isEditing ? "Update Rating" : "Submit Rating"}
             </Button>
           </div>

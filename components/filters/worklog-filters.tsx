@@ -13,7 +13,7 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import { parseDeadline, toLocalDateString } from "@/lib/dates";
 
-export type WorklogSortBy = "date" | "status" | "priority";
+export type WorklogSortBy = "date" | "status";
 export type WorklogSortDir = "asc" | "desc";
 
 export interface WorklogFilterState {
@@ -113,6 +113,7 @@ export function WorklogFilters({
               update({ dateFrom: date ? toLocalDateString(date) : "" })
             }
             placeholder="Start date"
+            maxDate={parseDeadline(value.dateTo) ?? undefined}
           />
         </div>
         <div className="min-w-[160px]">
@@ -123,6 +124,7 @@ export function WorklogFilters({
               update({ dateTo: date ? toLocalDateString(date) : "" })
             }
             placeholder="End date"
+            minDate={parseDeadline(value.dateFrom) ?? undefined}
           />
         </div>
         <div className="min-w-[160px]">
@@ -137,7 +139,6 @@ export function WorklogFilters({
             <SelectContent className="bg-slate-900 border-slate-700">
               <SelectItem value="date">Date</SelectItem>
               <SelectItem value="status">Status</SelectItem>
-              <SelectItem value="priority">Priority</SelectItem>
             </SelectContent>
           </Select>
         </div>

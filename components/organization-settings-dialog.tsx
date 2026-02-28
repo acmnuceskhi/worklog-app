@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,15 +30,19 @@ import {
 import { organizationUpdateSchema } from "@/lib/validations";
 import { toast } from "sonner";
 import {
-  FaEdit,
-  FaTrash,
-  FaExclamationTriangle,
-  FaSpinner,
-} from "react-icons/fa";
+  Settings,
+  Trash2,
+  AlertTriangle,
+  Loader2,
+  Check,
+  Users,
+  ClipboardList,
+} from "lucide-react";
 import {
   useUpdateOrganization,
   useDeleteOrganization,
 } from "@/lib/hooks/use-organizations";
+import { cn } from "@/lib/utils";
 
 type OrganizationFormData = z.infer<typeof organizationUpdateSchema>;
 
@@ -55,7 +60,7 @@ interface Organization {
     email: string | null;
     image: string | null;
   };
-  teams?: unknown[]; // For future use
+  teams?: unknown[];
   stats?: {
     totalTeams: number;
     totalMembers: number;
@@ -76,7 +81,6 @@ export function OrganizationSettingsDialog({
   onOpenChange,
   onSuccess,
 }: OrganizationSettingsDialogProps) {
-  // UI state
   const [isUpdating, setIsUpdating] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -102,7 +106,6 @@ export function OrganizationSettingsDialog({
     },
   });
 
-  // Get description for character count using useWatch (React Compiler compatible)
   const descriptionValue = useWatch({ control, name: "description" }) || "";
 
   // Reset form when dialog opens or organization changes
@@ -116,11 +119,9 @@ export function OrganizationSettingsDialog({
     }
   }, [open, organization.name, organization.description, reset, clearErrors]);
 
-  // Handle dialog close with form reset
   const handleDialogClose = useCallback(
     (newOpen: boolean) => {
       if (!newOpen) {
-        // Reset form state when closing
         reset();
         clearErrors();
         setShowDeleteDialog(false);
@@ -130,10 +131,8 @@ export function OrganizationSettingsDialog({
     [reset, clearErrors, onOpenChange],
   );
 
-  // Handle form submission
   const onSubmit = useCallback(
     async (data: OrganizationFormData) => {
-      // Prevent double submission
       if (isUpdating || isSubmitting) return;
 
       const updateProcess = async () => {
@@ -185,17 +184,13 @@ export function OrganizationSettingsDialog({
     ],
   );
 
-  // Handle keyboard shortcuts
+  // Ctrl/Cmd+Enter to submit
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!open) return;
-
-      // Close dialog on Escape key
       if (event.key === "Escape" && !isUpdating) {
         handleDialogClose(false);
       }
-
-      // Submit form on Ctrl/Cmd + Enter
       if (
         (event.ctrlKey || event.metaKey) &&
         event.key === "Enter" &&
@@ -207,7 +202,6 @@ export function OrganizationSettingsDialog({
         handleSubmit(onSubmit)();
       }
     };
-
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [
@@ -220,7 +214,6 @@ export function OrganizationSettingsDialog({
     handleDialogClose,
   ]);
 
-  // Handle organization deletion
   const handleDelete = async () => {
     toast.promise(deleteOrganization(organization.id), {
       loading: "Deleting organization...",
@@ -238,71 +231,64 @@ export function OrganizationSettingsDialog({
     });
   };
 
+  const isBusy = isUpdating || isSubmitting;
+
   return (
     <>
       <Dialog open={open} onOpenChange={handleDialogClose}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg bg-[var(--panel-strong)] border-white/10">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FaEdit className="text-blue-400" />
-              Organization Settings
-            </DialogTitle>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/20">
+                <Settings className="h-4 w-4 text-blue-400" />
+              </div>
+              <div>
+                <DialogTitle className="text-white">
+                  Organization Settings
+                </DialogTitle>
+                <DialogDescription className="text-white/50 text-sm">
+                  Update details or manage this organization
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
           <form
             onSubmit={handleSubmit(onSubmit)}
-            className="space-y-4"
+            className="space-y-5 mt-2"
             noValidate
           >
-            {/* Form Status Indicator */}
-            {isDirty && (
-              <div className="flex items-center gap-2 text-sm">
-                {isValid ? (
-                  <div className="flex items-center gap-1 text-green-400">
-                    <span className="text-xs">✓</span>
-                    <span>Form is valid and ready to submit</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1 text-yellow-400">
-                    <span className="text-xs">⚠</span>
-                    <span>Please fix the errors below</span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Organization Name */}
-            <div className="space-y-2">
-              <Label htmlFor="org-name" className="text-white/80">
-                Organization Name *
+            {/* ── Organization Name ───────────────────────────── */}
+            <div className="space-y-1.5">
+              <Label htmlFor="org-name" className="text-white/70 text-sm">
+                Name <span className="text-red-400">*</span>
               </Label>
               <div className="relative">
                 <Input
                   id="org-name"
                   {...register("name")}
                   placeholder="Enter organization name"
-                  className={`bg-white/5 border-white/10 text-white placeholder:text-white/50 pr-8 ${
-                    errors.name
-                      ? "border-red-400 focus:border-red-400"
-                      : isDirty && !errors.name
-                        ? "border-green-400 focus:border-green-400"
-                        : ""
-                  }`}
-                  disabled={isUpdating}
+                  className={cn(
+                    "bg-white/5 border-white/10 text-white placeholder:text-white/30 pr-8",
+                    "focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400",
+                    errors.name && "border-red-400/60 focus:border-red-400",
+                    isDirty &&
+                      !errors.name &&
+                      "border-green-400/40 focus:border-green-400",
+                  )}
+                  disabled={isBusy}
                   autoFocus
                   aria-describedby={errors.name ? "org-name-error" : undefined}
                   aria-invalid={!!errors.name}
                 />
                 {isDirty && !errors.name && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400">
-                    ✓
-                  </div>
+                  <Check className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-green-400" />
                 )}
               </div>
               {errors.name && (
                 <p
                   id="org-name-error"
-                  className="text-sm text-red-400"
+                  className="text-xs text-red-400"
                   role="alert"
                   aria-live="polite"
                 >
@@ -311,43 +297,40 @@ export function OrganizationSettingsDialog({
               )}
             </div>
 
-            {/* Organization Description */}
-            <div className="space-y-2">
-              <Label htmlFor="org-description" className="text-white/80">
-                Description
-              </Label>
-              <div className="relative">
-                <Textarea
-                  id="org-description"
-                  {...register("description")}
-                  placeholder="Enter organization description (optional)"
-                  className={`bg-white/5 border-white/10 text-white placeholder:text-white/50 resize-none ${
-                    errors.description
-                      ? "border-red-400 focus:border-red-400"
-                      : isDirty && !errors.description
-                        ? "border-green-400 focus:border-green-400"
-                        : ""
-                  }`}
-                  rows={3}
-                  disabled={isUpdating}
-                  aria-describedby={
-                    errors.description
-                      ? "org-description-error"
-                      : "org-description-help"
-                  }
-                  aria-invalid={!!errors.description}
-                />
-                <div className="absolute bottom-2 right-2 text-xs text-white/50">
+            {/* ── Description ─────────────────────────────────── */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label
+                  htmlFor="org-description"
+                  className="text-white/70 text-sm"
+                >
+                  Description
+                </Label>
+                <span className="text-[11px] text-white/30 tabular-nums">
                   {descriptionValue?.length || 0}/500
-                </div>
+                </span>
               </div>
-              <p id="org-description-help" className="text-xs text-white/50">
-                Optional description to help identify your organization
-              </p>
+              <Textarea
+                id="org-description"
+                {...register("description")}
+                placeholder="What does this organization do? (optional)"
+                className={cn(
+                  "bg-white/5 border-white/10 text-white placeholder:text-white/30 resize-none",
+                  "focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400",
+                  errors.description &&
+                    "border-red-400/60 focus:border-red-400",
+                )}
+                rows={3}
+                disabled={isBusy}
+                aria-describedby={
+                  errors.description ? "org-desc-error" : undefined
+                }
+                aria-invalid={!!errors.description}
+              />
               {errors.description && (
                 <p
-                  id="org-description-error"
-                  className="text-sm text-red-400"
+                  id="org-desc-error"
+                  className="text-xs text-red-400"
                   role="alert"
                   aria-live="polite"
                 >
@@ -356,142 +339,124 @@ export function OrganizationSettingsDialog({
               )}
             </div>
 
-            {/* Organization Stats (Read-only) */}
+            {/* ── Stats (read-only) ───────────────────────────── */}
             {organization.stats && (
-              <div className="p-3 rounded-lg bg-white/5 border border-white/10">
-                <h4 className="text-sm font-medium text-white/80 mb-2">
-                  Current Statistics
-                </h4>
-                <div className="grid grid-cols-3 gap-2 text-xs text-white/60">
-                  <div>
-                    <span className="block font-medium">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="flex items-center gap-2.5 rounded-lg bg-white/5 border border-white/5 px-3 py-2.5">
+                  <Users className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white tabular-nums leading-none">
                       {organization.stats.totalTeams}
-                    </span>
-                    <span>Teams</span>
+                    </p>
+                    <p className="text-[11px] text-white/40 mt-0.5">Teams</p>
                   </div>
-                  <div>
-                    <span className="block font-medium">
+                </div>
+                <div className="flex items-center gap-2.5 rounded-lg bg-white/5 border border-white/5 px-3 py-2.5">
+                  <Users className="h-3.5 w-3.5 text-green-400 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white tabular-nums leading-none">
                       {organization.stats.totalMembers}
-                    </span>
-                    <span>Members</span>
+                    </p>
+                    <p className="text-[11px] text-white/40 mt-0.5">Members</p>
                   </div>
-                  <div>
-                    <span className="block font-medium">
+                </div>
+                <div className="flex items-center gap-2.5 rounded-lg bg-white/5 border border-white/5 px-3 py-2.5">
+                  <ClipboardList className="h-3.5 w-3.5 text-purple-400 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white tabular-nums leading-none">
                       {organization.stats.totalWorklogs}
-                    </span>
-                    <span>Worklogs</span>
+                    </p>
+                    <p className="text-[11px] text-white/40 mt-0.5">Worklogs</p>
                   </div>
                 </div>
               </div>
             )}
 
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              {/* Keyboard Shortcuts Hint */}
-              <div className="w-full text-xs text-white/50 text-center sm:text-left">
-                <kbd className="px-1 py-0.5 bg-white/10 rounded text-xs">
-                  Ctrl
-                </kbd>{" "}
-                +{" "}
-                <kbd className="px-1 py-0.5 bg-white/10 rounded text-xs">
-                  Enter
-                </kbd>{" "}
-                to submit •{" "}
-                <kbd className="px-1 py-0.5 bg-white/10 rounded text-xs">
-                  Esc
-                </kbd>{" "}
-                to close
+            {/* ── Danger Zone ─────────────────────────────────── */}
+            <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-red-400" />
+                <h4 className="text-sm font-medium text-red-300">
+                  Danger Zone
+                </h4>
               </div>
-
-              {/* Delete Button */}
+              <p className="text-xs text-white/50 leading-relaxed">
+                Deleting this organization is permanent. Associated teams will
+                become read-only.
+              </p>
               <Button
                 type="button"
-                variant="danger"
-                className="border-red-400/30 text-red-300 hover:bg-red-500/20 hover:text-red-200"
+                variant="outline"
+                size="sm"
+                className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
                 onClick={() => setShowDeleteDialog(true)}
-                disabled={isUpdating || isSubmitting}
-                aria-label="Delete Organization"
+                disabled={isBusy}
               >
-                <FaTrash className="mr-2" />
+                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
                 Delete Organization
               </Button>
+            </div>
 
-              {/* Cancel and Update Buttons */}
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="border-white/20 text-white/70 hover:bg-white/10 hover:text-white"
-                  onClick={() => handleDialogClose(false)}
-                  disabled={isUpdating || isSubmitting}
-                  aria-label="Cancel updates"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  disabled={!isDirty || !isValid || isUpdating || isSubmitting}
-                  aria-describedby={!isDirty ? "no-changes-hint" : undefined}
-                  aria-label="Update Organization"
-                >
-                  {isUpdating || isSubmitting ? (
-                    <>
-                      <FaSpinner className="mr-2 animate-spin" />
-                      Updating...
-                    </>
-                  ) : (
-                    <>
-                      <FaEdit className="mr-2" />
-                      Update
-                    </>
-                  )}
-                </Button>
-                {!isDirty && (
-                  <span id="no-changes-hint" className="sr-only">
-                    Make changes to enable the update button
-                  </span>
+            {/* ── Footer ──────────────────────────────────────── */}
+            <DialogFooter className="gap-2 pt-2 border-t border-white/5">
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-white/60 hover:text-white"
+                onClick={() => handleDialogClose(false)}
+                disabled={isBusy}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={!isDirty || !isValid || isBusy}
+                aria-label="Save changes"
+              >
+                {isBusy ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  "Save Changes"
                 )}
-              </div>
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className="border-red-500/40 bg-slate-900/95 backdrop-blur-md">
+        <AlertDialogContent className="border-red-500/30 bg-[var(--panel-strong)]">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-red-400">
-              <FaExclamationTriangle />
+              <AlertTriangle className="h-5 w-5" />
               Delete Organization
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-white/80">
-              Are you sure you want to delete{" "}
-              <span className="font-semibold text-white">
-                {organization.name}
+            <AlertDialogDescription className="text-white/70 space-y-2">
+              <span>
+                Are you sure you want to delete{" "}
+                <strong className="text-white">{organization.name}</strong>?
+                This action cannot be undone.
               </span>
-              ? This action cannot be undone.
-              <br />
-              <br />
-              <strong className="text-yellow-400">
+              <span className="block text-amber-400/90 text-sm font-medium">
                 Associated teams will become read-only but will not be deleted.
-              </strong>
+              </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel
-              className="border-white/20 text-white/70 hover:bg-white/10 hover:text-white"
-              aria-label="Cancel deletion"
-            >
+            <AlertDialogCancel className="border-white/10 text-white/60 hover:bg-white/5 hover:text-white">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               className="bg-red-600 hover:bg-red-700 text-white"
-              aria-label="Confirm Delete Organization"
             >
-              <FaTrash className="mr-2" />
-              Delete Organization
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

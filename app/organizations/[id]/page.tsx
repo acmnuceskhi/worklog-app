@@ -2,24 +2,18 @@
 
 import { useEffect, useState, use, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  FaBuilding,
-  FaUsers,
-  FaCog,
-  FaPlus,
-  FaArrowLeft,
-  FaClipboardList,
-  FaUserTie,
-} from "react-icons/fa";
+  Users,
+  Settings,
+  Plus,
+  ArrowLeft,
+  ClipboardList,
+  Building2,
+  UserCheck,
+} from "lucide-react";
+import { FaBuilding, FaUsers, FaUserTie } from "react-icons/fa";
 import { RatingModal } from "@/components/rating-modal";
 import {
   TeamFilters,
@@ -45,6 +39,7 @@ import type {
   ProgressStatus,
 } from "@/components/tables";
 import { formatTableDate } from "@/lib/tables";
+import { TeamCardEnhanced } from "@/components/organizations";
 
 interface TeamMember {
   id: string;
@@ -438,230 +433,202 @@ export default function OrganizationDashboardPage({
 
       {/* Main Content */}
       <div className="p-4 md:p-8">
-        <div className="max-w-7xl mx-auto space-y-6">
-          {/* Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
+        <div className="max-w-7xl mx-auto space-y-8">
+          {/* ── Hero Header ─────────────────────────────────────── */}
+          <div className="space-y-5">
+            <div className="flex items-center gap-2 text-white/40 text-sm">
               <Button
                 variant="ghost"
-                size="icon"
+                size="sm"
+                className="text-white/40 hover:text-white h-7 px-2"
                 onClick={() => router.push("/teams/organisations")}
-                className="text-muted hover:text-white"
                 aria-label="Back to organizations"
               >
-                <FaArrowLeft className="h-5 w-5" />
-              </Button>
-              <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500">
-                <FaBuilding className="h-8 w-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-white">
-                  {organization.name}
-                </h1>
-                {organization.description && (
-                  <p className="text-muted mt-1">{organization.description}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Button variant="primary" onClick={() => setShowCreateTeam(true)}>
-                <FaPlus className="mr-2" /> Create Team
-              </Button>
-              <Button
-                variant="outline"
-                className="border-white/20 text-white/70 hover:text-white"
-                onClick={() => setShowSettingsDialog(true)}
-              >
-                <FaCog className="mr-2" /> Settings
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Organizations
               </Button>
             </div>
-          </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card className="border-white/10 bg-white/5">
-              <CardContent className="p-4 text-center">
-                <FaUsers className="h-6 w-6 text-blue-400 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-white">
-                  {organization.stats.totalTeams}
-                </p>
-                <p className="text-sm text-muted">Teams</p>
-              </CardContent>
-            </Card>
-            <Card className="border-white/10 bg-white/5">
-              <CardContent className="p-4 text-center">
-                <FaUsers className="h-6 w-6 text-green-400 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-white">
-                  {organization.stats.totalMembers}
-                </p>
-                <p className="text-sm text-muted">Members</p>
-              </CardContent>
-            </Card>
-            <Card className="border-white/10 bg-white/5">
-              <CardContent className="p-4 text-center">
-                <FaClipboardList className="h-6 w-6 text-purple-400 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-white">
-                  {organization.stats.totalWorklogs}
-                </p>
-                <p className="text-sm text-muted">Worklogs</p>
-              </CardContent>
-            </Card>
-            <Card className="border-white/10 bg-white/5 flex items-center justify-center p-4">
-              <p className="text-xs text-muted italic">
-                More stats coming soon...
-              </p>
-            </Card>
-          </div>
-
-          {/* Teams Grid */}
-          <Card className="border-white/10 bg-white/5">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <FaUsers className="text-blue-400" /> Teams
-              </CardTitle>
-              <CardDescription className="text-muted">
-                Manage teams within this organization
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-4">
-                <TeamFilters
-                  value={{ search: teamSearchQuery, sortBy, sortDir }}
-                  onChange={handleTeamFiltersChange}
-                  onReset={resetTeamFilters}
-                />
-              </div>
-              {filteredTeams.length === 0 ? (
-                <EmptyState
-                  title={
-                    teamSearchQuery ? "No matching teams" : "No teams found"
-                  }
-                  description={
-                    teamSearchQuery
-                      ? `No teams matched "${teamSearchQuery}". Try different keywords.`
-                      : "Create a team to start collaborating with members and tracking their worklogs"
-                  }
-                  icon={<FaUsers className="h-8 w-8" />}
-                  action={
-                    teamSearchQuery
-                      ? { label: "Clear Filters", onClick: resetTeamFilters }
-                      : {
-                          label: "Create Team",
-                          onClick: () => setShowCreateTeam(true),
-                        }
-                  }
-                />
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredTeams.map((team) => (
-                    <Link
-                      key={team.id}
-                      href={`/teams/lead/${team.id}`}
-                      className="block group"
-                    >
-                      <Card className="border-white/10 bg-white/5 hover:bg-white/10 transition-all cursor-pointer group-focus:ring-2 group-focus:ring-blue-500/40">
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/20">
-                              <FaUsers className="h-5 w-5 text-blue-400" />
-                            </div>
-                            <span className="text-xs text-white/60 bg-white/10 px-2 py-1 rounded">
-                              {team._count.members} members
-                            </span>
-                          </div>
-                          <h3 className="text-lg font-semibold text-white mb-1">
-                            {team.name}
-                          </h3>
-                          {team.description && (
-                            <p className="text-sm text-muted line-clamp-2 mb-3">
-                              {team.description}
-                            </p>
-                          )}
-                          <div className="flex items-center justify-between text-xs text-white/60">
-                            <span>{team._count.worklogs} worklogs</span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </Link>
-                  ))}
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-5">
+              <div className="flex items-start gap-4">
+                <div className="shrink-0 p-4 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 shadow-lg shadow-blue-500/20">
+                  <Building2 className="h-8 w-8 text-white" />
                 </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Recent Worklogs */}
-          <Card className="border-white/10 bg-white/5">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <FaClipboardList className="text-purple-400" /> Recent Worklogs
-              </CardTitle>
-              <CardDescription className="text-muted">
-                Filter and review worklogs across teams
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-4">
-                <WorklogFilters
-                  value={worklogFilters}
-                  onChange={handleWorklogFiltersChange}
-                  onReset={resetWorklogFilters}
-                  teamOptions={(organization.teams || []).map((team) => ({
-                    id: team.id,
-                    name: team.name,
-                  }))}
-                />
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-bold text-white">
+                    {organization.name}
+                  </h1>
+                  {organization.description && (
+                    <p className="text-white/50 mt-1 max-w-lg">
+                      {organization.description}
+                    </p>
+                  )}
+                  <p className="text-xs text-white/30 mt-2">
+                    Owned by{" "}
+                    {organization.owner.name || organization.owner.email} ·
+                    Created {formatTableDate(organization.createdAt)}
+                  </p>
+                </div>
               </div>
 
-              {worklogsError ? (
-                <ErrorState
-                  title="Failed to load worklogs"
-                  message={worklogsError}
-                />
-              ) : (
-                <OrganizationWorklogTable
-                  worklogs={worklogs}
-                  isLoading={worklogsLoading}
-                  onRate={handleOpenRating}
-                  onDelete={handleDeleteWorklog}
-                  isDeleting={deleteWorklogMutation.isPending}
-                  currentPage={worklogPage}
-                  totalPages={totalWorklogPages}
-                  totalCount={worklogTotal}
-                  onPageChange={setWorklogPage}
-                />
-              )}
-            </CardContent>
-          </Card>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  variant="primary"
+                  onClick={() => setShowCreateTeam(true)}
+                >
+                  <Plus className="mr-2 h-4 w-4" /> Create Team
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setShowSettingsDialog(true)}
+                  aria-label="Organization settings"
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
 
-          {/* Organization Info */}
-          <Card className="border-white/10 bg-white/5">
-            <CardHeader>
-              <CardTitle className="text-white text-sm">
-                Organization Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-muted space-y-2">
-              <div className="flex justify-between">
-                <span>Owner</span>
-                <span className="text-white">
-                  {organization.owner.name || organization.owner.email}
-                </span>
+          {/* ── Stats Row ───────────────────────────────────────── */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Card className="border-white/10 bg-white/5">
+              <CardContent className="p-5 flex items-center gap-4">
+                <div className="shrink-0 p-2.5 rounded-xl bg-blue-500/10">
+                  <Users className="h-5 w-5 text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-white tabular-nums">
+                    {organization.stats.totalTeams}
+                  </p>
+                  <p className="text-xs text-white/40">Teams</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-white/10 bg-white/5">
+              <CardContent className="p-5 flex items-center gap-4">
+                <div className="shrink-0 p-2.5 rounded-xl bg-green-500/10">
+                  <UserCheck className="h-5 w-5 text-green-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-white tabular-nums">
+                    {organization.stats.totalMembers}
+                  </p>
+                  <p className="text-xs text-white/40">Members</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-white/10 bg-white/5">
+              <CardContent className="p-5 flex items-center gap-4">
+                <div className="shrink-0 p-2.5 rounded-xl bg-purple-500/10">
+                  <ClipboardList className="h-5 w-5 text-purple-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-white tabular-nums">
+                    {organization.stats.totalWorklogs}
+                  </p>
+                  <p className="text-xs text-white/40">Worklogs</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* ── Teams Section ──────────────────────────────────── */}
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                  <Users className="h-5 w-5 text-blue-400" />
+                  Teams
+                </h2>
+                <p className="text-sm text-white/40 mt-0.5">
+                  Manage teams within this organization
+                </p>
               </div>
-              <div className="flex justify-between">
-                <span>Created</span>
-                <span className="text-white">
-                  {formatTableDate(organization.createdAt)}
-                </span>
+            </div>
+
+            <div className="mb-4">
+              <TeamFilters
+                value={{ search: teamSearchQuery, sortBy, sortDir }}
+                onChange={handleTeamFiltersChange}
+                onReset={resetTeamFilters}
+              />
+            </div>
+
+            {filteredTeams.length === 0 ? (
+              <EmptyState
+                title={teamSearchQuery ? "No matching teams" : "No teams yet"}
+                description={
+                  teamSearchQuery
+                    ? `No teams matched "${teamSearchQuery}". Try different keywords.`
+                    : "Create a team to start collaborating with members and tracking their worklogs."
+                }
+                icon={<Users className="h-8 w-8" />}
+                action={
+                  teamSearchQuery
+                    ? { label: "Clear Filters", onClick: resetTeamFilters }
+                    : {
+                        label: "Create Team",
+                        onClick: () => setShowCreateTeam(true),
+                      }
+                }
+              />
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredTeams.map((team) => (
+                  <TeamCardEnhanced key={team.id} team={team} />
+                ))}
               </div>
-              <div className="flex justify-between">
-                <span>Organization ID</span>
-                <span className="text-white/50 font-mono text-xs">
-                  {organization.id}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
+            )}
+          </section>
+
+          {/* ── Recent Worklogs ─────────────────────────────────── */}
+          <section>
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <ClipboardList className="h-5 w-5 text-purple-400" />
+                Recent Worklogs
+              </h2>
+              <p className="text-sm text-white/40 mt-0.5">
+                Filter and review worklogs across all teams
+              </p>
+            </div>
+
+            <Card className="border-white/10 bg-white/5">
+              <CardContent className="p-5">
+                <div className="mb-4">
+                  <WorklogFilters
+                    value={worklogFilters}
+                    onChange={handleWorklogFiltersChange}
+                    onReset={resetWorklogFilters}
+                    teamOptions={(organization.teams || []).map((team) => ({
+                      id: team.id,
+                      name: team.name,
+                    }))}
+                  />
+                </div>
+
+                {worklogsError ? (
+                  <ErrorState
+                    title="Failed to load worklogs"
+                    message={worklogsError}
+                  />
+                ) : (
+                  <OrganizationWorklogTable
+                    worklogs={worklogs}
+                    isLoading={worklogsLoading}
+                    onRate={handleOpenRating}
+                    onDelete={handleDeleteWorklog}
+                    isDeleting={deleteWorklogMutation.isPending}
+                    currentPage={worklogPage}
+                    totalPages={totalWorklogPages}
+                    totalCount={worklogTotal}
+                    onPageChange={setWorklogPage}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </section>
         </div>
 
         {/* Create Team Wizard */}

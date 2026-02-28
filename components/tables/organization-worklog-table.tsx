@@ -18,13 +18,9 @@ import type { ColumnDef } from "@/components/kibo-ui/table";
 import { TableColumnHeader } from "@/components/kibo-ui/table";
 import { Button } from "@/components/ui/button";
 import { BaseDataTable, TablePagination } from "./base-data-table";
-import {
-  StatusBadge,
-  UserAvatar,
-  STATUS_STYLES,
-} from "@/lib/tables/column-patterns";
+import { StatusBadge, STATUS_STYLES } from "@/lib/tables/column-patterns";
 import { formatTableDate, canRateWorklog } from "@/lib/tables/table-utils";
-import { Star, Trash2, Edit, ClipboardList } from "lucide-react";
+import { Star, Trash2, Pencil, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { OrganizationWorklogRow, ProgressStatus } from "./types";
 
@@ -53,22 +49,40 @@ export interface OrganizationWorklogTableProps {
 
 // ── Rating Display ────────────────────────────────────────────────────────────
 
+function getRatingColor(avg: number): string {
+  if (avg >= 8) return "text-emerald-400";
+  if (avg >= 6) return "text-yellow-400";
+  if (avg >= 4) return "text-amber-400";
+  return "text-red-400";
+}
+
+function getRatingStarFill(avg: number): string {
+  if (avg >= 8) return "fill-emerald-400";
+  if (avg >= 6) return "fill-yellow-400";
+  if (avg >= 4) return "fill-amber-400";
+  return "fill-red-400";
+}
+
 function RatingCell({
   ratings,
 }: {
   ratings: OrganizationWorklogRow["ratings"];
 }) {
   if (!ratings || ratings.length === 0) {
-    return <span className="text-white/40">—</span>;
+    return <span className="text-white/30 text-sm">Not rated</span>;
   }
 
   const avgRating =
     ratings.reduce((sum, r) => sum + r.value, 0) / ratings.length;
 
   return (
-    <div className="flex items-center gap-1 text-yellow-400">
-      <Star className="h-4 w-4 fill-yellow-400" />
-      <span className="font-medium tabular-nums">{avgRating.toFixed(1)}</span>
+    <div
+      className={cn("flex items-center gap-1.5", getRatingColor(avgRating))}
+      aria-label={`Rating: ${avgRating.toFixed(1)} out of 10`}
+    >
+      <Star className={cn("h-4 w-4", getRatingStarFill(avgRating))} />
+      <span className="font-semibold tabular-nums">{avgRating.toFixed(1)}</span>
+      <span className="text-white/40 text-xs">/10</span>
     </div>
   );
 }
@@ -108,15 +122,9 @@ export function OrganizationWorklogTable({
           <TableColumnHeader column={column} title="Member" />
         ),
         cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            <UserAvatar
-              name={row.original.user.name}
-              image={row.original.user.image}
-            />
-            <span className="text-white/90">
-              {row.original.user.name || "Unknown"}
-            </span>
-          </div>
+          <span className="text-white/90">
+            {row.original.user.name || "Unknown"}
+          </span>
         ),
       },
       {
@@ -177,12 +185,12 @@ export function OrganizationWorklogTable({
               {showRateButton && (
                 <Button
                   size="sm"
-                  variant={hasRating ? "outline" : "default"}
+                  variant={hasRating ? "outline" : "primary"}
                   className={cn(
-                    "h-8 px-3",
+                    "h-8 px-3 transition-all",
                     hasRating
-                      ? "border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/20"
-                      : "bg-gradient-to-r from-yellow-500 to-amber-500 text-black hover:from-yellow-600 hover:to-amber-600",
+                      ? "border-white/20 text-white/80 hover:bg-white/10 hover:text-white"
+                      : "shadow-md hover:shadow-lg",
                   )}
                   onClick={() => onRate(worklog)}
                   aria-label={
@@ -193,7 +201,7 @@ export function OrganizationWorklogTable({
                 >
                   {hasRating ? (
                     <>
-                      <Edit className="mr-1 h-3 w-3" /> Edit
+                      <Pencil className="mr-1 h-3 w-3" /> Edit
                     </>
                   ) : (
                     <>
@@ -204,13 +212,13 @@ export function OrganizationWorklogTable({
               )}
               <Button
                 size="sm"
-                variant="outline"
-                className="h-8 px-3 border-red-400/30 text-red-300 hover:bg-red-500/20 hover:text-red-200"
+                variant="ghost"
+                className="h-8 px-2 text-white/40 hover:text-red-400 hover:bg-red-500/10"
                 onClick={() => onDelete(worklog.id, worklog.title)}
                 disabled={isDeleting}
                 aria-label={`Delete ${worklog.title}`}
               >
-                <Trash2 className="mr-1 h-3 w-3" /> Delete
+                <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           );
