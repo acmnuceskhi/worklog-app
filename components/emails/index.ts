@@ -44,4 +44,30 @@ export type {
   TeamInvitationData,
   WorklogReviewData,
   DeadlineReminderData,
+  OrganizationInvitationData,
 } from "../../lib/email/service";
+
+// Email Infrastructure
+export {
+  createEmailLog,
+  updateEmailLogByRequestId,
+  updateEmailLogByResendId,
+  generateIdempotencyKey,
+  generateRequestId,
+  getEmailMetrics,
+} from "../../lib/email/email-log";
+export type { EmailStatus, EmailType } from "../../lib/email/email-log";
+
+export {
+  addToSuppressionList,
+  isEmailSuppressed,
+  removeFromSuppressionList,
+  verifyEmailBeforeSending,
+  listSuppressedEmails,
+} from "../../lib/email/suppression";
+export type {
+  SuppressionReason,
+  BounceType,
+} from "../../lib/email/suppression";
+
+export { emailDesignTokens } from "../../lib/email/design-tokens";

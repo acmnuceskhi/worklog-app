@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "skills": {
+    "doc-coauthoring": {
+      "source": "anthropic/doc-coauthoring",
+      "sourceType": "local",
+      "computedHash": "d8a7e0c3f2b1a9e4c5d6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7"
+    },
+    "email-best-practices": {
+      "source": "resend/email-best-practices",
+      "sourceType": "github",
+      "computedHash": "84584c37f5759255ec20b3d8df7cc5d9096e99fd603dde722f239503de793b6d"
+    },
+    "email-standardization": {
+      "source": "local/email-standardization",
+      "sourceType": "local",
+      "computedHash": "e9b8f1d4a7c2e5f8b0d3a6c9f2e5b8d1a4c7f0e3b6d9a2c5f8e1b4a7c0d3e6"
+    },
+    "frontend-design": {
+      "source": "anthropic/frontend-design",
+      "sourceType": "local",
+      "computedHash": "c5f8a1b4e7d0c3f6a9e1b4d7c0f3a6e9d2c5f8b1e4a7d0c3f6a9e1b4c7d0f3"
+    },
+    "react-email": {
+      "source": "resend/react-email",
+      "sourceType": "github",
+      "computedHash": "5abde077d6f10a25727a52f8d3ad5bf8c56e8ab17c277e3de32a0a3c32bf6f06"
+    },
+    "resend": {
+      "source": "resend/resend-skills",
+      "sourceType": "github",
+      "computedHash": "a449be6d89ca789b97a756c7380251356461b0b1160fa3baa35b168f74b3e440"
+    },
+    "theme-factory": {
+      "source": "anthropic/theme-factory",
+      "sourceType": "local",
+      "computedHash": "f0e3d6c9b2a5f8e1d4a7c0f3e6b9d2c5a8f1e4d7a0c3f6b9e2d5a8c1f4e7b0"
+    },
+    "web-artifacts-builder": {
+      "source": "anthropic/web-artifacts-builder",
+      "sourceType": "local",
+      "computedHash": "a1d4e7f0c3b6a9d2c5f8e1b4a7d0c3f6a9e2d5b8c1f4a7d0e3f6a9c2b5e8d1"
+    },
+    "webapp-testing": {
+      "source": "anthropic/webapp-testing",
+      "sourceType": "local",
+      "computedHash": "b2e5f8a1d4c7b0e3f6a9d2c5b8e1a4d7c0f3e6a9d2c5f8b1e4a7d0c3f6a9e2"
+    }
+  }
+}
