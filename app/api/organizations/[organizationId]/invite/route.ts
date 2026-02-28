@@ -44,11 +44,18 @@ export async function POST(
     //   );
     // }
 
-    // Check if user is the organization owner
+    // Check if user is the organization owner or an accepted co-owner
     const organization = await prisma.organization.findFirst({
       where: {
         id: organizationId,
-        ownerId: session.user.id,
+        OR: [
+          { ownerId: session.user.id },
+          {
+            invitations: {
+              some: { userId: session.user.id, status: "ACCEPTED" },
+            },
+          },
+        ],
       },
     });
 
@@ -68,21 +75,40 @@ export async function POST(
           where: { email },
         });
 
-        // Check if invitation already exists
+        // Check if user is already the organization owner
+        if (existingUser && existingUser.id === organization.ownerId) {
+          results.push({
+            email,
+            status: "skipped",
+            reason: "User is already the organization owner",
+          });
+          continue;
+        }
+
+        // Check if invitation already exists (PENDING or ACCEPTED)
         const existingInvitation =
           await prisma.organizationInvitation.findFirst({
             where: {
               organizationId,
               email,
-              status: "PENDING",
+              status: { in: ["PENDING", "ACCEPTED"] },
             },
           });
 
-        if (existingInvitation) {
+        if (existingInvitation?.status === "PENDING") {
           results.push({
             email,
             status: "skipped",
             reason: "Invitation already sent",
+          });
+          continue;
+        }
+
+        if (existingInvitation?.status === "ACCEPTED") {
+          results.push({
+            email,
+            status: "skipped",
+            reason: "User is already a co-owner",
           });
           continue;
         }
@@ -105,7 +131,7 @@ export async function POST(
         const acceptUrl = `${process.env.NEXTAUTH_URL}/api/invitations/${token}/accept`;
         const rejectUrl = `${process.env.NEXTAUTH_URL}/api/invitations/${token}/reject`;
 
-        await emailService.sendOrganizationInvitation({
+        await emailService.sendOrganizationOwnerInvitation({
           recipientEmail: email,
           organizationName: organization.name,
           inviterName: session.user.name || "Organization Owner",

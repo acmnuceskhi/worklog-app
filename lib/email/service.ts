@@ -19,6 +19,7 @@ import { teamInvitationTemplate } from "../../components/emails/TeamInvitationEm
 import { worklogReviewTemplate } from "../../components/emails/WorklogReviewEmail";
 import { deadlineReminderTemplate } from "../../components/emails/DeadlineReminderEmail";
 import { organizationInvitationTemplate } from "../../components/emails/OrganizationInvitationEmail";
+import { organizationOwnerInvitationTemplate } from "../../components/emails/OrganizationOwnerInvitationEmail";
 import {
   TeamInvitationEmailData,
   WorklogReviewEmailData,
@@ -260,6 +261,39 @@ export class EmailService {
       idempotencyKey: generateIdempotencyKey(
         "ORG_INVITE",
         `${data.recipientEmail}-${data.organizationName}`,
+      ),
+    });
+  }
+
+  public async sendOrganizationOwnerInvitation(
+    data: OrganizationInvitationData,
+  ): Promise<EmailResult> {
+    const validation = await verifyEmailBeforeSending(data.recipientEmail);
+    if (!validation.valid) {
+      return {
+        success: false,
+        error: validation.reason,
+        suppressed: validation.reason?.includes("suppressed"),
+      };
+    }
+
+    const template = organizationOwnerInvitationTemplate;
+    return this.sendWithRetry({
+      payload: {
+        from: this.getFromAddress(),
+        to: [data.recipientEmail],
+        subject: template.subject(data),
+        react: template.component(data),
+        tags: [
+          { name: "email_type", value: "org_owner_invite" },
+          { name: "org_name", value: sanitizeTagValue(data.organizationName) },
+        ],
+      },
+      emailType: "ORG_INVITE",
+      templateName: "OrganizationOwnerInvitation",
+      idempotencyKey: generateIdempotencyKey(
+        "ORG_INVITE",
+        `owner-${data.recipientEmail}-${data.organizationName}`,
       ),
     });
   }

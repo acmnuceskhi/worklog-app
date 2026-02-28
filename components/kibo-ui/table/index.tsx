@@ -60,6 +60,10 @@ export function TableProvider<TData, TValue>({
   className,
 }: TableProviderProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
+
+  // Note: TanStack Table's useReactTable returns functions that cannot be memoized.
+  // This is a known React Compiler incompatibility and documented limitation:
+  // https://github.com/TanStack/table/issues/4241
   const table = useReactTable({
     data,
     columns,

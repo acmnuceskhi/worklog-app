@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useOrganizations } from "@/lib/hooks";
+import { ManageOwnersSection } from "@/components/organizations/ManageOwnersSection";
 
 /* ──────────────────────────────────────────────────────────────────
  * OrganizationInvitationsPanel
@@ -164,7 +165,7 @@ export function OrganizationInvitationsPanel({
       <div className="flex items-center gap-2 mb-4">
         <FaCrown className="text-purple-400" />
         <h3 className="font-semibold text-sm uppercase tracking-wide text-white/70">
-          Invite Team Leaders
+          Invite Org Members
         </h3>
       </div>
 
@@ -311,6 +312,28 @@ export function OrganizationInvitationsPanel({
                     )}
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* Invite Co-Owners */}
+        {selectedOrgId && selectedOrg && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2, delay: 0.1 }}
+          >
+            <Card className="bg-white/5 border-white/10">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <FaCrown className="text-amber-400" />
+                  Invite Co-Owners to {selectedOrg.name}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <ManageOwnersSection organizationId={selectedOrgId} />
               </CardContent>
             </Card>
           </motion.div>

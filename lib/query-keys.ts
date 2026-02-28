@@ -24,6 +24,13 @@ export const queryKeys = {
     list: () => ["organizations", "list"] as const,
     detail: (id: string) => ["organizations", id] as const,
     teams: (id: string) => ["organizations", id, "teams"] as const,
+    invitations: (id: string, status?: string) =>
+      [
+        "organizations",
+        id,
+        "invitations",
+        ...(status ? [status] : []),
+      ] as const,
   },
 
   // Team queries

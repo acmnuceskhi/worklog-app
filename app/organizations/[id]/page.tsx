@@ -12,6 +12,7 @@ import {
   ClipboardList,
   Building2,
   UserCheck,
+  Crown,
 } from "lucide-react";
 import { FaBuilding, FaUsers, FaUserTie } from "react-icons/fa";
 import { RatingModal } from "@/components/rating-modal";
@@ -39,7 +40,10 @@ import type {
   ProgressStatus,
 } from "@/components/tables";
 import { formatTableDate } from "@/lib/tables";
-import { TeamCardEnhanced } from "@/components/organizations";
+import {
+  TeamCardEnhanced,
+  OwnersRosterSection,
+} from "@/components/organizations";
 
 interface TeamMember {
   id: string;
@@ -532,6 +536,28 @@ export default function OrganizationDashboardPage({
               </CardContent>
             </Card>
           </div>
+
+          {/* ── Owners Section ─────────────────────────────────── */}
+          <section>
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Crown className="h-5 w-5 text-amber-400" />
+                Owners
+              </h2>
+              <p className="text-sm text-white/40 mt-0.5">
+                Organization owner and co-owners
+              </p>
+            </div>
+
+            <Card className="border-white/10 bg-white/5">
+              <CardContent className="p-5">
+                <OwnersRosterSection
+                  organizationId={organizationId}
+                  currentOwnerId={organization.ownerId}
+                />
+              </CardContent>
+            </Card>
+          </section>
 
           {/* ── Teams Section ──────────────────────────────────── */}
           <section>

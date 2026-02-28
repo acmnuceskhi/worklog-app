@@ -239,3 +239,144 @@ export const useUpdateOrganizationCredits = (organizationId: string) => {
     },
   });
 };
+
+// ─── Organization Owner Invitation Types ─────────────────────────────────────
+
+export interface OrganizationInvitation {
+  id: string;
+  email: string;
+  status: "PENDING" | "ACCEPTED" | "REJECTED";
+  invitedAt: string;
+  joinedAt: string | null;
+  user: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    image: string | null;
+  } | null;
+}
+
+export interface OrganizationInvitationsResponse {
+  data: OrganizationInvitation[];
+  owner: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    image: string | null;
+  };
+  meta: {
+    total: number;
+    pending: number;
+    accepted: number;
+    rejected: number;
+  };
+}
+
+// ─── Organization Owner Invitation Hooks ─────────────────────────────────────
+
+/**
+ * Fetch organization invitations (pending, accepted, rejected)
+ */
+export const useOrganizationInvitations = (
+  organizationId: string,
+  status?: "PENDING" | "ACCEPTED" | "REJECTED",
+) => {
+  return useQuery({
+    queryKey: queryKeys.organizations.invitations(organizationId, status),
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (status) params.set("status", status);
+      const url = `/api/organizations/${organizationId}/invitations${params.toString() ? `?${params}` : ""}`;
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("Failed to fetch organization invitations");
+      }
+      return (await response.json()) as OrganizationInvitationsResponse;
+    },
+    enabled: !!organizationId,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+};
+
+/**
+ * Invite organization owners via email
+ */
+export const useInviteOrganizationOwner = (organizationId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (emails: string[]) => {
+      const response = await fetch(
+        `/api/organizations/${organizationId}/invite`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ emails }),
+        },
+      );
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to send invitations");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.organizations.invitations(organizationId),
+      });
+    },
+  });
+};
+
+/**
+ * Revoke a pending organization owner invitation
+ */
+export const useRevokeOrganizationInvitation = (organizationId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (invitationId: string) => {
+      const response = await fetch(
+        `/api/organizations/${organizationId}/invitations/${invitationId}`,
+        { method: "DELETE" },
+      );
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to revoke invitation");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.organizations.invitations(organizationId),
+      });
+    },
+  });
+};
+
+/**
+ * Remove an accepted co-owner from the organization
+ */
+export const useRemoveOrganizationOwner = (organizationId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await fetch(
+        `/api/organizations/${organizationId}/owners/${userId}`,
+        { method: "DELETE" },
+      );
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to remove co-owner");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.organizations.invitations(organizationId),
+      });
+    },
+  });
+};

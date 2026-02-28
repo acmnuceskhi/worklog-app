@@ -74,15 +74,25 @@ export async function GET() {
       }
     }
 
-    // Batch fetch organizations and teams in parallel
+    // Batch fetch organizations (owned + co-owned) and teams in parallel
     const [organizations, teams] = await Promise.all([
       prisma.organization.findMany({
-        where: { ownerId: user.id },
+        where: {
+          OR: [
+            { ownerId: user.id },
+            {
+              invitations: {
+                some: { userId: user.id, status: "ACCEPTED" },
+              },
+            },
+          ],
+        },
         select: {
           id: true,
           name: true,
           description: true,
           credits: true,
+          ownerId: true,
           createdAt: true,
           updatedAt: true,
           _count: {
@@ -96,7 +106,14 @@ export async function GET() {
       prisma.team.findMany({
         where: {
           organization: {
-            ownerId: user.id,
+            OR: [
+              { ownerId: user.id },
+              {
+                invitations: {
+                  some: { userId: user.id, status: "ACCEPTED" },
+                },
+              },
+            ],
           },
         },
         select: {

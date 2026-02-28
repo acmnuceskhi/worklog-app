@@ -236,7 +236,7 @@ export function OrganizationSettingsDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={handleDialogClose}>
-        <DialogContent className="sm:max-w-lg bg-[var(--panel-strong)] border-white/10">
+        <DialogContent className="sm:max-w-xl max-h-[85vh] overflow-y-auto bg-[var(--panel-strong)] border-white/10">
           <DialogHeader>
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/20">

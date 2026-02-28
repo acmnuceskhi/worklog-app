@@ -127,6 +127,32 @@ export async function isOrganizationOwner(
 }
 
 /**
+ * Check if user is an organization owner OR an accepted co-owner.
+ * Co-owners are tracked via OrganizationInvitation with status ACCEPTED.
+ * Uses a single DB query with OR for efficiency.
+ */
+export async function isOrganizationOwnerOrCoOwner(
+  userId: string,
+  organizationId: string,
+): Promise<boolean> {
+  const org = await prisma.organization.findFirst({
+    where: {
+      id: organizationId,
+      OR: [
+        { ownerId: userId },
+        {
+          invitations: {
+            some: { userId, status: "ACCEPTED" },
+          },
+        },
+      ],
+    },
+    select: { id: true },
+  });
+  return !!org;
+}
+
+/**
  * Check if user is a team owner
  */
 export async function isTeamOwner(
