@@ -68,11 +68,11 @@ function Calendar({
           defaults.dropdowns,
         ),
         dropdown_root: cn(
-          "relative has-focus:border-amber-400 border border-white/20 shadow-xs has-focus:ring-amber-400/50 has-focus:ring-[3px] rounded-md",
+          "relative has-focus:border-blue-400 border border-white/20 shadow-xs has-focus:ring-blue-400/50 has-focus:ring-[3px] rounded-md",
           defaults.dropdown_root,
         ),
         dropdown: cn(
-          "absolute bg-blue-950 inset-0 opacity-0",
+          "absolute bg-[var(--panel-strong)] inset-0 opacity-0",
           defaults.dropdown,
         ),
         caption_label: cn(
@@ -82,7 +82,7 @@ function Calendar({
         table: "w-full border-collapse",
         weekdays: cn("flex", defaults.weekdays),
         weekday: cn(
-          "text-amber-500/80 rounded-md flex-1 font-normal text-[0.8rem] select-none w-9",
+          "text-white/50 rounded-md flex-1 font-normal text-[0.8rem] select-none w-9",
           defaults.weekday,
         ),
         week: cn("flex w-full mt-2", defaults.week),
@@ -92,15 +92,15 @@ function Calendar({
           "[&:last-child[data-selected=true]_button]:rounded-r-md",
           defaults.day,
         ),
-        range_start: cn("rounded-l-md bg-amber-500/30", defaults.range_start),
+        range_start: cn("rounded-l-md bg-blue-500/30", defaults.range_start),
         range_middle: cn("rounded-none", defaults.range_middle),
-        range_end: cn("rounded-r-md bg-amber-500/30", defaults.range_end),
+        range_end: cn("rounded-r-md bg-blue-500/30", defaults.range_end),
         today: cn(
-          "bg-amber-500/20 text-amber-300 rounded-md data-[selected=true]:rounded-none",
+          "bg-blue-500/20 text-blue-300 rounded-md data-[selected=true]:rounded-none",
           defaults.today,
         ),
         outside: cn(
-          "text-white/30 opacity-50 aria-selected:bg-amber-500/20 aria-selected:text-white/30",
+          "text-white/30 opacity-50 aria-selected:bg-blue-500/20 aria-selected:text-white/30",
           defaults.outside,
         ),
         disabled: cn("text-white/30 opacity-50", defaults.disabled),
@@ -176,18 +176,18 @@ function CalendarDayButton({
       data-range-end={modifiers.range_end}
       data-range-middle={modifiers.range_middle}
       className={cn(
-        "data-[selected-single=true]:bg-amber-500 data-[selected-single=true]:text-white",
-        "data-[range-middle=true]:bg-amber-500/20 data-[range-middle=true]:text-amber-300",
-        "data-[range-start=true]:bg-amber-500 data-[range-start=true]:text-white",
-        "data-[range-end=true]:bg-amber-500 data-[range-end=true]:text-white",
-        "group-data-[focused=true]/day:border-amber-400 group-data-[focused=true]/day:ring-amber-400/50",
+        "data-[selected-single=true]:bg-blue-500 data-[selected-single=true]:text-white",
+        "data-[range-middle=true]:bg-blue-500/20 data-[range-middle=true]:text-blue-300",
+        "data-[range-start=true]:bg-blue-500 data-[range-start=true]:text-white",
+        "data-[range-end=true]:bg-blue-500 data-[range-end=true]:text-white",
+        "group-data-[focused=true]/day:border-blue-400 group-data-[focused=true]/day:ring-blue-400/50",
         "flex aspect-square size-auto w-full min-w-9 flex-col gap-1 leading-none font-normal",
         "group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10",
         "group-data-[focused=true]/day:ring-[3px]",
         "data-[range-end=true]:rounded-md data-[range-end=true]:rounded-r-md",
         "data-[range-middle=true]:rounded-none",
         "data-[range-start=true]:rounded-md data-[range-start=true]:rounded-l-md",
-        "hover:bg-amber-500/30 hover:text-amber-300",
+        "hover:bg-white/10 hover:text-white",
         "aria-selected:opacity-100",
         "h-9 w-9 p-0",
         defaults.day,

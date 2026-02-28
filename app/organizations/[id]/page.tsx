@@ -18,8 +18,6 @@ import {
   FaPlus,
   FaArrowLeft,
   FaClipboardList,
-  FaStar,
-  FaEdit,
   FaUserTie,
 } from "react-icons/fa";
 import { RatingModal } from "@/components/rating-modal";
@@ -41,6 +39,12 @@ import { ErrorState } from "@/components/states/error-state";
 import { TeamCreationWizard } from "@/components/teams/team-creation-wizard";
 import { useDeleteWorklog, useTeamSearch } from "@/lib/hooks";
 import { PageHeader } from "@/components/ui/page-header";
+import { OrganizationWorklogTable } from "@/components/tables";
+import type {
+  OrganizationWorklogRow,
+  ProgressStatus,
+} from "@/components/tables";
+import { formatTableDate } from "@/lib/tables";
 
 interface TeamMember {
   id: string;
@@ -56,7 +60,7 @@ interface Rating {
   id: string;
   value: number;
   comment: string | null;
-  rater: {
+  rater?: {
     id: string;
     name: string | null;
   };
@@ -66,7 +70,7 @@ interface Worklog {
   id: string;
   title: string;
   description: string;
-  progressStatus: string;
+  progressStatus: ProgressStatus;
   createdAt: string;
   user: {
     id: string;
@@ -80,7 +84,7 @@ interface WorklogListItem {
   id: string;
   title: string;
   description: string;
-  progressStatus: string;
+  progressStatus: ProgressStatus;
   createdAt: string;
   deadline?: string | null;
   team: {
@@ -310,25 +314,6 @@ export default function OrganizationDashboardPage({
     );
   };
 
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      STARTED: "bg-blue-500/20 text-blue-400",
-      HALF_DONE: "bg-yellow-500/20 text-yellow-400",
-      COMPLETED: "bg-green-500/20 text-green-400",
-      REVIEWED: "bg-purple-500/20 text-purple-400",
-      GRADED: "bg-cyan-500/20 text-cyan-400",
-    };
-    return colors[status] || "bg-white/10 text-white/70";
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
   const handleWorklogFiltersChange = useCallback((next: WorklogFilterState) => {
     setWorklogFilters(next);
     setWorklogPage(1);
@@ -379,12 +364,7 @@ export default function OrganizationDashboardPage({
     setSortDir("asc");
   }, [setTeamSearchQuery]);
 
-  const handleOpenRating = (worklog: {
-    id: string;
-    title: string;
-    progressStatus: string;
-    ratings: Rating[];
-  }) => {
+  const handleOpenRating = (worklog: OrganizationWorklogRow) => {
     // Find if current user (org owner) has already rated
     // Since this dashboard is only visible to org owner, we can check for existing rating
     const existingRating =
@@ -402,10 +382,6 @@ export default function OrganizationDashboardPage({
         : null,
     });
     setShowRatingModal(true);
-  };
-
-  const canRateWorklog = (status: string) => {
-    return status === "REVIEWED" || status === "GRADED";
   };
 
   if (isLoading) {
@@ -637,128 +613,23 @@ export default function OrganizationDashboardPage({
                 />
               </div>
 
-              {worklogsLoading ? (
-                <LoadingState text="Loading worklogs..." />
-              ) : worklogsError ? (
+              {worklogsError ? (
                 <ErrorState
                   title="Failed to load worklogs"
                   message={worklogsError}
                 />
-              ) : worklogs.length === 0 ? (
-                <div className="text-center py-8">
-                  <FaClipboardList className="h-12 w-12 text-white/40 mx-auto mb-3" />
-                  <p className="text-muted">No worklogs match filters</p>
-                </div>
               ) : (
-                <div className="space-y-3">
-                  {worklogs.map((worklog) => (
-                    <div
-                      key={worklog.id}
-                      className="flex items-center gap-4 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-medium text-white truncate">
-                            {worklog.title}
-                          </h4>
-                          <span
-                            className={`text-xs px-2 py-0.5 rounded ${getStatusColor(
-                              worklog.progressStatus,
-                            )}`}
-                          >
-                            {worklog.progressStatus.replace("_", " ")}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3 text-sm text-muted">
-                          <span>{worklog.user.name || "Unknown"}</span>
-                          <span>•</span>
-                          <span>{worklog.team.name}</span>
-                          <span>•</span>
-                          <span>{formatDate(worklog.createdAt)}</span>
-                        </div>
-                      </div>
-                      {worklog.ratings.length > 0 && (
-                        <div className="flex items-center gap-1 text-yellow-400">
-                          <FaStar className="h-4 w-4" />
-                          <span className="font-medium">
-                            {(
-                              worklog.ratings.reduce(
-                                (sum, r) => sum + r.value,
-                                0,
-                              ) / worklog.ratings.length
-                            ).toFixed(1)}
-                          </span>
-                        </div>
-                      )}
-                      {canRateWorklog(worklog.progressStatus) && (
-                        <Button
-                          size="sm"
-                          variant={
-                            worklog.ratings.length > 0 ? "outline" : "default"
-                          }
-                          className={
-                            worklog.ratings.length > 0
-                              ? "border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/20"
-                              : "bg-gradient-to-r from-yellow-500 to-amber-500 text-black"
-                          }
-                          onClick={() => handleOpenRating(worklog)}
-                        >
-                          {worklog.ratings.length > 0 ? (
-                            <>
-                              <FaEdit className="mr-1 h-3 w-3" /> Edit
-                            </>
-                          ) : (
-                            <>
-                              <FaStar className="mr-1 h-3 w-3" /> Rate
-                            </>
-                          )}
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-red-400/30 text-red-300 hover:bg-red-500/20"
-                        onClick={() =>
-                          handleDeleteWorklog(worklog.id, worklog.title)
-                        }
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                  ))}
-                  <div className="flex items-center justify-between pt-2 text-xs text-muted">
-                    <span>
-                      Page {worklogPage} of {totalWorklogPages} • {worklogTotal}{" "}
-                      total
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-white/20 text-white/70 hover:bg-white/10 hover:text-white"
-                        onClick={() =>
-                          setWorklogPage((prev) => Math.max(1, prev - 1))
-                        }
-                        disabled={worklogPage <= 1}
-                      >
-                        Prev
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-white/20 text-white/70 hover:bg-white/10 hover:text-white"
-                        onClick={() =>
-                          setWorklogPage((prev) =>
-                            Math.min(totalWorklogPages, prev + 1),
-                          )
-                        }
-                        disabled={worklogPage >= totalWorklogPages}
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+                <OrganizationWorklogTable
+                  worklogs={worklogs}
+                  isLoading={worklogsLoading}
+                  onRate={handleOpenRating}
+                  onDelete={handleDeleteWorklog}
+                  isDeleting={deleteWorklogMutation.isPending}
+                  currentPage={worklogPage}
+                  totalPages={totalWorklogPages}
+                  totalCount={worklogTotal}
+                  onPageChange={setWorklogPage}
+                />
               )}
             </CardContent>
           </Card>
@@ -780,7 +651,7 @@ export default function OrganizationDashboardPage({
               <div className="flex justify-between">
                 <span>Created</span>
                 <span className="text-white">
-                  {formatDate(organization.createdAt)}
+                  {formatTableDate(organization.createdAt)}
                 </span>
               </div>
               <div className="flex justify-between">

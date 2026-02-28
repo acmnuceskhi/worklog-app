@@ -88,18 +88,17 @@ export function DatePicker({
             aria-invalid={isError}
             aria-describedby={isError ? "date-picker-error" : undefined}
             className={cn(
-              "w-full justify-start text-left font-normal transition-all duration-300",
-              "bg-blue-900/80 border-amber-500/40 text-amber-400",
-              "hover:bg-blue-800/90 hover:border-amber-400/60 hover:text-amber-300",
-              "focus:ring-2 focus:ring-amber-500/50 focus:border-amber-400",
-              "data-[empty=true]:text-amber-500/60",
-              "backdrop-blur-sm shadow-lg shadow-blue-900/50",
-              "hover:shadow-amber-500/20 hover:shadow-xl",
+              "w-full justify-start text-left font-normal transition-all duration-200",
+              "bg-white/5 border-white/20 text-white",
+              "hover:bg-white/10 hover:border-white/30",
+              "focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400",
+              "data-[empty=true]:text-white/40",
+              "backdrop-blur-sm",
               isError && "border-red-500/60 focus:ring-red-500/50",
               disabled && "opacity-50 cursor-not-allowed",
             )}
           >
-            <CalendarIcon className="mr-3 h-5 w-5 text-amber-400" />
+            <CalendarIcon className="mr-3 h-5 w-5 text-white/50" />
             <span className="truncate">
               {displayValue ?? <span>{placeholder}</span>}
             </span>
@@ -107,8 +106,8 @@ export function DatePicker({
         </PopoverTrigger>
         <PopoverContent
           className={cn(
-            "w-auto p-0 bg-blue-950/95 border-amber-500/30 backdrop-blur-md",
-            "shadow-2xl shadow-amber-500/10 rounded-lg",
+            "w-auto p-0 rounded-lg",
+            "shadow-2xl",
             "animate-in fade-in-0 zoom-in-95 duration-200",
           )}
           align="start"

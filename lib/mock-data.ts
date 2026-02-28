@@ -287,6 +287,7 @@ export const mockWorklogs: MockWorklog[] = isDevelopment
         title: "Implement user authentication",
         description:
           "Set up OAuth integration with Google and GitHub providers using NextAuth.js",
+        githubLink: "https://github.com/acm-techops/worklog-app/pull/42",
         progressStatus: "COMPLETED",
         deadline: new Date("2026-02-25"),
         userId: "mock-member-1",
@@ -311,6 +312,7 @@ export const mockWorklogs: MockWorklog[] = isDevelopment
         title: "Set up database schema",
         description:
           "Define Prisma models for organizations, teams, worklogs, and ratings with proper relationships",
+        githubLink: "https://github.com/acm-techops/worklog-app/commit/a3f5b2c",
         progressStatus: "GRADED",
         userId: "mock-member-1",
         teamId: "mock-team-1",
@@ -347,6 +349,7 @@ export const mockWorklogs: MockWorklog[] = isDevelopment
         title: "Build REST API endpoints",
         description:
           "Create CRUD endpoints for worklogs, teams, and organizations",
+        githubLink: "https://github.com/acm-techops/worklog-app/pull/58",
         progressStatus: "COMPLETED",
         userId: "mock-member-1",
         teamId: "mock-team-2",
