@@ -6,7 +6,6 @@ import {
   FaHome,
   FaUsers,
   FaUserTie,
-  FaBell,
   FaBars,
   FaChevronLeft,
   FaChevronRight,
@@ -108,11 +107,11 @@ export default function TeamsLayout({
       ? "bg-gradient-to-br from-[#fbc2eb] to-[#a6c1ee] text-[var(--color-text)]"
       : "bg-[var(--page-bg-dark)] text-white"
   }`;
-  const sidebarClassName = `p-4 rounded-xl flex flex-col gap-3 relative z-100 bg-[var(--nav-bg)] text-white ${
+  const sidebarClassName = `p-4 rounded-xl flex flex-col gap-3 overflow-hidden relative z-100 bg-[var(--nav-bg)] text-white ${
     isMobile
       ? "fixed top-[88px] left-[12px] bottom-[12px] h-auto shadow-[0_24px_80px_rgba(2,6,23,0.4)]"
       : ""
-  } ${isSidebarCollapsed && !isMobile ? "w-[72px]" : "w-56"}`;
+  }`;
   const handleNavigate = useCallback(
     (href: string) => {
       router.push(href);
@@ -156,14 +155,6 @@ export default function TeamsLayout({
         </div>
 
         <div className="flex gap-3 flex-shrink-0">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="border border-white/20"
-            aria-label="Notifications"
-          >
-            <FaBell />
-          </Button>
           <Button
             variant="ghost"
             size="sm"

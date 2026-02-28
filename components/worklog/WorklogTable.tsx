@@ -1,0 +1,163 @@
+"use client";
+
+import React from "react";
+import { cn } from "@/lib/utils";
+import { Clock } from "lucide-react";
+import {
+  getStatusColor,
+  getStatusLabel,
+  daysUntilDeadline,
+} from "@/lib/homepage-utils";
+import { formatLocalDate } from "@/lib/deadline-utils";
+
+// ── Types ─────────────────────────────────────────────────────
+
+interface WorklogRow {
+  id: string;
+  title: string;
+  progressStatus: string;
+  deadline?: Date | string | null;
+  createdAt?: Date | string;
+  teamId?: string;
+}
+
+interface WorklogTableProps {
+  worklogs: WorklogRow[];
+  onRowClick?: (worklog: WorklogRow) => void;
+  className?: string;
+}
+
+// ── Component ─────────────────────────────────────────────────
+
+export function WorklogTable({
+  worklogs,
+  onRowClick,
+  className,
+}: WorklogTableProps) {
+  if (worklogs.length === 0) return null;
+
+  return (
+    <div className={cn("overflow-x-auto", className)}>
+      <table className="w-full text-sm" aria-label="Recent worklogs">
+        <thead>
+          <tr className="border-b border-white/10 text-left">
+            <th className="py-2.5 px-3 text-xs font-medium text-white/50 uppercase tracking-wider">
+              Title
+            </th>
+            <th className="py-2.5 px-3 text-xs font-medium text-white/50 uppercase tracking-wider">
+              Status
+            </th>
+            <th className="py-2.5 px-3 text-xs font-medium text-white/50 uppercase tracking-wider hidden md:table-cell">
+              Deadline
+            </th>
+            <th className="py-2.5 px-3 text-xs font-medium text-white/50 uppercase tracking-wider hidden sm:table-cell">
+              Created
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {worklogs.map((w) => {
+            const statusClasses = getStatusColor(w.progressStatus);
+            const statusLabel = getStatusLabel(w.progressStatus);
+            const hasDeadline = !!w.deadline;
+            const days = hasDeadline
+              ? daysUntilDeadline(w.deadline as string | Date)
+              : null;
+
+            return (
+              <tr
+                key={w.id}
+                className={cn(
+                  "border-b border-white/5 transition-colors",
+                  onRowClick && "hover:bg-white/5 cursor-pointer",
+                )}
+                onClick={() => onRowClick?.(w)}
+                tabIndex={onRowClick ? 0 : undefined}
+                onKeyDown={(e) => {
+                  if ((e.key === "Enter" || e.key === " ") && onRowClick) {
+                    e.preventDefault();
+                    onRowClick(w);
+                  }
+                }}
+              >
+                {/* Title */}
+                <td className="py-2.5 px-3">
+                  <span className="font-medium text-white truncate block max-w-[200px] lg:max-w-[300px]">
+                    {w.title}
+                  </span>
+                </td>
+
+                {/* Status */}
+                <td className="py-2.5 px-3">
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                      statusClasses,
+                    )}
+                  >
+                    {statusLabel}
+                  </span>
+                </td>
+
+                {/* Deadline */}
+                <td className="py-2.5 px-3 hidden md:table-cell">
+                  {hasDeadline ? (
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <Clock
+                        className={cn(
+                          "h-3 w-3 shrink-0",
+                          days !== null && days < 0
+                            ? "text-red-400"
+                            : days !== null && days <= 3
+                              ? "text-orange-400"
+                              : "text-white/40",
+                        )}
+                        aria-hidden
+                      />
+                      <span className="text-white/60">
+                        {formatLocalDate(new Date(w.deadline as string))}
+                      </span>
+                      {days !== null && (
+                        <span
+                          className={cn(
+                            "text-[10px] tabular-nums font-medium",
+                            days < 0
+                              ? "text-red-400"
+                              : days <= 3
+                                ? "text-orange-400"
+                                : "text-white/40",
+                          )}
+                        >
+                          (
+                          {days < 0
+                            ? `${Math.abs(days)}d ago`
+                            : days === 0
+                              ? "today"
+                              : `${days}d`}
+                          )
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-white/30">—</span>
+                  )}
+                </td>
+
+                {/* Created */}
+                <td className="py-2.5 px-3 hidden sm:table-cell">
+                  {w.createdAt ? (
+                    <span className="text-xs text-white/40">
+                      {formatLocalDate(new Date(w.createdAt as string))}
+                    </span>
+                  ) : (
+                    <span className="text-white/30">—</span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}

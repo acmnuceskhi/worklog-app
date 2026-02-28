@@ -7,22 +7,27 @@ import {
   FaHome,
   FaUsers,
   FaUserTie,
-  FaBell,
   FaSearch,
   FaBars,
   FaChevronLeft,
   FaChevronRight,
   FaSignOutAlt,
+  FaTh,
+  FaList,
 } from "react-icons/fa";
 import { signOut } from "next-auth/react";
 import { useSharedSession } from "@/components/providers";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { DeadlineStatusBadge } from "@/components/worklog/deadline-status-badge";
-import { DeadlineCountdown } from "@/components/worklog/deadline-countdown";
+import { AlertTriangle, Clock, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
-import { formatLocalDate, getDeadlineStatus } from "@/lib/deadline-utils";
+import { formatLocalDate } from "@/lib/deadline-utils";
+import {
+  segmentDeadlinesByUrgency,
+  getUrgentCounts,
+  type HomepageWorklog,
+} from "@/lib/homepage-utils";
 import {
   useDashboard,
   useMounted,
@@ -37,6 +42,10 @@ import { EmptyState } from "@/components/states/empty-state";
 import { TeamCreationWizard } from "@/components/teams/team-creation-wizard";
 import { InvitationsPanel } from "@/components/invitations-panel";
 import { PageHeader } from "@/components/ui/page-header";
+import { UrgentAlertZone } from "@/components/alerts/UrgentAlertZone";
+import { WorklogGridCard } from "@/components/worklog/WorklogGridCard";
+import { WorklogTable } from "@/components/worklog/WorklogTable";
+import { DeadlineRow } from "@/components/worklog/DeadlineRow";
 const lobster = Lobster_Two({
   weight: ["400", "700"],
   subsets: ["latin"],
@@ -80,76 +89,52 @@ export default function DashboardPage() {
   const [isMobile, setIsMobile] = useState(false);
   const deadlineNotifiedRef = useRef<Set<string>>(new Set());
 
+  // Worklog view mode: grid or table
+  const [worklogViewMode, setWorklogViewMode] = useState<"grid" | "table">(
+    "grid",
+  );
+
   // Detect mobile breakpoint changes and initialise sidebar
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 960px)");
     const update = () => {
-      setIsMobile(mediaQuery.matches);
-      if (mediaQuery.matches) setIsSidebarOpen(false);
+      const mobile = mediaQuery.matches;
+      setIsMobile(mobile);
+      setIsSidebarOpen(!mobile);
+      if (mobile) setIsSidebarCollapsed(false);
     };
     update();
     mediaQuery.addEventListener("change", update);
     return () => mediaQuery.removeEventListener("change", update);
   }, []);
 
-  // Compute deadline worklogs from fetched worklogs
-  const deadlineWorklogs = allWorklogs
-    .filter((w) => w.deadline)
-    .map((worklog) => ({
-      id: worklog.id,
-      title: worklog.title,
-      deadline: String(worklog.deadline),
-      progressStatus: worklog.progressStatus ?? null,
-    }))
-    .slice(0, 5);
+  // Segment deadline worklogs by urgency (overdue, due soon, later)
+  const deadlineSegments = useMemo(
+    () => segmentDeadlinesByUrgency(allWorklogs as HomepageWorklog[]),
+    [allWorklogs],
+  );
+  const urgentCounts = useMemo(
+    () => getUrgentCounts(allWorklogs as HomepageWorklog[]),
+    [allWorklogs],
+  );
 
   // Show deadline notifications
   useEffect(() => {
-    deadlineWorklogs.forEach((worklog) => {
-      if (deadlineNotifiedRef.current.has(worklog.id)) {
-        return;
-      }
-      const info = getDeadlineStatus({
-        deadline: worklog.deadline,
-        status: worklog.progressStatus,
+    deadlineSegments.overdue.forEach((worklog) => {
+      if (deadlineNotifiedRef.current.has(worklog.id)) return;
+      deadlineNotifiedRef.current.add(worklog.id);
+      toast.error(`Deadline ${formatLocalDate(new Date(worklog.deadline))}`, {
+        description: `${worklog.title} is overdue`,
       });
-      if (info.status === "overdue" || info.status === "due_soon") {
-        deadlineNotifiedRef.current.add(worklog.id);
-        if (info.status === "overdue") {
-          toast.error(
-            `Deadline ${formatLocalDate(new Date(worklog.deadline))}`,
-            {
-              description: `${worklog.title} is ${info.label.toLowerCase()}`,
-            },
-          );
-        } else {
-          toast.warning(
-            `Deadline ${formatLocalDate(new Date(worklog.deadline))}`,
-            {
-              description: `${worklog.title} is ${info.label.toLowerCase()}`,
-            },
-          );
-        }
-      }
     });
-  }, [deadlineWorklogs]);
-
-  // Helper function for progress status mapping
-  const getProgressInfo = (status: string | null) => {
-    const progressMap = {
-      STARTED: { width: "25%", label: "25%" },
-      HALF_DONE: { width: "50%", label: "50%" },
-      COMPLETED: { width: "75%", label: "75%" },
-      REVIEWED: { width: "90%", label: "90%" },
-      GRADED: { width: "100%", label: "100%" },
-    };
-    return (
-      progressMap[status as keyof typeof progressMap] || {
-        width: "0%",
-        label: "0%",
-      }
-    );
-  };
+    deadlineSegments.dueSoon.forEach((worklog) => {
+      if (deadlineNotifiedRef.current.has(worklog.id)) return;
+      deadlineNotifiedRef.current.add(worklog.id);
+      toast.warning(`Deadline ${formatLocalDate(new Date(worklog.deadline))}`, {
+        description: `${worklog.title} is due soon`,
+      });
+    });
+  }, [deadlineSegments]);
 
   // Combine member and owned teams for display (memoized for performance)
   // Deduplicate teams by ID to prevent React key conflicts
@@ -233,7 +218,7 @@ export default function DashboardPage() {
       ? "bg-[var(--nav-bg)] border-white/10"
       : "bg-white/90 border-white/20"
   } p-3`;
-  const sidebarClassName = `p-4 rounded-xl flex flex-col gap-3 relative z-100 bg-[var(--nav-bg)] text-white ${
+  const sidebarClassName = `p-4 rounded-xl flex flex-col gap-3 overflow-hidden relative z-100 bg-[var(--nav-bg)] text-white ${
     isMobile
       ? "fixed top-[88px] left-[12px] bottom-[12px] h-auto shadow-[0_24px_80px_rgba(2,6,23,0.4)]"
       : ""
@@ -303,14 +288,6 @@ export default function DashboardPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="border border-white/20"
-            aria-label="Notifications"
-          >
-            <FaBell />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
             className="border border-white/20 relative p-0 overflow-hidden"
             onClick={() => router.push("/profile")}
             aria-label="View Profile"
@@ -369,7 +346,7 @@ export default function DashboardPage() {
         </AnimatePresence>
 
         <motion.aside
-          className={`${sidebarClassName} w-56`}
+          className={sidebarClassName}
           aria-label="Main navigation"
           aria-expanded={isSidebarOpen}
           initial={false}
@@ -468,41 +445,95 @@ export default function DashboardPage() {
         </motion.aside>
 
         <main className="flex-1 flex flex-col gap-4 overflow-hidden">
+          {/* ── Hero Section ─────────────────────────────────── */}
           <section
             className={`${cardClassName} flex flex-col gap-4 md:flex-row md:items-center md:justify-between`}
           >
             <div>
-              <h2 className="text-xl font-semibold">Welcome back!</h2>
-              <p className="text-muted">
-                Here&apos;s what&apos;s happening with your teams and work.
+              <h2 className="text-xl font-semibold">
+                Welcome back
+                {session?.user?.name
+                  ? `, ${session.user.name.split(" ")[0]}`
+                  : ""}
+                !
+              </h2>
+              <p className="text-muted text-sm">
+                {new Date().toLocaleDateString("en-US", {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                })}
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-3 text-xs">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
               <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white/80">
-                <div className="text-lg font-semibold text-white">
+                <div className="text-lg font-semibold text-white tabular-nums">
                   {teams.length}
                 </div>
                 <div className="text-white/60">My Teams</div>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white/80">
-                <div className="text-lg font-semibold text-white">
+                <div className="text-lg font-semibold text-white tabular-nums">
                   {sidebarStatsData?.pendingReviewsCount ?? 0}
                 </div>
                 <div className="text-white/60">Reviews Pending</div>
               </div>
+              {urgentCounts.overdueCount > 0 && (
+                <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-300">
+                  <div className="text-lg font-semibold tabular-nums">
+                    {urgentCounts.overdueCount}
+                  </div>
+                  <div className="text-red-400/70 flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" aria-hidden />
+                    Overdue
+                  </div>
+                </div>
+              )}
+              {urgentCounts.dueSoonCount > 0 && (
+                <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 px-3 py-2 text-orange-300">
+                  <div className="text-lg font-semibold tabular-nums">
+                    {urgentCounts.dueSoonCount}
+                  </div>
+                  <div className="text-orange-400/70 flex items-center gap-1">
+                    <Clock className="h-3 w-3" aria-hidden />
+                    Due Soon
+                  </div>
+                </div>
+              )}
             </div>
           </section>
 
+          {/* ── Priority Alert Zone ──────────────────────────── */}
+          <UrgentAlertZone
+            overdueDeadlines={deadlineSegments.overdue}
+            dueSoonDeadlines={deadlineSegments.dueSoon}
+          />
+
+          {/* ── Featured Teams ───────────────────────────────── */}
           <section className={cardClassName}>
-            <div className="flex items-center justify-between mb-1">
-              <h3>Featured Teams</h3>
-              {hasTeamQuery && (
-                <span className="text-sm text-muted">
-                  {filteredTeams.length} result
-                  {filteredTeams.length !== 1 ? "s" : ""}
-                </span>
-              )}
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-base font-semibold">Featured Teams</h3>
+              <div className="flex items-center gap-2">
+                {hasTeamQuery && (
+                  <span className="text-xs text-muted">
+                    {filteredTeams.length} result
+                    {filteredTeams.length !== 1 ? "s" : ""}
+                  </span>
+                )}
+                {filteredTeams.length > 6 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-white/50 hover:text-white"
+                    onClick={() => router.push("/teams/member")}
+                  >
+                    View All ({filteredTeams.length})
+                    <ChevronRight className="ml-1 h-3 w-3" />
+                  </Button>
+                )}
+              </div>
             </div>
             {filteredTeams.length === 0 ? (
               <EmptyState
@@ -532,7 +563,7 @@ export default function DashboardPage() {
                 {filteredTeams.slice(0, 6).map((team) => (
                   <div key={team.id} className={teamCardClassName}>
                     <div className="flex gap-2.5 items-center">
-                      <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-white text-sm font-semibold flex items-center justify-center">
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-white text-xs font-semibold flex items-center justify-center shrink-0">
                         {team.name
                           .split(" ")
                           .map((n: string) => n[0])
@@ -540,22 +571,18 @@ export default function DashboardPage() {
                           .join("")}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="text-base font-semibold mb-1">
+                        <h4 className="text-sm font-semibold line-clamp-1">
                           {team.name}
                         </h4>
-                        <p className="text-sm text-muted mb-2 line-clamp-2">
+                        <p className="text-xs text-muted line-clamp-1">
                           {team.description || team.project || "No description"}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex justify-between items-center mt-2.5">
-                      <span className="text-sm text-muted">
-                        {team._count?.members || 0} members
-                      </span>
-                      <span className="text-sm text-muted">
-                        {team._count?.worklogs || 0} worklogs
-                      </span>
+                    <div className="flex justify-between items-center mt-2 text-xs text-muted">
+                      <span>{team._count?.members || 0} members</span>
+                      <span>{team._count?.worklogs || 0} worklogs</span>
                     </div>
                   </div>
                 ))}
@@ -563,95 +590,183 @@ export default function DashboardPage() {
             )}
           </section>
 
-          <section className={cardClassName}>
-            <div className="flex items-center justify-between mb-1">
-              <h3>Recent Worklogs</h3>
-              {hasTeamQuery && (
-                <span className="text-sm text-muted">
-                  {filteredWorklogs.length} result
-                  {filteredWorklogs.length !== 1 ? "s" : ""}
+          {/* ── Upcoming Deadlines (Segmented) ───────────────── */}
+          {(deadlineSegments.overdue.length > 0 ||
+            deadlineSegments.dueSoon.length > 0 ||
+            deadlineSegments.later.length > 0) && (
+            <section className={cardClassName}>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-base font-semibold">Upcoming Deadlines</h3>
+                <span className="text-xs text-muted tabular-nums">
+                  {urgentCounts.totalDeadlines} active
                 </span>
-              )}
+              </div>
+
+              <div className="space-y-4">
+                {/* Overdue segment */}
+                {deadlineSegments.overdue.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-semibold text-red-400 uppercase tracking-wider mb-2">
+                      Overdue ({deadlineSegments.overdue.length})
+                    </h4>
+                    <div
+                      className="space-y-0.5 rounded-lg border border-red-500/20 bg-red-500/5 p-1"
+                      role="list"
+                      aria-label="Overdue deadlines"
+                    >
+                      {deadlineSegments.overdue.slice(0, 5).map((dl) => (
+                        <DeadlineRow
+                          key={dl.id}
+                          deadline={dl}
+                          priority="high"
+                        />
+                      ))}
+                      {deadlineSegments.overdue.length > 5 && (
+                        <p className="text-xs text-white/40 text-center py-1.5">
+                          +{deadlineSegments.overdue.length - 5} more overdue
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Due soon segment */}
+                {deadlineSegments.dueSoon.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-semibold text-orange-400 uppercase tracking-wider mb-2">
+                      Due This Week ({deadlineSegments.dueSoon.length})
+                    </h4>
+                    <div
+                      className="space-y-0.5"
+                      role="list"
+                      aria-label="Deadlines due this week"
+                    >
+                      {deadlineSegments.dueSoon.slice(0, 5).map((dl) => (
+                        <DeadlineRow
+                          key={dl.id}
+                          deadline={dl}
+                          priority="medium"
+                        />
+                      ))}
+                      {deadlineSegments.dueSoon.length > 5 && (
+                        <p className="text-xs text-white/40 text-center py-1.5">
+                          +{deadlineSegments.dueSoon.length - 5} more due soon
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Later segment */}
+                {deadlineSegments.later.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">
+                      Later ({deadlineSegments.later.length})
+                    </h4>
+                    <div
+                      className="space-y-0.5"
+                      role="list"
+                      aria-label="Upcoming deadlines"
+                    >
+                      {deadlineSegments.later.slice(0, 5).map((dl) => (
+                        <DeadlineRow key={dl.id} deadline={dl} priority="low" />
+                      ))}
+                      {deadlineSegments.later.length > 5 && (
+                        <p className="text-xs text-white/40 text-center py-1.5">
+                          +{deadlineSegments.later.length - 5} more upcoming
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* ── Recent Worklogs ───────────────────────────────── */}
+          <section className={cardClassName}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-base font-semibold">Recent Worklogs</h3>
+              <div className="flex items-center gap-2">
+                {hasTeamQuery && (
+                  <span className="text-xs text-muted">
+                    {filteredWorklogs.length} result
+                    {filteredWorklogs.length !== 1 ? "s" : ""}
+                  </span>
+                )}
+
+                {/* View toggle */}
+                <div className="flex rounded-lg border border-white/10 overflow-hidden">
+                  <button
+                    className={`p-1.5 text-xs transition-colors ${
+                      worklogViewMode === "grid"
+                        ? "bg-white/10 text-white"
+                        : "text-white/40 hover:text-white/60"
+                    }`}
+                    onClick={() => setWorklogViewMode("grid")}
+                    aria-label="Grid view"
+                    aria-pressed={worklogViewMode === "grid"}
+                  >
+                    <FaTh className="h-3 w-3" />
+                  </button>
+                  <button
+                    className={`p-1.5 text-xs transition-colors ${
+                      worklogViewMode === "table"
+                        ? "bg-white/10 text-white"
+                        : "text-white/40 hover:text-white/60"
+                    }`}
+                    onClick={() => setWorklogViewMode("table")}
+                    aria-label="Table view"
+                    aria-pressed={worklogViewMode === "table"}
+                  >
+                    <FaList className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
             </div>
+
             {filteredWorklogs.length === 0 ? (
-              <p className="text-muted">
+              <p className="text-sm text-muted py-4">
                 {hasTeamQuery
                   ? `No worklogs matched "${searchQuery}".`
                   : "Your worklogs will appear here once you start tracking your progress."}
               </p>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {filteredWorklogs.slice(0, 6).map((worklog) => (
-                  <div key={worklog.id} className={teamCardClassName}>
-                    <div className="flex gap-2.5 items-center">
-                      <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-white text-sm font-semibold flex items-center justify-center">
-                        {worklog.title
-                          .split(" ")
-                          .map((n: string) => n[0])
-                          .slice(0, 2)
-                          .join("")}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-base font-semibold mb-1">
-                          {worklog.title}
-                        </h4>
-                        <p className="text-sm text-muted mb-2 line-clamp-2">
-                          {worklog.progressStatus?.replace("_", " ") ||
-                            "Not started"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="h-2 bg-black/10 rounded-full overflow-hidden mt-2.5">
-                      <div
-                        className="h-full bg-gradient-to-r from-blue-500 to-cyan-500"
-                        style={{
-                          width: getProgressInfo(worklog.progressStatus).width,
-                        }}
+              <>
+                {/* Grid View */}
+                {worklogViewMode === "grid" && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {filteredWorklogs.slice(0, 6).map((worklog) => (
+                      <WorklogGridCard
+                        key={worklog.id}
+                        worklog={worklog}
+                        className={teamCardClassName}
                       />
-                    </div>
-
-                    <div className="flex justify-between mt-1.5">
-                      <span>Progress</span>
-                      <strong>
-                        {getProgressInfo(worklog.progressStatus).label}
-                      </strong>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
-          </section>
+                )}
 
-          <section className={cardClassName}>
-            <h3>Upcoming Deadlines</h3>
-            {deadlineWorklogs.length === 0 ? (
-              <p className="text-muted">No upcoming deadlines yet.</p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {deadlineWorklogs.map((worklog) => (
-                  <div key={worklog.id} className={teamCardClassName}>
-                    <div className="flex gap-2.5 items-center">
-                      <div>
-                        <strong>{worklog.title}</strong>
-                        <div className="text-muted">
-                          {formatLocalDate(new Date(worklog.deadline))}
-                        </div>
-                      </div>
-                      <DeadlineStatusBadge
-                        deadline={worklog.deadline}
-                        status={worklog.progressStatus}
-                      />
-                    </div>
-                    <div className="mt-2">
-                      <DeadlineCountdown
-                        deadline={worklog.deadline}
-                        status={worklog.progressStatus}
-                      />
-                    </div>
+                {/* Table View */}
+                {worklogViewMode === "table" && (
+                  <WorklogTable worklogs={filteredWorklogs.slice(0, 12)} />
+                )}
+
+                {/* View All CTA */}
+                {filteredWorklogs.length >
+                  (worklogViewMode === "grid" ? 6 : 12) && (
+                  <div className="mt-4 text-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-white/50 hover:text-white"
+                      onClick={() => router.push("/teams/member")}
+                    >
+                      View All Worklogs ({filteredWorklogs.length})
+                      <ChevronRight className="ml-1 h-3 w-3" />
+                    </Button>
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             )}
           </section>
         </main>

@@ -16,7 +16,6 @@ import {
   FaShieldAlt,
   FaUsers,
   FaUserTie,
-  FaBell,
   FaSearch,
   FaBars,
   FaChevronLeft,
@@ -56,8 +55,10 @@ export default function ProfilePage() {
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 960px)");
     const update = () => {
-      setIsMobile(mediaQuery.matches);
-      if (mediaQuery.matches) setIsSidebarOpen(false);
+      const mobile = mediaQuery.matches;
+      setIsMobile(mobile);
+      setIsSidebarOpen(!mobile);
+      if (mobile) setIsSidebarCollapsed(false);
     };
     update();
     mediaQuery.addEventListener("change", update);
@@ -103,7 +104,7 @@ export default function ProfilePage() {
       ? "bg-gradient-to-br from-[#fbc2eb] to-[#a6c1ee] text-[var(--color-text)]"
       : "bg-[var(--page-bg-dark)] text-white"
   }`;
-  const sidebarClassName = `p-4 rounded-xl flex flex-col gap-3 relative z-100 bg-[var(--nav-bg)] text-white ${
+  const sidebarClassName = `p-4 rounded-xl flex flex-col gap-3 overflow-hidden relative z-100 bg-[var(--nav-bg)] text-white ${
     isMobile
       ? "fixed top-[88px] left-[12px] bottom-[12px] h-auto shadow-[0_24px_80px_rgba(2,6,23,0.4)]"
       : ""
@@ -117,14 +118,6 @@ export default function ProfilePage() {
     },
     [router, isMobile],
   );
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(max-width: 960px)");
-    const update = () => setIsMobile(mediaQuery.matches);
-    update();
-    mediaQuery.addEventListener("change", update);
-    return () => mediaQuery.removeEventListener("change", update);
-  }, []);
 
   if (!mounted || status === "loading") {
     return (
@@ -175,14 +168,6 @@ export default function ProfilePage() {
             variant="ghost"
             size="sm"
             className="border border-white/20"
-            aria-label="Notifications"
-          >
-            <FaBell />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="border border-white/20"
             onClick={() =>
               setContentTheme(contentTheme === "light" ? "dark" : "light")
             }
@@ -218,7 +203,6 @@ export default function ProfilePage() {
 
         <motion.aside
           className={sidebarClassName}
-          style={{ width: sidebarWidth }}
           aria-label="Main navigation"
           aria-expanded={isSidebarOpen}
           initial={false}
