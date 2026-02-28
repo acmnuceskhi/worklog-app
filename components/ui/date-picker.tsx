@@ -1,5 +1,5 @@
 import * as React from "react";
-import { format, isValid } from "date-fns";
+import { format, isValid, startOfToday } from "date-fns";
 import { Calendar as CalendarIcon, AlertCircle } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -17,6 +17,14 @@ interface DatePickerProps {
   placeholder?: string;
   error?: string;
   disabled?: boolean;
+  /** Prevent selecting dates before today */
+  disablePast?: boolean;
+  /** Prevent selecting dates after today */
+  disableFuture?: boolean;
+  /** Earliest selectable date */
+  minDate?: Date;
+  /** Latest selectable date */
+  maxDate?: Date;
   className?: string;
 }
 
@@ -26,22 +34,47 @@ export function DatePicker({
   placeholder = "Pick a date",
   error,
   disabled = false,
+  disablePast = false,
+  disableFuture = false,
+  minDate,
+  maxDate,
   className,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
 
-  const handleSelect = (date: Date | undefined) => {
-    if (date && !isValid(date)) {
-      // Handle invalid date, but react-day-picker should prevent this
-      return;
+  // Build a matcher for react-day-picker v9 `disabled` prop
+  const disabledMatcher = React.useMemo(() => {
+    const matchers: Array<
+      { before: Date } | { after: Date } | ((date: Date) => boolean)
+    > = [];
+
+    if (disablePast) {
+      matchers.push({ before: startOfToday() });
     }
-    onChange?.(date);
-    setOpen(false);
-  };
+    if (disableFuture) {
+      matchers.push({ after: startOfToday() });
+    }
+    if (minDate) {
+      matchers.push({ before: minDate });
+    }
+    if (maxDate) {
+      matchers.push({ after: maxDate });
+    }
+
+    return matchers.length > 0 ? matchers : undefined;
+  }, [disablePast, disableFuture, minDate, maxDate]);
+
+  const handleSelect = React.useCallback(
+    (date: Date | undefined) => {
+      onChange?.(date);
+      setOpen(false);
+    },
+    [onChange],
+  );
 
   const isError = !!error;
   const displayValue =
-    value && isValid(value) ? format(value, "PPP") : placeholder;
+    value && isValid(value) ? format(value, "PPP") : undefined;
 
   return (
     <div className={cn("relative", className)}>
@@ -51,7 +84,7 @@ export function DatePicker({
             variant="outline"
             disabled={disabled}
             data-empty={!value}
-            aria-label={`Select date. Current selection: ${displayValue}`}
+            aria-label={`Select date. Current selection: ${displayValue ?? placeholder}`}
             aria-invalid={isError}
             aria-describedby={isError ? "date-picker-error" : undefined}
             className={cn(
@@ -67,7 +100,9 @@ export function DatePicker({
             )}
           >
             <CalendarIcon className="mr-3 h-5 w-5 text-amber-400" />
-            <span className="truncate">{displayValue}</span>
+            <span className="truncate">
+              {displayValue ?? <span>{placeholder}</span>}
+            </span>
           </Button>
         </PopoverTrigger>
         <PopoverContent
@@ -83,8 +118,9 @@ export function DatePicker({
             mode="single"
             selected={value}
             onSelect={handleSelect}
-            // Removed disabled dates to allow past dates
-            initialFocus
+            disabled={disabledMatcher}
+            defaultMonth={value}
+            autoFocus
             className="rounded-lg"
           />
         </PopoverContent>

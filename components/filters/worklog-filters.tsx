@@ -10,6 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
+import { parseDeadline, toLocalDateString } from "@/lib/dates";
 
 export type WorklogSortBy = "date" | "status" | "priority";
 export type WorklogSortDir = "asc" | "desc";
@@ -105,20 +107,22 @@ export function WorklogFilters({
       <div className="flex flex-wrap gap-3">
         <div className="min-w-[160px]">
           <Label className="text-slate-300">From</Label>
-          <Input
-            type="date"
-            value={value.dateFrom}
-            onChange={(event) => update({ dateFrom: event.target.value })}
-            className="bg-slate-800/60 border-slate-700 text-white"
+          <DatePicker
+            value={parseDeadline(value.dateFrom) ?? undefined}
+            onChange={(date) =>
+              update({ dateFrom: date ? toLocalDateString(date) : "" })
+            }
+            placeholder="Start date"
           />
         </div>
         <div className="min-w-[160px]">
           <Label className="text-slate-300">To</Label>
-          <Input
-            type="date"
-            value={value.dateTo}
-            onChange={(event) => update({ dateTo: event.target.value })}
-            className="bg-slate-800/60 border-slate-700 text-white"
+          <DatePicker
+            value={parseDeadline(value.dateTo) ?? undefined}
+            onChange={(date) =>
+              update({ dateTo: date ? toLocalDateString(date) : "" })
+            }
+            placeholder="End date"
           />
         </div>
         <div className="min-w-[160px]">

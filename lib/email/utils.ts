@@ -1,5 +1,8 @@
 // Email template constants and utilities
 
+import { format, addDays, differenceInDays } from "date-fns";
+import { DATE_FORMATS } from "@/lib/dates/constants";
+
 export const EMAIL_CONSTANTS = {
   // Default expiration times
   INVITATION_EXPIRY_DAYS: 7,
@@ -58,35 +61,21 @@ export function calculateEmailPriority(
  * Format deadline date for email display
  */
 export function formatDeadlineDate(date: Date): string {
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
+  return format(date, DATE_FORMATS.long + " 'at' h:mm a");
 }
 
 /**
  * Format expiry date for email display
  */
 export function formatExpiryDate(date: Date): string {
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  }).format(date);
+  return format(date, DATE_FORMATS.long);
 }
 
 /**
  * Generate invitation expiry date
  */
 export function generateInvitationExpiry(): Date {
-  return new Date(
-    Date.now() + EMAIL_CONSTANTS.INVITATION_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
-  );
+  return addDays(new Date(), EMAIL_CONSTANTS.INVITATION_EXPIRY_DAYS);
 }
 
 /**
@@ -97,9 +86,7 @@ export function shouldSendDeadlineReminder(
   lastReminderSent?: Date,
   currentDate: Date = new Date(),
 ): boolean {
-  const daysUntilDeadline = Math.ceil(
-    (deadline.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24),
-  );
+  const daysUntilDeadline = differenceInDays(deadline, currentDate);
 
   // Don't send if already past deadline
   if (daysUntilDeadline < 0) return false;
@@ -112,9 +99,9 @@ export function shouldSendDeadlineReminder(
   ) {
     // Check if we already sent a reminder for this period
     if (lastReminderSent) {
-      const daysSinceLastReminder = Math.floor(
-        (currentDate.getTime() - lastReminderSent.getTime()) /
-          (1000 * 60 * 60 * 24),
+      const daysSinceLastReminder = differenceInDays(
+        currentDate,
+        lastReminderSent,
       );
       // Don't send another reminder within 1 day of the last one
       if (daysSinceLastReminder < 1) return false;

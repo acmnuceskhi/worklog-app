@@ -815,6 +815,7 @@ function ContributionFlashcardPageContent({
                       )
                     }
                     placeholder="Select deadline"
+                    disablePast
                   />
                   {watch("deadline") && (
                     <div className="flex flex-wrap items-center gap-2">

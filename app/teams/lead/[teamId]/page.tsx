@@ -812,6 +812,7 @@ function TeamDetailsPageContent({
                   })
                 }
                 placeholder="Select deadline"
+                disablePast
               />
             </FormField>
 
