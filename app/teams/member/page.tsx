@@ -27,7 +27,8 @@ export default function MemberTeamsPage() {
 
 function MemberTeamsPageContent() {
   const router = useRouter();
-  const { data: teams = [], isLoading, error, refetch } = useMemberTeams();
+  const { data: paginatedTeams, isLoading, error, refetch } = useMemberTeams();
+  const teams = paginatedTeams?.items ?? [];
 
   // Search + sort
   const [sortBy, setSortBy] = useState<TeamSortBy>("name");

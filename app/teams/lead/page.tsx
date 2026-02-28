@@ -22,7 +22,8 @@ export default function LeadTeamsPage() {
   const router = useRouter();
   const [showWizard, setShowWizard] = useState(false);
 
-  const { data: teams = [], isLoading, error, refetch } = useOwnedTeams();
+  const { data: paginatedTeams, isLoading, error, refetch } = useOwnedTeams();
+  const teams = paginatedTeams?.items ?? [];
 
   // Search + sort
   const [sortBy, setSortBy] = useState<TeamSortBy>("name");

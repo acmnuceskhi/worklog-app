@@ -7,6 +7,8 @@ import {
   mockOrganizations,
   mockUsers,
 } from "@/lib/mock-data";
+import type { PaginationMeta } from "@/lib/types/pagination";
+import { DEFAULT_PAGE } from "@/lib/types/pagination";
 
 export interface DashboardData {
   sidebarStats: {
@@ -64,6 +66,8 @@ export interface DashboardData {
       worklogs: number;
     };
   }>;
+  /** Pagination metadata for the worklogs array */
+  worklogsPagination?: PaginationMeta;
 }
 
 /**
@@ -72,9 +76,12 @@ export interface DashboardData {
  *
  * Response format: { data: DashboardData }
  */
-export const useDashboard = () => {
+export const useDashboard = (
+  worklogPage: number = DEFAULT_PAGE,
+  worklogLimit: number = 20,
+) => {
   return useQuery({
-    queryKey: queryKeys.dashboard.all(),
+    queryKey: queryKeys.dashboard.all(worklogPage, worklogLimit),
     queryFn: async (): Promise<DashboardData> => {
       // In development, return mock data directly without API call
       if (process.env.NODE_ENV === "development") {
@@ -96,6 +103,11 @@ export const useDashboard = () => {
           (o) => o.ownerId === defaultUserId,
         );
 
+        const total = userWorklogs.length;
+        const skip = (worklogPage - 1) * worklogLimit;
+        const paginatedWorklogs = userWorklogs.slice(skip, skip + worklogLimit);
+        const totalPages = Math.max(1, Math.ceil(total / worklogLimit));
+
         return {
           sidebarStats: {
             memberTeamsCount: memberTeams.length,
@@ -109,7 +121,7 @@ export const useDashboard = () => {
               (w) => w.progressStatus === "COMPLETED",
             ),
           },
-          worklogs: userWorklogs.map((w) => ({
+          worklogs: paginatedWorklogs.map((w) => ({
             id: w.id,
             title: w.title,
             description: w.description,
@@ -168,11 +180,21 @@ export const useDashboard = () => {
               worklogs: mockWorklogs.filter((w) => w.teamId === t.id).length,
             },
           })),
+          worklogsPagination: {
+            page: worklogPage,
+            limit: worklogLimit,
+            total,
+            totalPages,
+            hasNextPage: worklogPage < totalPages,
+            hasPreviousPage: worklogPage > 1,
+          },
         };
       }
 
       // Production: fetch from API
-      const response = await fetch("/api/dashboard");
+      const response = await fetch(
+        `/api/dashboard?worklogPage=${worklogPage}&worklogLimit=${worklogLimit}`,
+      );
       if (!response.ok) {
         throw new Error("Failed to fetch dashboard data");
       }

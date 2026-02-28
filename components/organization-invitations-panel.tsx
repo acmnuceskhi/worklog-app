@@ -50,8 +50,8 @@ export function OrganizationInvitationsPanel({
   const [isSending, setIsSending] = useState(false);
 
   // Get organizations where user is owner
-  const { data: ownedOrganizations, isLoading: orgsLoading } =
-    useOrganizations();
+  const { data: paginatedOrgs, isLoading: orgsLoading } = useOrganizations();
+  const ownedOrganizations = paginatedOrgs?.items ?? [];
 
   const addEmailField = () => {
     setInviteEmails([...inviteEmails, ""]);

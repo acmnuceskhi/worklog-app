@@ -1,6 +1,11 @@
+import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-utils";
 import { apiResponse, unauthorized, handleApiError } from "@/lib/api-utils";
+import {
+  parsePaginationParams,
+  buildPaginationMeta,
+} from "@/lib/api-pagination";
 import {
   isDevelopment,
   mockTeams,
@@ -12,11 +17,20 @@ import {
 
 /**
  * GET /api/dashboard
- * Returns all data needed for the home dashboard in a single optimized request
- * This reduces API calls from 4 to 1, significantly reducing session queries
+ * Returns all data needed for the home dashboard in a single optimized request.
+ * Supports ?worklogPage=&worklogLimit= for paginating the worklogs slice.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const { skip, take, page, limit } = parsePaginationParams(
+      {
+        page: searchParams.get("worklogPage"),
+        limit: searchParams.get("worklogLimit"),
+      },
+      { defaultLimit: 20, maxLimit: 50 },
+    );
+
     const user = await getCurrentUser();
 
     // In development mode without auth, return mock dashboard data
@@ -57,7 +71,7 @@ export async function GET() {
             (w) => w.progressStatus === "COMPLETED",
           ),
         },
-        worklogs: mockUserWorklogs.map((w) => ({
+        worklogs: mockUserWorklogs.slice(skip, skip + take).map((w) => ({
           id: w.id,
           title: w.title,
           description: w.description,
@@ -69,6 +83,11 @@ export async function GET() {
           teamId: w.teamId,
           userId: w.userId,
         })),
+        worklogsPagination: buildPaginationMeta(
+          mockUserWorklogs.length,
+          page,
+          limit,
+        ),
         memberTeams: mockMemberTeams.map((t) => ({
           id: t.id,
           name: t.name,
@@ -130,8 +149,8 @@ export async function GET() {
     );
 
     // Batch fetch all dashboard data in parallel
-    const [sidebarStats, worklogs, memberTeams, ownedTeams] = await Promise.all(
-      [
+    const [sidebarStats, totalWorklogs, worklogs, memberTeams, ownedTeams] =
+      await Promise.all([
         // Sidebar stats (already optimized with transaction)
         prisma.$transaction([
           prisma.teamMember.count({
@@ -165,7 +184,10 @@ export async function GET() {
           }),
         ]),
 
-        // Worklogs with optimized query - reduce fields and add pagination
+        // Total worklogs count for pagination
+        prisma.worklog.count({ where: { userId: user.id } }),
+
+        // Worklogs with pagination
         prisma.worklog.findMany({
           where: { userId: user.id },
           select: {
@@ -181,7 +203,8 @@ export async function GET() {
             githubLink: true,
           },
           orderBy: { createdAt: "desc" },
-          take: 20, // Reduce from 50 to 20 for better performance
+          skip,
+          take,
         }),
 
         // Member teams with optimized query - remove expensive counts
@@ -245,8 +268,7 @@ export async function GET() {
             },
           },
         }),
-      ],
-    );
+      ]);
 
     const [
       memberTeamsCount,
@@ -281,6 +303,7 @@ export async function GET() {
         ...w,
         teamId: w.teamId,
       })),
+      worklogsPagination: buildPaginationMeta(totalWorklogs, page, limit),
       memberTeams,
       ownedTeams,
     });

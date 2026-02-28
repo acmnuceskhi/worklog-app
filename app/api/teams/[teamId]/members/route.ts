@@ -1,13 +1,12 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import {
-  apiResponse,
-  handleApiError,
-  unauthorized,
-  forbidden,
-} from "@/lib/api-utils";
+import { handleApiError, unauthorized, forbidden } from "@/lib/api-utils";
 import { isTeamMember, isTeamOwner } from "@/lib/auth-utils";
+import {
+  parsePaginationParams,
+  createPaginatedResponse,
+} from "@/lib/api-pagination";
 import { isDevelopment, mockTeamMembers, mockUsers } from "@/lib/mock-data";
 
 export async function GET(
@@ -16,10 +15,15 @@ export async function GET(
 ) {
   try {
     const { teamId } = await params;
+    const { searchParams } = new URL(request.url);
+    const { skip, take, page, limit } = parsePaginationParams(searchParams, {
+      defaultLimit: 50,
+      maxLimit: 200,
+    });
 
     // In development mode, return mock members for the team
     if (isDevelopment) {
-      const members = mockTeamMembers
+      const allMembers = mockTeamMembers
         .filter((tm) => tm.teamId === teamId)
         .map((tm) => {
           const user = tm.userId
@@ -38,7 +42,11 @@ export async function GET(
               : null,
           };
         });
-      return apiResponse(members);
+      const total = allMembers.length;
+      const items = allMembers.slice(skip, skip + take);
+      return NextResponse.json(
+        createPaginatedResponse(items, total, page, limit),
+      );
     }
 
     const session = await auth();
@@ -58,23 +66,32 @@ export async function GET(
       );
     }
 
-    const members = await prisma.teamMember.findMany({
-      where: { teamId },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+    const where = { teamId };
+
+    const [total, members] = await Promise.all([
+      prisma.teamMember.count({ where }),
+      prisma.teamMember.findMany({
+        where,
+        skip,
+        take,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
           },
         },
-      },
-      orderBy: {
-        status: "asc", // PENDING first, then ACCEPTED? Or check enum order.
-      },
-    });
+        orderBy: {
+          status: "asc",
+        },
+      }),
+    ]);
 
-    return apiResponse(members);
+    return NextResponse.json(
+      createPaginatedResponse(members, total, page, limit),
+    );
   } catch (error) {
     return handleApiError(error);
   }

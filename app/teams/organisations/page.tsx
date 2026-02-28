@@ -29,7 +29,8 @@ const ORG_SORT_OPTIONS: SortOption[] = [
 ];
 
 export default function OrganisationsPage() {
-  const { data: organizations = [], isLoading, error } = useOrganizations();
+  const { data: paginatedOrgs, isLoading, error } = useOrganizations();
+  const organizations = paginatedOrgs?.items ?? [];
 
   // Search + sort
   const [sortBy, setSortBy] = useState<TeamSortBy>("name");

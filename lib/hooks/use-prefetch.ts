@@ -6,6 +6,7 @@
 import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
+import { DEFAULT_PAGE, DEFAULT_LIMIT } from "@/lib/types/pagination";
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -38,9 +39,11 @@ export const usePrefetchOwnedTeams = () => {
   return useCallback(() => {
     if (isDev) return;
     queryClient.prefetchQuery({
-      queryKey: queryKeys.teams.owned(),
+      queryKey: queryKeys.teams.owned(DEFAULT_PAGE, DEFAULT_LIMIT),
       queryFn: async () => {
-        const response = await fetch("/api/teams/owned");
+        const response = await fetch(
+          `/api/teams/owned?page=${DEFAULT_PAGE}&limit=${DEFAULT_LIMIT}`,
+        );
         if (!response.ok) throw new Error("Failed to fetch owned teams");
         return response.json();
       },
@@ -58,9 +61,11 @@ export const usePrefetchMemberTeams = () => {
   return useCallback(() => {
     if (isDev) return;
     queryClient.prefetchQuery({
-      queryKey: queryKeys.teams.member(),
+      queryKey: queryKeys.teams.member(DEFAULT_PAGE, DEFAULT_LIMIT),
       queryFn: async () => {
-        const response = await fetch("/api/teams/member");
+        const response = await fetch(
+          `/api/teams/member?page=${DEFAULT_PAGE}&limit=${DEFAULT_LIMIT}`,
+        );
         if (!response.ok) throw new Error("Failed to fetch member teams");
         return response.json();
       },
@@ -77,10 +82,13 @@ export const usePrefetchOrganizations = () => {
 
   return useCallback(() => {
     if (isDev) return;
+    const orgLimit = 50;
     queryClient.prefetchQuery({
-      queryKey: queryKeys.organizations.list(),
+      queryKey: queryKeys.organizations.list(DEFAULT_PAGE, orgLimit),
       queryFn: async () => {
-        const response = await fetch("/api/organizations");
+        const response = await fetch(
+          `/api/organizations?page=${DEFAULT_PAGE}&limit=${orgLimit}`,
+        );
         if (!response.ok) throw new Error("Failed to fetch organizations");
         return response.json();
       },
@@ -120,9 +128,11 @@ export const usePrefetchTeamWorklogs = (teamId: string) => {
     if (isDev || !teamId) return;
 
     queryClient.prefetchQuery({
-      queryKey: queryKeys.teams.worklogs(teamId),
+      queryKey: queryKeys.teams.worklogs(teamId, DEFAULT_PAGE, DEFAULT_LIMIT),
       queryFn: async () => {
-        const response = await fetch(`/api/teams/${teamId}/worklogs`);
+        const response = await fetch(
+          `/api/teams/${teamId}/worklogs?page=${DEFAULT_PAGE}&limit=${DEFAULT_LIMIT}`,
+        );
         if (!response.ok) throw new Error("Failed to fetch team worklogs");
         return response.json();
       },
@@ -140,10 +150,13 @@ export const usePrefetchTeamMembers = (teamId: string) => {
   return useCallback(() => {
     if (isDev || !teamId) return;
 
+    const membersLimit = 50;
     queryClient.prefetchQuery({
-      queryKey: queryKeys.teams.members(teamId),
+      queryKey: queryKeys.teams.members(teamId, DEFAULT_PAGE, membersLimit),
       queryFn: async () => {
-        const response = await fetch(`/api/teams/${teamId}/members`);
+        const response = await fetch(
+          `/api/teams/${teamId}/members?page=${DEFAULT_PAGE}&limit=${membersLimit}`,
+        );
         if (!response.ok) throw new Error("Failed to fetch team members");
         return response.json();
       },

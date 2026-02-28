@@ -6,6 +6,7 @@ import {
   mockUsers,
   mockRatings,
 } from "@/lib/mock-data";
+import { buildPaginationMeta } from "@/lib/api-pagination";
 
 const MAX_PAGE_SIZE = 50;
 const ALLOWED_STATUSES = new Set([
@@ -188,12 +189,8 @@ export async function GET(
       .filter(Boolean); // Remove null entries
 
     return NextResponse.json({
-      data: worklogs,
-      meta: {
-        total,
-        page,
-        pageSize,
-      },
+      items: worklogs,
+      meta: buildPaginationMeta(total, page, pageSize),
     });
   } catch (error) {
     console.error("Organization worklogs error:", error);

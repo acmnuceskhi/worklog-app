@@ -1,13 +1,12 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { isTeamOwner } from "@/lib/auth-utils";
+import { handleApiError, unauthorized, forbidden } from "@/lib/api-utils";
 import {
-  apiResponse,
-  handleApiError,
-  unauthorized,
-  forbidden,
-} from "@/lib/api-utils";
+  parsePaginationParams,
+  createPaginatedResponse,
+} from "@/lib/api-pagination";
 import { isDevelopment, mockWorklogs, mockUsers } from "@/lib/mock-data";
 
 export async function GET(
@@ -16,10 +15,12 @@ export async function GET(
 ) {
   try {
     const { teamId } = await params;
+    const { searchParams } = new URL(request.url);
+    const { skip, take, page, limit } = parsePaginationParams(searchParams);
 
     // In development mode, return mock worklogs for the team
     if (isDevelopment) {
-      const teamWorklogs = mockWorklogs
+      const allWorklogs = mockWorklogs
         .filter((w) => w.teamId === teamId)
         .map((w) => {
           const user = mockUsers.find((u) => u.id === w.userId);
@@ -44,7 +45,11 @@ export async function GET(
           (a, b) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
         );
-      return apiResponse(teamWorklogs);
+      const total = allWorklogs.length;
+      const items = allWorklogs.slice(skip, skip + take);
+      return NextResponse.json(
+        createPaginatedResponse(items, total, page, limit),
+      );
     }
 
     const session = await auth();
@@ -60,31 +65,38 @@ export async function GET(
       );
     }
 
-    // Fetch worklogs for the team
-    const worklogs = await prisma.worklog.findMany({
-      where: {
-        teamId: teamId,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        ratings: {
-          select: {
-            value: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+    const where = { teamId };
 
-    return apiResponse(worklogs);
+    // Fetch total count and paginated worklogs in parallel
+    const [total, worklogs] = await Promise.all([
+      prisma.worklog.count({ where }),
+      prisma.worklog.findMany({
+        where,
+        skip,
+        take,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          ratings: {
+            select: {
+              value: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      }),
+    ]);
+
+    return NextResponse.json(
+      createPaginatedResponse(worklogs, total, page, limit),
+    );
   } catch (error) {
     return handleApiError(error);
   }

@@ -131,8 +131,9 @@ function TeamDetailsContent({
 
   /* ── Data fetching ───────────────────────────────────────────────────── */
   const { data: team, isLoading, error, refetch } = useTeam(teamId);
-  const { data: worklogs = [], isLoading: worklogsLoading } =
+  const { data: paginatedWorklogs, isLoading: worklogsLoading } =
     useTeamWorklogs(teamId);
+  const worklogs = paginatedWorklogs?.items ?? [];
 
   /* ── Mutations ───────────────────────────────────────────────────────── */
   const removeMemberMutation = useRemoveTeamMember(teamId);

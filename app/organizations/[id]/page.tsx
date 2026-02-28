@@ -261,7 +261,7 @@ export default function OrganizationDashboardPage({
         throw new Error(result.error || "Failed to load worklogs");
       }
 
-      setWorklogs(result.data || []);
+      setWorklogs(result.items || []);
       setWorklogTotal(result.meta?.total ?? 0);
     } catch (err) {
       setWorklogsError(

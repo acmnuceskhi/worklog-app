@@ -2,6 +2,10 @@
  * Centralized query keys for TanStack Query
  * Following the Factory Pattern for type-safe, maintainable query key management
  * @see https://tanstack.com/query/latest/docs/framework/react/guides/important-defaults
+ *
+ * Paginated list keys embed { page, limit } only when values are supplied,
+ * so each page combination gets its own cache entry while calls without
+ * pagination params return a prefix key suitable for broad invalidation.
  */
 
 export const queryKeys = {
@@ -15,13 +19,19 @@ export const queryKeys = {
 
   // Dashboard queries (combined data for home page)
   dashboard: {
-    all: () => ["dashboard"] as const,
+    all: (worklogPage?: number, worklogLimit?: number) =>
+      worklogPage != null || worklogLimit != null
+        ? (["dashboard", { worklogPage, worklogLimit }] as const)
+        : (["dashboard"] as const),
   },
 
   // Organization queries
   organizations: {
     all: () => ["organizations"] as const,
-    list: () => ["organizations", "list"] as const,
+    list: (page?: number, limit?: number) =>
+      page != null || limit != null
+        ? (["organizations", "list", { page, limit }] as const)
+        : (["organizations", "list"] as const),
     detail: (id: string) => ["organizations", id] as const,
     teams: (id: string) => ["organizations", id, "teams"] as const,
     invitations: (id: string, status?: string) =>
@@ -37,12 +47,24 @@ export const queryKeys = {
   teams: {
     all: () => ["teams"] as const,
     list: () => ["teams", "list"] as const,
-    owned: () => ["teams", "owned"] as const,
-    member: () => ["teams", "member"] as const,
+    owned: (page?: number, limit?: number) =>
+      page != null || limit != null
+        ? (["teams", "owned", { page, limit }] as const)
+        : (["teams", "owned"] as const),
+    member: (page?: number, limit?: number) =>
+      page != null || limit != null
+        ? (["teams", "member", { page, limit }] as const)
+        : (["teams", "member"] as const),
     invitations: () => ["teams", "invitations"] as const,
     detail: (id: string) => ["teams", id] as const,
-    members: (id: string) => ["teams", id, "members"] as const,
-    worklogs: (id: string) => ["teams", id, "worklogs"] as const,
+    members: (id: string, page?: number, limit?: number) =>
+      page != null || limit != null
+        ? (["teams", id, "members", { page, limit }] as const)
+        : (["teams", id, "members"] as const),
+    worklogs: (id: string, page?: number, limit?: number) =>
+      page != null || limit != null
+        ? (["teams", id, "worklogs", { page, limit }] as const)
+        : (["teams", id, "worklogs"] as const),
   },
 
   // Worklog queries
@@ -57,8 +79,10 @@ export const queryKeys = {
   ratings: {
     all: () => ["ratings"] as const,
     list: () => ["ratings", "list"] as const,
-    byWorklog: (worklogId: string) =>
-      ["ratings", "worklog", worklogId] as const,
+    byWorklog: (worklogId: string, page?: number, limit?: number) =>
+      page != null || limit != null
+        ? (["ratings", "worklog", worklogId, { page, limit }] as const)
+        : (["ratings", "worklog", worklogId] as const),
     byOrganization: (organizationId: string) =>
       ["ratings", "organization", organizationId] as const,
   },

@@ -174,7 +174,8 @@ function ContributionFlashcardPageContent({
 
   // Use custom hooks for data fetching
   const { data: team, isLoading, error, refetch } = useTeam(teamId);
-  const { data: teamMembers = [] } = useTeamMembers(teamId);
+  const { data: paginatedMembers } = useTeamMembers(teamId);
+  const teamMembers = paginatedMembers?.items ?? [];
   const { data: worklogsData = [], isLoading: worklogsLoading } = useWorklogs();
   const teamWorklogs = worklogsData.filter(
     (worklog) => worklog.teamId === teamId,

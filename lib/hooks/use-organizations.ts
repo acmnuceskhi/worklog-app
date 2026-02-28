@@ -6,6 +6,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import { mockOrganizations, mockTeams } from "@/lib/mock-data";
+import type { PaginatedResponse } from "@/lib/types/pagination";
+import { DEFAULT_PAGE } from "@/lib/types/pagination";
 
 export interface Organization {
   id: string;
@@ -29,16 +31,19 @@ export interface OrgListData {
 }
 
 /**
- * Fetch all organizations where user is an owner
+ * Fetch all organizations where user is an owner (paginated)
  */
-export const useOrganizations = () => {
+export const useOrganizations = (
+  page: number = DEFAULT_PAGE,
+  limit: number = 50,
+) => {
   return useQuery({
-    queryKey: queryKeys.organizations.list(),
-    queryFn: async () => {
+    queryKey: queryKeys.organizations.list(page, limit),
+    queryFn: async (): Promise<PaginatedResponse<Organization>> => {
       // In development, return mock data directly without any network call
       if (process.env.NODE_ENV === "development") {
         const defaultUserId = "mock-org-owner-1";
-        return mockOrganizations
+        const all = mockOrganizations
           .filter((o) => o.ownerId === defaultUserId)
           .map((o) => ({
             id: o.id,
@@ -55,13 +60,29 @@ export const useOrganizations = () => {
               teams: mockTeams.filter((t) => t.organizationId === o.id).length,
             },
           })) as Organization[];
+        const total = all.length;
+        const skip = (page - 1) * limit;
+        const items = all.slice(skip, skip + limit);
+        const totalPages = Math.max(1, Math.ceil(total / limit));
+        return {
+          items,
+          meta: {
+            page,
+            limit,
+            total,
+            totalPages,
+            hasNextPage: page < totalPages,
+            hasPreviousPage: page > 1,
+          },
+        };
       }
-      const response = await fetch("/api/organizations");
+      const response = await fetch(
+        `/api/organizations?page=${page}&limit=${limit}`,
+      );
       if (!response.ok) {
         throw new Error("Failed to fetch organizations");
       }
-      const payload = await response.json();
-      return (payload.data || payload.organizations || []) as Organization[];
+      return (await response.json()) as PaginatedResponse<Organization>;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });

@@ -1,22 +1,28 @@
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-utils";
-import { apiResponse, handleApiError, unauthorized } from "@/lib/api-utils";
+import { handleApiError, unauthorized } from "@/lib/api-utils";
+import {
+  parsePaginationParams,
+  createPaginatedResponse,
+} from "@/lib/api-pagination";
 import { isDevelopment, mockTeams, mockOrganizations } from "@/lib/mock-data";
 
 /**
  * GET /api/teams/owned
- * Get all teams owned by the current user
+ * Get all teams owned by the current user (paginated)
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const { skip, take, page, limit } = parsePaginationParams(searchParams);
+
     // In development mode without auth, return mock data
     if (isDevelopment) {
       const defaultUserId = "mock-org-owner-1";
-      const mockOwnedTeams = mockTeams.filter(
-        (t) => t.ownerId === defaultUserId,
-      );
-      if (mockOwnedTeams.length > 0) {
-        const result = mockOwnedTeams.map((team) => {
+      const allOwnedTeams = mockTeams
+        .filter((t) => t.ownerId === defaultUserId)
+        .map((team) => {
           const organization = mockOrganizations.find(
             (org) => org.id === team.organizationId,
           );
@@ -28,17 +34,18 @@ export async function GET() {
               ? { id: organization.id, name: organization.name }
               : null,
             _count: {
-              members: 0, // Mock count
-              worklogs: 0, // Mock count
+              members: 0,
+              worklogs: 0,
             },
             role: "owner",
           };
         });
-        return apiResponse(result);
-      }
 
-      // Return empty array if no mock data
-      return apiResponse([]);
+      const total = allOwnedTeams.length;
+      const items = allOwnedTeams.slice(skip, skip + take);
+      return NextResponse.json(
+        createPaginatedResponse(items, total, page, limit),
+      );
     }
 
     const user = await getCurrentUser();
@@ -46,31 +53,38 @@ export async function GET() {
       return unauthorized();
     }
 
-    // Optimized query: Fetch teams with counts in a single query
-    const teams = await prisma.team.findMany({
-      where: { ownerId: user.id },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        credits: true,
-        project: true,
-        createdAt: true,
-        updatedAt: true,
-        organization: {
-          select: {
-            id: true,
-            name: true,
+    const where = { ownerId: user.id };
+
+    const [total, teams] = await Promise.all([
+      prisma.team.count({ where }),
+      prisma.team.findMany({
+        where,
+        skip,
+        take,
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          credits: true,
+          project: true,
+          createdAt: true,
+          updatedAt: true,
+          organization: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          _count: {
+            select: {
+              members: true,
+              worklogs: true,
+            },
           },
         },
-        _count: {
-          select: {
-            members: true,
-            worklogs: true,
-          },
-        },
-      },
-    });
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
 
     // Add role property to match expected interface
     const teamsWithDetails = teams.map((team) => ({
@@ -78,7 +92,9 @@ export async function GET() {
       role: "owner",
     }));
 
-    return apiResponse(teamsWithDetails);
+    return NextResponse.json(
+      createPaginatedResponse(teamsWithDetails, total, page, limit),
+    );
   } catch (error) {
     return handleApiError(error);
   }

@@ -49,7 +49,8 @@ export function TeamLeaderInvitationsPanel({
   const [isSending, setIsSending] = useState(false);
 
   // Get teams where user is a leader
-  const { data: ownedTeams, isLoading: teamsLoading } = useOwnedTeams();
+  const { data: paginatedTeams, isLoading: teamsLoading } = useOwnedTeams();
+  const ownedTeams = paginatedTeams?.items ?? [];
 
   const addEmailField = () => {
     setInviteEmails([...inviteEmails, ""]);

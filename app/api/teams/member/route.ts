@@ -1,6 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getCurrentUser, unauthorized } from "@/lib/auth-utils";
+import {
+  parsePaginationParams,
+  createPaginatedResponse,
+} from "@/lib/api-pagination";
 import {
   isDevelopment,
   mockTeams,
@@ -9,51 +13,58 @@ import {
   mockOrganizations,
   mockWorklogs,
 } from "@/lib/mock-data";
-import { apiResponse } from "@/lib/api-utils";
 
 /**
  * GET /api/teams/member
  * Get all teams where the current user is a member (ACCEPTED status only)
- * Optimized to prevent N+1 queries and excessive data transfer
+ * Paginated. Worklogs are fetched per-team separately.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const { skip, take, page, limit } = parsePaginationParams(searchParams);
+
     // In development mode without auth, return mock data
     if (isDevelopment) {
       const defaultUserId = "mock-org-owner-1";
-      const mockMemberTeams = mockTeams.filter((t) =>
-        mockTeamMembers.some(
-          (tm) =>
-            tm.teamId === t.id &&
-            tm.userId === defaultUserId &&
-            tm.status === "ACCEPTED",
-        ),
-      );
+      const allMemberTeams = mockTeams
+        .filter((t) =>
+          mockTeamMembers.some(
+            (tm) =>
+              tm.teamId === t.id &&
+              tm.userId === defaultUserId &&
+              tm.status === "ACCEPTED",
+          ),
+        )
+        .map((team) => ({
+          id: team.id,
+          name: team.name,
+          description: team.description || null,
+          project: team.project || null,
+          owner: {
+            name:
+              mockUsers.find((u) => u.id === team.ownerId)?.name ||
+              "Unknown Owner",
+            email: mockUsers.find((u) => u.id === team.ownerId)?.email || "",
+          },
+          organization: team.organizationId
+            ? {
+                id: team.organizationId,
+                name:
+                  mockOrganizations.find((o) => o.id === team.organizationId)
+                    ?.name || "",
+              }
+            : null,
+          myWorklogCount: mockWorklogs.filter(
+            (w) => w.teamId === team.id && w.userId === defaultUserId,
+          ).length,
+        }));
 
-      const result = mockMemberTeams.map((team) => ({
-        id: team.id,
-        name: team.name,
-        description: team.description || null,
-        project: team.project || null,
-        owner: {
-          name:
-            mockUsers.find((u) => u.id === team.ownerId)?.name ||
-            "Unknown Owner",
-          email: mockUsers.find((u) => u.id === team.ownerId)?.email || "",
-        },
-        organization: team.organizationId
-          ? {
-              id: team.organizationId,
-              name:
-                mockOrganizations.find((o) => o.id === team.organizationId)
-                  ?.name || "",
-            }
-          : null,
-        myWorklogCount: mockWorklogs.filter(
-          (w) => w.teamId === team.id && w.userId === defaultUserId,
-        ).length,
-      }));
-      return apiResponse(result);
+      const total = allMemberTeams.length;
+      const items = allMemberTeams.slice(skip, skip + take);
+      return NextResponse.json(
+        createPaginatedResponse(items, total, page, limit),
+      );
     }
 
     const user = await getCurrentUser();
@@ -61,12 +72,19 @@ export async function GET() {
       return unauthorized();
     }
 
-    // Get team memberships with basic team info
+    // Count total memberships for pagination meta
+    const total = await prisma.teamMember.count({
+      where: { userId: user.id, status: "ACCEPTED" },
+    });
+
+    // Get team memberships with basic team info (paginated)
     const teamMemberships = await prisma.teamMember.findMany({
       where: {
         userId: user.id,
         status: "ACCEPTED",
       },
+      skip,
+      take,
       select: {
         status: true,
         team: {
@@ -88,6 +106,7 @@ export async function GET() {
           },
         },
       },
+      orderBy: { joinedAt: "desc" },
     });
 
     // Extract team IDs for efficient querying
@@ -139,7 +158,9 @@ export async function GET() {
       role: "member",
     }));
 
-    return NextResponse.json({ data: teams });
+    return NextResponse.json(
+      createPaginatedResponse(teams, total, page, limit),
+    );
   } catch (error) {
     console.error("Get member teams error:", error);
     return NextResponse.json(

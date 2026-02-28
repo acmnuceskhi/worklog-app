@@ -10,6 +10,10 @@ import {
   badRequest,
 } from "@/lib/auth-utils";
 import { validateRequest, ratingCreateSchema } from "@/lib/validations";
+import {
+  parsePaginationParams,
+  createPaginatedResponse,
+} from "@/lib/api-pagination";
 
 /**
  * POST /api/worklogs/[worklogId]/ratings
@@ -123,10 +127,10 @@ export async function POST(
 
 /**
  * GET /api/worklogs/[worklogId]/ratings
- * Get ratings for a worklog (organization owners only)
+ * Get ratings for a worklog (organization owners only, paginated)
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ worklogId: string }> },
 ) {
   try {
@@ -136,6 +140,11 @@ export async function GET(
     }
 
     const { worklogId } = await params;
+    const { searchParams } = new URL(request.url);
+    const { skip, take, page, limit } = parsePaginationParams(searchParams, {
+      defaultLimit: 20,
+      maxLimit: 50,
+    });
 
     // Get worklog with team and organization
     const worklog = await prisma.worklog.findUnique({
@@ -168,24 +177,33 @@ export async function GET(
       return forbidden("Only organization owners can view ratings");
     }
 
-    // Get all ratings for this worklog
-    const ratings = await prisma.rating.findMany({
-      where: { worklogId },
-      include: {
-        rater: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+    const where = { worklogId };
+
+    // Get count and paginated ratings in parallel
+    const [total, ratings] = await Promise.all([
+      prisma.rating.count({ where }),
+      prisma.rating.findMany({
+        where,
+        skip,
+        take,
+        include: {
+          rater: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
           },
         },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+        orderBy: {
+          createdAt: "desc",
+        },
+      }),
+    ]);
 
-    return success(ratings);
+    return NextResponse.json(
+      createPaginatedResponse(ratings, total, page, limit),
+    );
   } catch (error) {
     console.error("Get ratings error:", error);
     return NextResponse.json(

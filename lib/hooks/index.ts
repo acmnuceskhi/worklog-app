@@ -3,6 +3,14 @@
  * Simplifies imports across the application
  */
 
+// Pagination types (re-exported from types for convenience)
+export type {
+  PaginatedResponse,
+  PaginationMeta,
+  PaginationParams,
+} from "@/lib/types/pagination";
+export { DEFAULT_PAGE, DEFAULT_LIMIT, MAX_LIMIT } from "@/lib/types/pagination";
+
 // User hooks
 export { useUserPermissions, useSidebarStats } from "./use-user";
 

@@ -6,6 +6,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
+import type { PaginatedResponse } from "@/lib/types/pagination";
+import { DEFAULT_PAGE } from "@/lib/types/pagination";
 
 export interface Rating {
   id: string;
@@ -23,24 +25,37 @@ export interface Rating {
 }
 
 /**
- * Fetch ratings for a specific worklog
+ * Fetch ratings for a specific worklog (paginated)
  */
-export const useWorklogRatings = (worklogId: string) => {
+export const useWorklogRatings = (
+  worklogId: string,
+  page: number = DEFAULT_PAGE,
+  limit: number = 20,
+) => {
   return useQuery({
-    queryKey: queryKeys.ratings.byWorklog(worklogId),
-    queryFn: async () => {
+    queryKey: queryKeys.ratings.byWorklog(worklogId, page, limit),
+    queryFn: async (): Promise<PaginatedResponse<Rating>> => {
       // In development, return empty ratings (no mock ratings exist)
       if (process.env.NODE_ENV === "development") {
-        return [] as Rating[];
+        return {
+          items: [],
+          meta: {
+            page,
+            limit,
+            total: 0,
+            totalPages: 1,
+            hasNextPage: false,
+            hasPreviousPage: false,
+          },
+        };
       }
-      const response = await fetch(`/api/worklogs/${worklogId}/ratings`);
+      const response = await fetch(
+        `/api/worklogs/${worklogId}/ratings?page=${page}&limit=${limit}`,
+      );
       if (!response.ok) {
         throw new Error("Failed to fetch ratings");
       }
-      const payload = await response.json();
-      return (
-        Array.isArray(payload) ? payload : payload.data || []
-      ) as Rating[];
+      return (await response.json()) as PaginatedResponse<Rating>;
     },
     enabled: !!worklogId,
     staleTime: 2 * 60 * 1000, // 2 minutes

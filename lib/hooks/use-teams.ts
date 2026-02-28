@@ -12,6 +12,8 @@ import {
   mockWorklogs,
   mockUsers,
 } from "@/lib/mock-data";
+import type { PaginatedResponse } from "@/lib/types/pagination";
+import { DEFAULT_PAGE, DEFAULT_LIMIT } from "@/lib/types/pagination";
 
 export interface Team {
   id: string;
@@ -73,16 +75,19 @@ export const useTeams = () => {
 };
 
 /**
- * Fetch teams owned by current user
+ * Fetch teams owned by current user (paginated)
  */
-export const useOwnedTeams = () => {
+export const useOwnedTeams = (
+  page: number = DEFAULT_PAGE,
+  limit: number = DEFAULT_LIMIT,
+) => {
   return useQuery({
-    queryKey: queryKeys.teams.owned(),
-    queryFn: async () => {
+    queryKey: queryKeys.teams.owned(page, limit),
+    queryFn: async (): Promise<PaginatedResponse<Team>> => {
       // In development, return mock data directly without any network call
       if (process.env.NODE_ENV === "development") {
         const defaultUserId = "mock-org-owner-1";
-        return mockTeams
+        const all = mockTeams
           .filter((t) => t.ownerId === defaultUserId)
           .map((t) => ({
             id: t.id,
@@ -114,69 +119,105 @@ export const useOwnedTeams = () => {
             },
             role: "owner",
           })) as Team[];
+        const total = all.length;
+        const skip = (page - 1) * limit;
+        const items = all.slice(skip, skip + limit);
+        const totalPages = Math.max(1, Math.ceil(total / limit));
+        return {
+          items,
+          meta: {
+            page,
+            limit,
+            total,
+            totalPages,
+            hasNextPage: page < totalPages,
+            hasPreviousPage: page > 1,
+          },
+        };
       }
-      const response = await fetch("/api/teams/owned");
+      const response = await fetch(
+        `/api/teams/owned?page=${page}&limit=${limit}`,
+      );
       if (!response.ok) {
         throw new Error("Failed to fetch owned teams");
       }
-      const payload = await response.json();
-      return (payload.data || payload) as Team[];
+      return (await response.json()) as PaginatedResponse<Team>;
     },
     staleTime: 5 * 60 * 1000,
   });
 };
 
 /**
- * Fetch teams where current user is a member
+ * Fetch teams where current user is a member (paginated)
  */
-export const useMemberTeams = () => {
+export const useMemberTeams = (
+  page: number = DEFAULT_PAGE,
+  limit: number = DEFAULT_LIMIT,
+) => {
   return useQuery({
-    queryKey: queryKeys.teams.member(),
-    queryFn: async () => {
+    queryKey: queryKeys.teams.member(page, limit),
+    queryFn: async (): Promise<PaginatedResponse<Team>> => {
       // In development, return mock data directly without any network call
       if (process.env.NODE_ENV === "development") {
         const defaultUserId = "mock-org-owner-1";
-        const memberTeams = mockTeams.filter((t) =>
-          mockTeamMembers.some(
-            (tm) =>
-              tm.teamId === t.id &&
-              tm.userId === defaultUserId &&
-              tm.status === "ACCEPTED",
-          ),
-        );
-        return memberTeams.map((t) => ({
-          id: t.id,
-          name: t.name,
-          description: t.description || null,
-          project: t.project || null,
-          credits: t.credits,
-          organizationId: t.organizationId || null,
-          ownerId: t.ownerId,
-          createdAt: t.createdAt.toISOString(),
-          updatedAt: t.updatedAt.toISOString(),
-          owner: {
-            name: mockUsers.find((u) => u.id === t.ownerId)?.name || null,
-            email: mockUsers.find((u) => u.id === t.ownerId)?.email || "",
+        const all = mockTeams
+          .filter((t) =>
+            mockTeamMembers.some(
+              (tm) =>
+                tm.teamId === t.id &&
+                tm.userId === defaultUserId &&
+                tm.status === "ACCEPTED",
+            ),
+          )
+          .map((t) => ({
+            id: t.id,
+            name: t.name,
+            description: t.description || null,
+            project: t.project || null,
+            credits: t.credits,
+            organizationId: t.organizationId || null,
+            ownerId: t.ownerId,
+            createdAt: t.createdAt.toISOString(),
+            updatedAt: t.updatedAt.toISOString(),
+            owner: {
+              name: mockUsers.find((u) => u.id === t.ownerId)?.name || null,
+              email: mockUsers.find((u) => u.id === t.ownerId)?.email || "",
+            },
+            organization: t.organizationId
+              ? {
+                  id: t.organizationId,
+                  name:
+                    mockOrganizations.find((o) => o.id === t.organizationId)
+                      ?.name || "",
+                }
+              : undefined,
+            myWorklogCount: mockWorklogs.filter(
+              (w) => w.teamId === t.id && w.userId === defaultUserId,
+            ).length,
+          })) as Team[];
+        const total = all.length;
+        const skip = (page - 1) * limit;
+        const items = all.slice(skip, skip + limit);
+        const totalPages = Math.max(1, Math.ceil(total / limit));
+        return {
+          items,
+          meta: {
+            page,
+            limit,
+            total,
+            totalPages,
+            hasNextPage: page < totalPages,
+            hasPreviousPage: page > 1,
           },
-          organization: t.organizationId
-            ? {
-                id: t.organizationId,
-                name:
-                  mockOrganizations.find((o) => o.id === t.organizationId)
-                    ?.name || "",
-              }
-            : undefined,
-          myWorklogCount: mockWorklogs.filter(
-            (w) => w.teamId === t.id && w.userId === defaultUserId,
-          ).length,
-        })) as Team[];
+        };
       }
-      const response = await fetch("/api/teams/member");
+      const response = await fetch(
+        `/api/teams/member?page=${page}&limit=${limit}`,
+      );
       if (!response.ok) {
         throw new Error("Failed to fetch member teams");
       }
-      const payload = await response.json();
-      return (payload.data || payload) as Team[];
+      return (await response.json()) as PaginatedResponse<Team>;
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -257,15 +298,19 @@ export const useTeam = (teamId: string) => {
 };
 
 /**
- * Fetch team members
+ * Fetch team members (paginated)
  */
-export const useTeamMembers = (teamId: string) => {
+export const useTeamMembers = (
+  teamId: string,
+  page: number = DEFAULT_PAGE,
+  limit: number = 50,
+) => {
   return useQuery({
-    queryKey: queryKeys.teams.members(teamId),
-    queryFn: async () => {
+    queryKey: queryKeys.teams.members(teamId, page, limit),
+    queryFn: async (): Promise<PaginatedResponse<TeamMember>> => {
       // In development, return mock data directly without any network call
       if (process.env.NODE_ENV === "development") {
-        return mockTeamMembers
+        const all = mockTeamMembers
           .filter((tm) => tm.teamId === teamId)
           .map((tm) => {
             const user = tm.userId
@@ -284,13 +329,29 @@ export const useTeamMembers = (teamId: string) => {
                 : null,
             } as TeamMember;
           });
+        const total = all.length;
+        const skip = (page - 1) * limit;
+        const items = all.slice(skip, skip + limit);
+        const totalPages = Math.max(1, Math.ceil(total / limit));
+        return {
+          items,
+          meta: {
+            page,
+            limit,
+            total,
+            totalPages,
+            hasNextPage: page < totalPages,
+            hasPreviousPage: page > 1,
+          },
+        };
       }
-      const response = await fetch(`/api/teams/${teamId}/members`);
+      const response = await fetch(
+        `/api/teams/${teamId}/members?page=${page}&limit=${limit}`,
+      );
       if (!response.ok) {
         throw new Error("Failed to fetch team members");
       }
-      const payload = await response.json();
-      return (payload.data || payload) as TeamMember[];
+      return (await response.json()) as PaginatedResponse<TeamMember>;
     },
     enabled: !!teamId,
     staleTime: 5 * 60 * 1000,

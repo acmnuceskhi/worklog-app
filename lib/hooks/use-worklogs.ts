@@ -6,6 +6,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import { mockWorklogs, mockUsers } from "@/lib/mock-data";
+import type { PaginatedResponse } from "@/lib/types/pagination";
+import { DEFAULT_PAGE, DEFAULT_LIMIT } from "@/lib/types/pagination";
 
 export type ProgressStatus =
   | "STARTED"
@@ -85,15 +87,19 @@ export const useWorklogs = () => {
 };
 
 /**
- * Fetch worklogs for a specific team
+ * Fetch worklogs for a specific team (paginated)
  */
-export const useTeamWorklogs = (teamId: string) => {
+export const useTeamWorklogs = (
+  teamId: string,
+  page: number = DEFAULT_PAGE,
+  limit: number = DEFAULT_LIMIT,
+) => {
   return useQuery({
-    queryKey: queryKeys.teams.worklogs(teamId),
-    queryFn: async () => {
+    queryKey: queryKeys.teams.worklogs(teamId, page, limit),
+    queryFn: async (): Promise<PaginatedResponse<WorklogPreview>> => {
       // In development, return mock data directly without any network call
       if (process.env.NODE_ENV === "development") {
-        return mockWorklogs
+        const filtered = mockWorklogs
           .filter((w) => w.teamId === teamId)
           .map((w) => {
             const user = mockUsers.find((u) => u.id === w.userId);
@@ -118,13 +124,29 @@ export const useTeamWorklogs = (teamId: string) => {
             (a, b) =>
               new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
           );
+        const total = filtered.length;
+        const skip = (page - 1) * limit;
+        const items = filtered.slice(skip, skip + limit);
+        const totalPages = Math.max(1, Math.ceil(total / limit));
+        return {
+          items,
+          meta: {
+            page,
+            limit,
+            total,
+            totalPages,
+            hasNextPage: page < totalPages,
+            hasPreviousPage: page > 1,
+          },
+        };
       }
-      const response = await fetch(`/api/teams/${teamId}/worklogs`);
+      const response = await fetch(
+        `/api/teams/${teamId}/worklogs?page=${page}&limit=${limit}`,
+      );
       if (!response.ok) {
         throw new Error("Failed to fetch team worklogs");
       }
-      const payload = await response.json();
-      return (payload.worklogs || payload.data || payload) as WorklogPreview[];
+      return (await response.json()) as PaginatedResponse<WorklogPreview>;
     },
     enabled: !!teamId,
     staleTime: 1 * 60 * 1000,
