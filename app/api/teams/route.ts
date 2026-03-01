@@ -7,8 +7,11 @@ import {
   handleApiError,
   unauthorized,
   forbidden,
+  getRateLimitIdentifier,
+  checkRateLimit,
 } from "@/lib/api-utils";
 import { validateRequest, teamCreateSchema } from "@/lib/validations";
+import { apiLimiter } from "@/lib/rate-limit";
 
 /**
  * POST /api/teams
@@ -16,6 +19,11 @@ import { validateRequest, teamCreateSchema } from "@/lib/validations";
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const identifier = await getRateLimitIdentifier();
+    const rateLimitResponse = checkRateLimit(apiLimiter, 30, identifier);
+    if (rateLimitResponse) return rateLimitResponse;
+
     const user = await getCurrentUser();
     if (!user) {
       return unauthorized();

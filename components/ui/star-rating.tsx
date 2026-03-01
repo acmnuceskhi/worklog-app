@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { FaStar, FaRegStar } from "react-icons/fa";
+import { Star } from "lucide-react";
 
 export interface StarRatingProps {
   value: number;
@@ -11,6 +11,8 @@ export interface StarRatingProps {
   readOnly?: boolean;
   size?: "sm" | "md" | "lg";
   className?: string;
+  /** HTML id – enables `<label htmlFor=…>` association */
+  id?: string;
 }
 
 const sizeClasses = {
@@ -26,6 +28,7 @@ export function StarRating({
   readOnly = false,
   size = "md",
   className,
+  id,
 }: StarRatingProps) {
   const [hoveredRating, setHoveredRating] = React.useState(0);
   const starsRef = React.useRef<(HTMLButtonElement | null)[]>([]);
@@ -90,12 +93,14 @@ export function StarRating({
           return (
             <span key={rating} className="inline-flex">
               {isActive ? (
-                <FaStar
+                <Star
                   className={cn(sizeClasses[size], "text-yellow-400")}
+                  fill="currentColor"
+                  strokeWidth={0}
                   aria-hidden="true"
                 />
               ) : (
-                <FaRegStar
+                <Star
                   className={cn(sizeClasses[size], "text-slate-500")}
                   aria-hidden="true"
                 />
@@ -109,6 +114,7 @@ export function StarRating({
 
   return (
     <div
+      id={id}
       className={cn("flex items-center gap-0.5", className)}
       role="radiogroup"
       aria-label="Rate this worklog"
@@ -143,9 +149,14 @@ export function StarRating({
             )}
           >
             {isActive ? (
-              <FaStar className={sizeClasses[size]} aria-hidden="true" />
+              <Star
+                className={sizeClasses[size]}
+                fill="currentColor"
+                strokeWidth={0}
+                aria-hidden="true"
+              />
             ) : (
-              <FaRegStar className={sizeClasses[size]} aria-hidden="true" />
+              <Star className={sizeClasses[size]} aria-hidden="true" />
             )}
           </button>
         );

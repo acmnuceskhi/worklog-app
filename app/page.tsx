@@ -3,15 +3,19 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Share_Tech_Mono } from "next/font/google"; // Techy font
-import { FcGoogle } from "react-icons/fc";
-import { FaGithub } from "react-icons/fa";
+import { GoogleIcon } from "@/components/ui/brand-icons";
+import { GithubIcon } from "@/components/ui/brand-icons";
 import { signIn } from "next-auth/react";
 import { useSharedSession } from "@/components/providers";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import styles from "./page.module.css";
 
-const shareTechMono = Share_Tech_Mono({ weight: "400", subsets: ["latin"] });
+const shareTechMono = Share_Tech_Mono({
+  weight: "400",
+  subsets: ["latin"],
+  display: "swap",
+});
 
 export default function Home() {
   const router = useRouter();
@@ -97,18 +101,24 @@ export default function Home() {
         {/* RIGHT SIDE: LOGIN CARD */}
         <div className={styles.card}>
           <input
+            id="login-email"
             type="email"
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className={styles.input}
+            aria-label="Email"
+            autoComplete="email"
           />
           <input
+            id="login-password"
             type="password"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className={styles.input}
+            aria-label="Password"
+            autoComplete="current-password"
           />
           <Button
             onClick={handleLogin}
@@ -130,7 +140,7 @@ export default function Home() {
               className={styles.socialButton}
               aria-label="Sign in with Google"
             >
-              <FcGoogle size={20} />
+              <GoogleIcon size={20} />
               Google
             </Button>
             <Button
@@ -138,7 +148,7 @@ export default function Home() {
               className={styles.socialButton}
               aria-label="Sign in with GitHub"
             >
-              <FaGithub size={20} />
+              <GithubIcon size={20} />
               GitHub
             </Button>
           </div>

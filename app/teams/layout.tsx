@@ -3,18 +3,18 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Lobster_Two } from "next/font/google";
 import {
-  FaHome,
-  FaUsers,
-  FaUserTie,
-  FaBars,
-  FaChevronLeft,
-  FaChevronRight,
-  FaSignOutAlt,
-} from "react-icons/fa";
+  Home,
+  Users,
+  UserCog,
+  Menu,
+  ChevronLeft,
+  ChevronRight,
+  LogOut,
+} from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useSharedSession } from "@/components/providers";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useMounted, useContentTheme, useSidebarStats } from "@/lib/hooks";
 import { InvitationsPanel } from "@/components/invitations-panel";
@@ -73,21 +73,21 @@ export default function TeamsLayout({
       id: "dashboard",
       label: "Dashboard",
       href: "/home",
-      icon: <FaHome />,
+      icon: <Home />,
       count: null,
     },
     {
       id: "member",
       label: "My Teams",
       href: "/teams/member",
-      icon: <FaUsers />,
+      icon: <Users />,
       count: sidebarStatsData?.memberTeamsCount ?? 0,
     },
     {
       id: "lead",
       label: "Teams I Lead",
       href: "/teams/lead",
-      icon: <FaUserTie />,
+      icon: <UserCog />,
       count: sidebarStatsData?.leadTeamsCount ?? 0,
       reviewCount: sidebarStatsData?.pendingReviewsCount ?? 0,
     },
@@ -95,7 +95,7 @@ export default function TeamsLayout({
       id: "orgs",
       label: "My Organizations",
       href: "/teams/organisations",
-      icon: <FaUsers />,
+      icon: <Users />,
       count: sidebarStatsData?.organizationsCount ?? 0,
     },
   ];
@@ -145,7 +145,7 @@ export default function TeamsLayout({
             aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
             aria-expanded={isSidebarOpen}
           >
-            <FaBars />
+            <Menu />
           </Button>
           <h1
             className={`${lobsterTwo.className} text-2xl font-bold text-white tracking-tight`}
@@ -172,7 +172,7 @@ export default function TeamsLayout({
             onClick={() => signOut({ callbackUrl: "/" })}
             aria-label="Sign out of account"
           >
-            <FaSignOutAlt className="mr-2" />
+            <LogOut className="mr-2" />
             Sign Out
           </Button>
         </div>
@@ -181,7 +181,7 @@ export default function TeamsLayout({
       <div className="flex gap-4 flex-1 mt-3 w-full overflow-x-hidden">
         <AnimatePresence>
           {isMobile && isSidebarOpen && (
-            <motion.div
+            <m.div
               className="fixed inset-0 bg-black/60 z-90"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -192,7 +192,7 @@ export default function TeamsLayout({
           )}
         </AnimatePresence>
 
-        <motion.aside
+        <m.aside
           className={sidebarClassName}
           aria-label="Main navigation"
           aria-expanded={isSidebarOpen}
@@ -217,7 +217,7 @@ export default function TeamsLayout({
                   isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
                 }
               >
-                {isSidebarCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
+                {isSidebarCollapsed ? <ChevronRight /> : <ChevronLeft />}
               </Button>
             )}
           </div>
@@ -280,13 +280,13 @@ export default function TeamsLayout({
             {sidebarLoading && (
               <div className="p-2.5 rounded-xl flex gap-2 cursor-pointer mb-2 items-center opacity-60">
                 <span className="inline-flex items-center justify-center w-5">
-                  <FaUsers />
+                  <Users />
                 </span>{" "}
                 {showSidebarLabels ? "Loading..." : "..."}
               </div>
             )}
           </div>
-        </motion.aside>
+        </m.aside>
 
         <main className="flex-1 overflow-hidden flex flex-col gap-4">
           {children}

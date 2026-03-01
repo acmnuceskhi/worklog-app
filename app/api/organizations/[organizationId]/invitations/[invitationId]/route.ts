@@ -17,20 +17,28 @@ export async function DELETE(
 
     const { organizationId, invitationId } = await params;
 
-    // Verify user is the organization owner or an accepted co-owner
-    const organization = await prisma.organization.findFirst({
-      where: {
-        id: organizationId,
-        OR: [
-          { ownerId: session.user.id },
-          {
-            invitations: {
-              some: { userId: session.user.id, status: "ACCEPTED" },
+    // Parallel: verify org access + find invitation simultaneously
+    const [organization, invitation] = await Promise.all([
+      prisma.organization.findFirst({
+        where: {
+          id: organizationId,
+          OR: [
+            { ownerId: session.user.id },
+            {
+              invitations: {
+                some: { userId: session.user.id, status: "ACCEPTED" },
+              },
             },
-          },
-        ],
-      },
-    });
+          ],
+        },
+      }),
+      prisma.organizationInvitation.findFirst({
+        where: {
+          id: invitationId,
+          organizationId,
+        },
+      }),
+    ]);
 
     if (!organization) {
       return NextResponse.json(
@@ -38,14 +46,6 @@ export async function DELETE(
         { status: 403 },
       );
     }
-
-    // Find the invitation
-    const invitation = await prisma.organizationInvitation.findFirst({
-      where: {
-        id: invitationId,
-        organizationId,
-      },
-    });
 
     if (!invitation) {
       return NextResponse.json(

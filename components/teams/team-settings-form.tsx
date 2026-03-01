@@ -22,8 +22,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { FaCog, FaCheck, FaTimes, FaSpinner } from "react-icons/fa";
-import { motion, AnimatePresence } from "framer-motion";
+import { Settings, Check, X, Loader2 } from "lucide-react";
+import { m, AnimatePresence } from "framer-motion";
 
 interface Organization {
   id: string;
@@ -202,7 +202,7 @@ export const TeamSettingsForm: React.FC<TeamSettingsFormProps> = ({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
-            <FaCog className="text-white/60" />
+            <Settings className="text-white/60" />
             Team Settings
           </DialogTitle>
         </DialogHeader>
@@ -211,7 +211,7 @@ export const TeamSettingsForm: React.FC<TeamSettingsFormProps> = ({
           {/* Success Message */}
           <AnimatePresence>
             {successMessage && (
-              <motion.div
+              <m.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
@@ -219,20 +219,20 @@ export const TeamSettingsForm: React.FC<TeamSettingsFormProps> = ({
                 role="alert"
               >
                 {successMessage}
-              </motion.div>
+              </m.div>
             )}
           </AnimatePresence>
 
           {/* Error Message */}
           <AnimatePresence>
             {errorMessage && (
-              <motion.div
+              <m.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
               >
                 <ErrorState message={errorMessage} className="py-4" />
-              </motion.div>
+              </m.div>
             )}
           </AnimatePresence>
 
@@ -333,7 +333,7 @@ export const TeamSettingsForm: React.FC<TeamSettingsFormProps> = ({
               onClick={handleCancel}
               disabled={loading}
             >
-              <FaTimes className="mr-2" />
+              <X className="mr-2" />
               Cancel
             </Button>
             <Button
@@ -344,12 +344,12 @@ export const TeamSettingsForm: React.FC<TeamSettingsFormProps> = ({
             >
               {loading ? (
                 <>
-                  <FaSpinner className="mr-2 animate-spin" />
+                  <Loader2 className="mr-2 animate-spin" />
                   Saving...
                 </>
               ) : (
                 <>
-                  <FaCheck className="mr-2" />
+                  <Check className="mr-2" />
                   Save Changes
                 </>
               )}

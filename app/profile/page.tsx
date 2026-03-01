@@ -9,19 +9,19 @@ import Image from "next/image";
 import { useSidebarStats, useMounted, useContentTheme } from "@/lib/hooks";
 import { Button } from "@/components/ui/button";
 import {
-  FaHome,
-  FaSignOutAlt,
-  FaEnvelope,
-  FaCalendar,
-  FaShieldAlt,
-  FaUsers,
-  FaUserTie,
-  FaSearch,
-  FaBars,
-  FaChevronLeft,
-  FaChevronRight,
-} from "react-icons/fa";
-import { AnimatePresence, motion } from "framer-motion";
+  Home,
+  LogOut,
+  Mail,
+  Calendar,
+  Shield,
+  Users,
+  UserCog,
+  Search,
+  Menu,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import { AnimatePresence, m } from "framer-motion";
 import { PageHeader } from "@/components/ui/page-header";
 
 const lobster = Lobster_Two({
@@ -70,21 +70,21 @@ export default function ProfilePage() {
       id: "dashboard",
       label: "Dashboard",
       href: "/home",
-      icon: <FaHome />,
+      icon: <Home />,
       count: null,
     },
     {
       id: "member",
       label: "My Teams",
       href: "/teams/member",
-      icon: <FaUsers />,
+      icon: <Users />,
       count: sidebarStatsData?.memberTeamsCount ?? 0,
     },
     {
       id: "lead",
       label: "Teams I Lead",
       href: "/teams/lead",
-      icon: <FaUserTie />,
+      icon: <UserCog />,
       count: sidebarStatsData?.leadTeamsCount ?? 0,
       reviewCount: sidebarStatsData?.pendingReviewsCount ?? 0,
     },
@@ -92,7 +92,7 @@ export default function ProfilePage() {
       id: "orgs",
       label: "My Organizations",
       href: "/teams/organisations",
-      icon: <FaUsers />,
+      icon: <Users />,
       count: sidebarStatsData?.organizationsCount ?? 0,
     },
   ];
@@ -147,7 +147,7 @@ export default function ProfilePage() {
             aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
             aria-expanded={isSidebarOpen}
           >
-            <FaBars />
+            <Menu />
           </Button>
           <h1
             className={`${lobster.className} text-2xl font-bold text-white tracking-tight`}
@@ -155,10 +155,11 @@ export default function ProfilePage() {
             Worklog
           </h1>
           <div className="flex items-center gap-2 bg-white/10 px-2.5 py-1.5 rounded-lg w-70">
-            <FaSearch />
+            <Search />
             <input
               placeholder="Search teams..."
               className="bg-transparent border-none outline-none text-white placeholder-white/70 w-full"
+              aria-label="Search teams"
             />
           </div>
         </div>
@@ -181,7 +182,7 @@ export default function ProfilePage() {
             onClick={() => signOut({ callbackUrl: "/" })}
             aria-label="Sign out of account"
           >
-            <FaSignOutAlt className="mr-2" />
+            <LogOut className="mr-2" />
             Sign Out
           </Button>
         </div>
@@ -190,7 +191,7 @@ export default function ProfilePage() {
       <div className="flex gap-4 flex-1 w-full overflow-x-hidden">
         <AnimatePresence>
           {isMobile && isSidebarOpen && (
-            <motion.div
+            <m.div
               className="fixed inset-0 bg-black/60 z-90"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -201,7 +202,7 @@ export default function ProfilePage() {
           )}
         </AnimatePresence>
 
-        <motion.aside
+        <m.aside
           className={sidebarClassName}
           aria-label="Main navigation"
           aria-expanded={isSidebarOpen}
@@ -226,7 +227,7 @@ export default function ProfilePage() {
                   isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
                 }
               >
-                {isSidebarCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
+                {isSidebarCollapsed ? <ChevronRight /> : <ChevronLeft />}
               </Button>
             )}
           </div>
@@ -289,13 +290,13 @@ export default function ProfilePage() {
             {sidebarLoading && (
               <div className="p-2.5 rounded-xl flex gap-2 cursor-pointer mb-2 items-center opacity-60">
                 <span className="inline-flex items-center justify-center w-5">
-                  <FaUsers />
+                  <Users />
                 </span>
                 {showSidebarLabels ? "Loading..." : "..."}
               </div>
             )}
           </div>
-        </motion.aside>
+        </m.aside>
 
         <main className="flex-1 overflow-auto p-5">
           {/* Profile Card */}
@@ -355,7 +356,7 @@ export default function ProfilePage() {
 
               <div className="flex items-center gap-4 p-4 bg-white/5 rounded-xl border border-white/10 mb-2.5">
                 <div className="w-10 h-10 rounded-xl bg-blue-400/20 text-blue-400 text-lg flex items-center justify-center">
-                  <FaEnvelope />
+                  <Mail />
                 </div>
                 <div>
                   <p className="text-white/60 text-sm mb-1">Email</p>
@@ -367,7 +368,7 @@ export default function ProfilePage() {
 
               <div className="flex items-center gap-4 p-4 bg-white/5 rounded-xl border border-white/10 mb-2.5">
                 <div className="w-10 h-10 rounded-xl bg-blue-400/20 text-blue-400 text-lg flex items-center justify-center">
-                  <FaShieldAlt />
+                  <Shield />
                 </div>
                 <div>
                   <p className="text-white/60 text-sm mb-1">Name</p>
@@ -379,7 +380,7 @@ export default function ProfilePage() {
 
               <div className="flex items-center gap-4 p-4 bg-white/5 rounded-xl border border-white/10 mb-2.5">
                 <div className="w-10 h-10 rounded-xl bg-blue-400/20 text-blue-400 text-lg flex items-center justify-center">
-                  <FaCalendar />
+                  <Calendar />
                 </div>
                 <div>
                   <p className="text-white/60 text-sm mb-1">Account Status</p>

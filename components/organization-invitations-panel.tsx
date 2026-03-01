@@ -1,14 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  FaUserPlus,
-  FaPaperPlane,
-  FaTimes,
-  FaBuilding,
-  FaCrown,
-} from "react-icons/fa";
+import { m, AnimatePresence } from "framer-motion";
+import { UserPlus, Send, X, Building2, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -155,7 +149,7 @@ export function OrganizationInvitationsPanel({
   );
 
   return (
-    <motion.aside
+    <m.aside
       className={`w-[300px] p-4 rounded-xl flex-shrink-0 bg-[var(--nav-bg)] text-yellow-300 max-[960px]:w-full ${className}`}
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
@@ -163,7 +157,7 @@ export function OrganizationInvitationsPanel({
       aria-label="Organization invitations panel"
     >
       <div className="flex items-center gap-2 mb-4">
-        <FaCrown className="text-purple-400" />
+        <Crown className="text-purple-400" />
         <h3 className="font-semibold text-sm uppercase tracking-wide text-white/70">
           Invite Org Members
         </h3>
@@ -174,7 +168,7 @@ export function OrganizationInvitationsPanel({
         <Card className="bg-white/5 border-white/10">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
-              <FaBuilding className="text-purple-400" />
+              <Building2 className="text-purple-400" />
               Select Organization
             </CardTitle>
           </CardHeader>
@@ -205,7 +199,7 @@ export function OrganizationInvitationsPanel({
                     )}
                     <div className="flex items-center gap-2 mt-2">
                       <Badge variant="secondary" className="text-xs">
-                        <FaBuilding className="mr-1" />
+                        <Building2 className="mr-1" />
                         {org._count?.teams || 0} teams
                       </Badge>
                     </div>
@@ -232,7 +226,7 @@ export function OrganizationInvitationsPanel({
 
         {/* Email Input */}
         {selectedOrgId && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
@@ -241,7 +235,7 @@ export function OrganizationInvitationsPanel({
             <Card className="bg-white/5 border-white/10">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <FaPaperPlane className="text-green-400" />
+                  <Send className="text-green-400" />
                   Invite Leaders to {selectedOrg?.name}
                 </CardTitle>
               </CardHeader>
@@ -252,7 +246,7 @@ export function OrganizationInvitationsPanel({
 
                 <AnimatePresence>
                   {inviteEmails.map((email, index) => (
-                    <motion.div
+                    <m.div
                       key={index}
                       className="flex gap-2"
                       initial={{ opacity: 0, x: -10 }}
@@ -266,6 +260,8 @@ export function OrganizationInvitationsPanel({
                         value={email}
                         onChange={(e) => updateEmail(index, e.target.value)}
                         className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                        aria-label={`Team leader email ${index + 1}`}
+                        autoComplete="email"
                       />
                       {inviteEmails.length > 1 && (
                         <Button
@@ -273,11 +269,12 @@ export function OrganizationInvitationsPanel({
                           variant="ghost"
                           onClick={() => removeEmailField(index)}
                           className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                          aria-label={`Remove email field ${index + 1}`}
                         >
-                          <FaTimes />
+                          <X aria-hidden="true" />
                         </Button>
                       )}
-                    </motion.div>
+                    </m.div>
                   ))}
                 </AnimatePresence>
 
@@ -288,7 +285,7 @@ export function OrganizationInvitationsPanel({
                     onClick={addEmailField}
                     className="flex-1"
                   >
-                    <FaUserPlus className="mr-2" />
+                    <UserPlus className="mr-2" />
                     Add Another
                   </Button>
                 </div>
@@ -305,7 +302,7 @@ export function OrganizationInvitationsPanel({
                       "Sending..."
                     ) : (
                       <>
-                        <FaPaperPlane className="mr-2" />
+                        <Send className="mr-2" />
                         Send Invitations (
                         {inviteEmails.filter((e) => e.trim()).length})
                       </>
@@ -314,12 +311,12 @@ export function OrganizationInvitationsPanel({
                 </div>
               </CardContent>
             </Card>
-          </motion.div>
+          </m.div>
         )}
 
         {/* Invite Co-Owners */}
         {selectedOrgId && selectedOrg && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
@@ -328,7 +325,7 @@ export function OrganizationInvitationsPanel({
             <Card className="bg-white/5 border-white/10">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <FaCrown className="text-amber-400" />
+                  <Crown className="text-amber-400" />
                   Invite Co-Owners to {selectedOrg.name}
                 </CardTitle>
               </CardHeader>
@@ -336,9 +333,9 @@ export function OrganizationInvitationsPanel({
                 <ManageOwnersSection organizationId={selectedOrgId} />
               </CardContent>
             </Card>
-          </motion.div>
+          </m.div>
         )}
       </div>
-    </motion.aside>
+    </m.aside>
   );
 }

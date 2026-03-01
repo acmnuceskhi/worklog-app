@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { FaUserPlus, FaPaperPlane, FaTimes } from "react-icons/fa";
+import { m, AnimatePresence } from "framer-motion";
+import { UserPlus, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -82,7 +82,7 @@ export function ManageOwnersSection({
 
       <AnimatePresence>
         {inviteEmails.map((email, index) => (
-          <motion.div
+          <m.div
             key={index}
             className="flex gap-2"
             initial={{ opacity: 0, x: -10 }}
@@ -96,6 +96,8 @@ export function ManageOwnersSection({
               value={email}
               onChange={(e) => updateEmail(index, e.target.value)}
               className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50"
+              aria-label={`Co-owner email ${index + 1}`}
+              autoComplete="email"
             />
             {inviteEmails.length > 1 && (
               <Button
@@ -103,11 +105,12 @@ export function ManageOwnersSection({
                 variant="ghost"
                 onClick={() => removeEmailField(index)}
                 className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                aria-label={`Remove email field ${index + 1}`}
               >
-                <FaTimes />
+                <X aria-hidden="true" />
               </Button>
             )}
-          </motion.div>
+          </m.div>
         ))}
       </AnimatePresence>
 
@@ -118,7 +121,7 @@ export function ManageOwnersSection({
           onClick={addEmailField}
           className="flex-1"
         >
-          <FaUserPlus className="mr-2" />
+          <UserPlus className="mr-2" />
           Add Another
         </Button>
       </div>
@@ -134,7 +137,7 @@ export function ManageOwnersSection({
           "Sending..."
         ) : (
           <>
-            <FaPaperPlane className="mr-2" />
+            <Send className="mr-2" />
             Send Invitations ({inviteEmails.filter((e) => e.trim()).length})
           </>
         )}

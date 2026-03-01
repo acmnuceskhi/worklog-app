@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { AlertTriangle, Clock, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { DeadlineWorklog } from "@/lib/homepage-utils";
@@ -57,7 +57,7 @@ function AlertBanner({
   const remaining = items.length - shown.length;
 
   return (
-    <motion.div
+    <m.div
       className={`rounded-xl border-l-4 ${styles.border} ${styles.bg} p-4`}
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
@@ -112,7 +112,7 @@ function AlertBanner({
           <ChevronRight className="ml-1 h-3.5 w-3.5" />
         </Button>
       )}
-    </motion.div>
+    </m.div>
   );
 }
 

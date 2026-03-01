@@ -27,21 +27,22 @@ export async function GET(
 
     const { teamId } = await params;
 
-    // Check if user is team owner
-    const isOwner = await isTeamOwner(user.id, teamId);
+    // Parallel: check ownership + fetch team data
+    const [isOwner, team] = await Promise.all([
+      isTeamOwner(user.id, teamId),
+      prisma.team.findUnique({
+        where: { id: teamId },
+        select: {
+          id: true,
+          name: true,
+          credits: true,
+        },
+      }),
+    ]);
+
     if (!isOwner) {
       return forbidden("Only team owners can view team credits");
     }
-
-    // Get team credits
-    const team = await prisma.team.findUnique({
-      where: { id: teamId },
-      select: {
-        id: true,
-        name: true,
-        credits: true,
-      },
-    });
 
     if (!team) {
       return notFound("Team not found");
@@ -79,21 +80,22 @@ export async function PATCH(
     }
     const { action, amount } = validation.data;
 
-    // Check if user is team owner
-    const isOwner = await isTeamOwner(user.id, teamId);
+    // Parallel: check ownership + fetch team data
+    const [isOwner, team] = await Promise.all([
+      isTeamOwner(user.id, teamId),
+      prisma.team.findUnique({
+        where: { id: teamId },
+        select: {
+          id: true,
+          name: true,
+          credits: true,
+        },
+      }),
+    ]);
+
     if (!isOwner) {
       return forbidden("Only team owners can update team credits");
     }
-
-    // Get current credits
-    const team = await prisma.team.findUnique({
-      where: { id: teamId },
-      select: {
-        id: true,
-        name: true,
-        credits: true,
-      },
-    });
 
     if (!team) {
       return notFound("Team not found");

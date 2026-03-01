@@ -7,12 +7,19 @@ import {
   validateRequest,
   organizationInviteMultipleSchema,
 } from "@/lib/validations";
+import { getRateLimitIdentifier, checkRateLimit } from "@/lib/api-utils";
+import { inviteLimiter } from "@/lib/rate-limit";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ organizationId: string }> },
 ) {
   try {
+    // Rate limiting — prevent email spam
+    const identifier = await getRateLimitIdentifier();
+    const rateLimitResponse = checkRateLimit(inviteLimiter, 10, identifier);
+    if (rateLimitResponse) return rateLimitResponse;
+
     // Get current session
     const session = await auth();
 
@@ -66,14 +73,33 @@ export async function POST(
       );
     }
 
+    // Batch: look up all users + existing invitations at once
+    const [allExistingUsers, allExistingInvitations] = await Promise.all([
+      prisma.user.findMany({
+        where: { email: { in: emails } },
+      }),
+      prisma.organizationInvitation.findMany({
+        where: {
+          organizationId,
+          email: { in: emails },
+          status: { in: ["PENDING", "ACCEPTED"] },
+        },
+      }),
+    ]);
+    const userByEmail = new Map(
+      allExistingUsers
+        .filter((u): u is typeof u & { email: string } => u.email !== null)
+        .map((u) => [u.email, u]),
+    );
+    const invitationByEmail = new Map(
+      allExistingInvitations.map((inv) => [inv.email, inv]),
+    );
+
     // Process each email invitation
     const results = [];
     for (const email of emails) {
       try {
-        // Check if user already exists
-        const existingUser = await prisma.user.findUnique({
-          where: { email },
-        });
+        const existingUser = userByEmail.get(email) ?? null;
 
         // Check if user is already the organization owner
         if (existingUser && existingUser.id === organization.ownerId) {
@@ -86,14 +112,7 @@ export async function POST(
         }
 
         // Check if invitation already exists (PENDING or ACCEPTED)
-        const existingInvitation =
-          await prisma.organizationInvitation.findFirst({
-            where: {
-              organizationId,
-              email,
-              status: { in: ["PENDING", "ACCEPTED"] },
-            },
-          });
+        const existingInvitation = invitationByEmail.get(email) ?? null;
 
         if (existingInvitation?.status === "PENDING") {
           results.push({
@@ -150,7 +169,7 @@ export async function POST(
         results.push({
           email,
           status: "failed",
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: "Failed to process invitation",
         });
       }
     }

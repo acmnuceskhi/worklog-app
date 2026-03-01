@@ -73,6 +73,8 @@ export function WorklogTable({
                 )}
                 onClick={() => onRowClick?.(w)}
                 tabIndex={onRowClick ? 0 : undefined}
+                role={onRowClick ? "link" : undefined}
+                aria-label={onRowClick ? `View worklog: ${w.title}` : undefined}
                 onKeyDown={(e) => {
                   if ((e.key === "Enter" || e.key === " ") && onRowClick) {
                     e.preventDefault();

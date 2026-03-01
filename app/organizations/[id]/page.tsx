@@ -13,8 +13,8 @@ import {
   Building2,
   UserCheck,
   Crown,
+  UserCog,
 } from "lucide-react";
-import { FaBuilding, FaUsers, FaUserTie } from "react-icons/fa";
 import { RatingModal } from "@/components/rating-modal";
 import {
   TeamFilters,
@@ -414,18 +414,18 @@ export default function OrganizationDashboardPage({
           {
             label: "My Teams",
             href: "/teams/member",
-            icon: <FaUsers className="h-4 w-4" />,
+            icon: <Users className="h-4 w-4" />,
           },
           {
             label: "Teams I Lead",
             href: "/teams/lead",
-            icon: <FaUserTie className="h-4 w-4" />,
+            icon: <UserCog className="h-4 w-4" />,
           },
           {
             label: "My Organizations",
             href: "/teams/organisations",
             isActive: true,
-            icon: <FaBuilding className="h-4 w-4" />,
+            icon: <Building2 className="h-4 w-4" />,
           },
         ]}
         rightAction={

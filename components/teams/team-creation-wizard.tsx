@@ -16,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FaUsers } from "react-icons/fa";
+import { Users } from "lucide-react";
 import { toast } from "sonner";
 import { useCreateTeam, useInviteTeamMember } from "@/lib/hooks/use-teams";
 
@@ -139,7 +139,7 @@ export const TeamCreationWizard: React.FC<TeamCreationWizardProps> = ({
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl">
-            <FaUsers className="text-blue-600" />
+            <Users className="text-blue-600" />
             Create Team
           </DialogTitle>
         </DialogHeader>

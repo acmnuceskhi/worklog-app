@@ -6,8 +6,11 @@ import {
   unauthorized,
   badRequest,
   handleApiError,
+  getRateLimitIdentifier,
+  checkRateLimit,
 } from "@/lib/api-utils";
 import { validateRequest, worklogCreateSchema } from "@/lib/validations";
+import { apiLimiter } from "@/lib/rate-limit";
 import { isDevelopment, mockWorklogs, mockUsers } from "@/lib/mock-data";
 
 /**
@@ -152,6 +155,11 @@ export async function GET() {
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const identifier = await getRateLimitIdentifier();
+    const rateLimitResponse = checkRateLimit(apiLimiter, 30, identifier);
+    if (rateLimitResponse) return rateLimitResponse;
+
     const user = await getCurrentUser();
     if (!user) {
       return unauthorized();
@@ -211,20 +219,21 @@ export async function POST(request: NextRequest) {
       targetUserId = assignedUserId;
     } else {
       // Logic for creating own worklog (Member or Owner)
-      const teamMember = await prisma.teamMember.findFirst({
-        where: {
-          teamId,
-          userId: user.id,
-          status: "ACCEPTED",
-        },
-      });
-
-      const isTeamOwner = await prisma.team.findFirst({
-        where: {
-          id: teamId,
-          ownerId: user.id,
-        },
-      });
+      const [teamMember, isTeamOwner] = await Promise.all([
+        prisma.teamMember.findFirst({
+          where: {
+            teamId,
+            userId: user.id,
+            status: "ACCEPTED",
+          },
+        }),
+        prisma.team.findFirst({
+          where: {
+            id: teamId,
+            ownerId: user.id,
+          },
+        }),
+      ]);
 
       if (!teamMember && !isTeamOwner) {
         return NextResponse.json(

@@ -3,6 +3,12 @@ import { randomUUID } from "crypto";
 import path from "path";
 import { mkdir, writeFile } from "fs/promises";
 import { getCurrentUser, unauthorized } from "@/lib/auth-utils";
+import { getRateLimitIdentifier, checkRateLimit } from "@/lib/api-utils";
+import { uploadLimiter } from "@/lib/rate-limit";
+import {
+  validateFileMagicBytes,
+  MAX_FILES_PER_UPLOAD,
+} from "@/lib/file-validation";
 
 export const runtime = "nodejs";
 
@@ -21,6 +27,11 @@ function sanitizeFileName(name: string) {
 
 export async function POST(request: Request) {
   try {
+    // Rate limiting
+    const identifier = await getRateLimitIdentifier();
+    const rateLimitResponse = checkRateLimit(uploadLimiter, 10, identifier);
+    if (rateLimitResponse) return rateLimitResponse;
+
     const user = await getCurrentUser();
     if (!user) {
       return unauthorized();
@@ -35,6 +46,14 @@ export async function POST(request: Request) {
 
     if (files.length === 0) {
       return NextResponse.json({ error: "No files provided" }, { status: 400 });
+    }
+
+    // Enforce upload count limit
+    if (files.length > MAX_FILES_PER_UPLOAD) {
+      return NextResponse.json(
+        { error: `Maximum ${MAX_FILES_PER_UPLOAD} files per upload` },
+        { status: 400 },
+      );
     }
 
     const uploadDir = path.join(process.cwd(), "public", "uploads");
@@ -62,10 +81,19 @@ export async function POST(request: Request) {
         );
       }
 
+      // Validate file content via magic bytes (prevents MIME spoofing)
+      const arrayBuffer = await file.arrayBuffer();
+      if (!validateFileMagicBytes(arrayBuffer, file.type)) {
+        return NextResponse.json(
+          { error: `File content does not match declared type: ${file.name}` },
+          { status: 400 },
+        );
+      }
+
       const extension = path.extname(file.name);
       const safeName = sanitizeFileName(path.basename(file.name, extension));
       const fileName = `${safeName}-${randomUUID()}${extension}`;
-      const buffer = Buffer.from(await file.arrayBuffer());
+      const buffer = Buffer.from(arrayBuffer);
       await writeFile(path.join(uploadDir, fileName), buffer);
 
       results.push({

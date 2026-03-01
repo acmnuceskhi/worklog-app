@@ -14,12 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { BulkEmailInput } from "@/components/forms/bulk-email-input";
-import {
-  FaInfoCircle,
-  FaUsers,
-  FaEnvelope,
-  FaCheckCircle,
-} from "react-icons/fa";
+import { Info, Users, Mail, CheckCircle2 } from "lucide-react";
 import type { WizardStepProps } from "@/components/wizard/multi-step-wizard";
 
 interface Organization {
@@ -86,7 +81,7 @@ export const TeamBasicInfoStep: React.FC<WizardStepProps> = ({
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-3 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-        <FaInfoCircle className="text-blue-400 mt-1 flex-shrink-0" />
+        <Info className="text-blue-400 mt-1 flex-shrink-0" />
         <div className="text-sm text-blue-300">
           <p className="font-medium mb-1">Let&apos;s create your team</p>
           <p className="text-blue-300/80">
@@ -198,7 +193,7 @@ export const TeamOrganizationStep: React.FC<WizardStepProps> = ({
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-        <FaInfoCircle className="text-amber-400 mt-1 flex-shrink-0" />
+        <Info className="text-amber-400 mt-1 flex-shrink-0" />
         <div className="text-sm text-amber-300">
           <p className="font-medium mb-1">Organization (Optional)</p>
           <p className="text-amber-300/80">
@@ -271,7 +266,7 @@ export const TeamMemberInvitationStep: React.FC<WizardStepProps> = ({
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-3 p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
-        <FaEnvelope className="text-purple-400 mt-1 flex-shrink-0" />
+        <Mail className="text-purple-400 mt-1 flex-shrink-0" />
         <div className="text-sm text-purple-300">
           <p className="font-medium mb-1">Invite Team Members</p>
           <p className="text-purple-300/80">
@@ -292,7 +287,7 @@ export const TeamMemberInvitationStep: React.FC<WizardStepProps> = ({
 
         <div className="p-4 bg-white/5 border border-white/10 rounded-lg">
           <h4 className="text-sm font-medium text-white mb-2 flex items-center gap-2">
-            <FaUsers className="text-white/60" />
+            <Users className="text-white/60" />
             What happens next?
           </h4>
           <ul className="text-sm text-white/70 space-y-1 list-disc list-inside">
@@ -317,7 +312,7 @@ export const TeamReviewStep: React.FC<WizardStepProps> = ({ data }) => {
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-3 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
-        <FaCheckCircle className="text-green-400 mt-1 flex-shrink-0" />
+        <CheckCircle2 className="text-green-400 mt-1 flex-shrink-0" />
         <div className="text-sm text-green-300">
           <p className="font-medium mb-1">Review Your Team</p>
           <p className="text-green-300/80">

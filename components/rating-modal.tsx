@@ -142,8 +142,9 @@ export function RatingModal({
           {error && <ErrorState message={error} className="py-3" />}
 
           {/* Star Rating */}
-          <FormField label="Rating" required>
+          <FormField label="Rating" required htmlFor="star-rating">
             <StarRating
+              id="star-rating"
               value={ratingValue}
               onChange={setRatingValue}
               size="lg"

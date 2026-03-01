@@ -72,42 +72,42 @@ export async function GET(request: NextRequest) {
       return unauthorized();
     }
 
-    // Count total memberships for pagination meta
-    const total = await prisma.teamMember.count({
-      where: { userId: user.id, status: "ACCEPTED" },
-    });
-
-    // Get team memberships with basic team info (paginated)
-    const teamMemberships = await prisma.teamMember.findMany({
-      where: {
-        userId: user.id,
-        status: "ACCEPTED",
-      },
-      skip,
-      take,
-      select: {
-        status: true,
-        team: {
-          select: {
-            id: true,
-            name: true,
-            owner: {
-              select: {
-                name: true,
-                email: true,
+    // Parallel: count + fetch memberships
+    const [total, teamMemberships] = await Promise.all([
+      prisma.teamMember.count({
+        where: { userId: user.id, status: "ACCEPTED" },
+      }),
+      prisma.teamMember.findMany({
+        where: {
+          userId: user.id,
+          status: "ACCEPTED",
+        },
+        skip,
+        take,
+        select: {
+          status: true,
+          team: {
+            select: {
+              id: true,
+              name: true,
+              owner: {
+                select: {
+                  name: true,
+                  email: true,
+                },
               },
-            },
-            organization: {
-              select: {
-                id: true,
-                name: true,
+              organization: {
+                select: {
+                  id: true,
+                  name: true,
+                },
               },
             },
           },
         },
-      },
-      orderBy: { joinedAt: "desc" },
-    });
+        orderBy: { joinedAt: "desc" },
+      }),
+    ]);
 
     // Extract team IDs for efficient querying
     const teamIds = teamMemberships.map((membership) => membership.team.id);

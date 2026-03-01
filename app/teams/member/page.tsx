@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { FaUsers, FaSearch } from "react-icons/fa";
+import { Users, Search } from "lucide-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { useMemberTeams, useTeamSearch } from "@/lib/hooks";
 import {
@@ -78,7 +78,7 @@ function MemberTeamsPageContent() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <FaUsers className="text-blue-400" />
+            <Users className="text-blue-400" />
             My Teams
           </h1>
           <p className="text-muted mt-1">
@@ -112,13 +112,13 @@ function MemberTeamsPageContent() {
         <EmptyState
           title="Welcome to your teams!"
           description="You'll see teams here once you accept invitations from team leaders."
-          icon={<FaUsers className="h-8 w-8" />}
+          icon={<Users className="h-8 w-8" />}
         />
       ) : sortedTeams.length === 0 ? (
         <EmptyState
           title="No matching teams"
           description={`No teams matched "${searchQuery}". Try different keywords.`}
-          icon={<FaSearch className="h-8 w-8" />}
+          icon={<Search className="h-8 w-8" />}
           action={{ label: "Clear Filters", onClick: handleFilterReset }}
         />
       ) : (
@@ -132,7 +132,7 @@ function MemberTeamsPageContent() {
                   ? `Leader: ${team.owner.name || team.owner.email}`
                   : undefined
               }
-              avatar={<FaUsers className="text-blue-400" />}
+              avatar={<Users className="text-blue-400" />}
               stats={[
                 { label: "My Worklogs", value: team.myWorklogCount ?? 0 },
               ]}

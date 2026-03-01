@@ -1,7 +1,7 @@
 import { signIn, signOut } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { FaSignOutAlt, FaGithub } from "react-icons/fa";
-import { FcGoogle } from "react-icons/fc";
+import { LogOut } from "lucide-react";
+import { GithubIcon, GoogleIcon } from "@/components/ui/brand-icons";
 
 export function SignIn({ provider }: { provider?: string }) {
   return (
@@ -33,7 +33,7 @@ export function SignOut() {
         size="sm"
         aria-label="Sign out of account"
       >
-        <FaSignOutAlt className="mr-2" />
+        <LogOut className="mr-2" />
         Sign Out
       </Button>
     </form>
@@ -54,7 +54,7 @@ export function SignInWithGitHub() {
         className="w-full flex items-center justify-center gap-2"
         aria-label="Sign In with GitHub"
       >
-        <FaGithub className="w-5 h-5" />
+        <GithubIcon className="w-5 h-5" />
         Sign In with GitHub
       </Button>
     </form>
@@ -75,7 +75,7 @@ export function SignInWithGoogle() {
         className="w-full flex items-center justify-center gap-2"
         aria-label="Sign In with Google"
       >
-        <FcGoogle className="w-5 h-5" />
+        <GoogleIcon className="w-5 h-5" />
         Sign In with Google
       </Button>
     </form>

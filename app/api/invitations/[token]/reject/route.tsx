@@ -1,24 +1,43 @@
 import prisma from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { getRateLimitIdentifier, checkRateLimit } from "@/lib/api-utils";
+import { authLimiter } from "@/lib/rate-limit";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> },
 ) {
   try {
+    // Rate limiting — public endpoint, strict limits
+    const identifier = await getRateLimitIdentifier();
+    const rateLimitResponse = checkRateLimit(authLimiter, 10, identifier);
+    if (rateLimitResponse) return rateLimitResponse;
+
     const { token } = await params;
 
-    // First, try to find a team member invitation
-    const teamMember = await prisma.teamMember.findFirst({
-      where: {
-        token,
-        status: "PENDING", // Only allow rejecting pending invitations
-      },
-      include: {
-        team: true,
-        user: true,
-      },
-    });
+    // Parallel: check both team + org invitations simultaneously
+    const [teamMember, organizationInvitation] = await Promise.all([
+      prisma.teamMember.findFirst({
+        where: {
+          token,
+          status: "PENDING",
+        },
+        include: {
+          team: true,
+          user: true,
+        },
+      }),
+      prisma.organizationInvitation.findFirst({
+        where: {
+          token,
+          status: "PENDING",
+        },
+        include: {
+          organization: true,
+          user: true,
+        },
+      }),
+    ]);
 
     if (teamMember) {
       // Handle team member invitation rejection
@@ -52,19 +71,6 @@ export async function POST(
         },
       });
     }
-
-    // If no team member invitation found, try organization invitation
-    const organizationInvitation =
-      await prisma.organizationInvitation.findFirst({
-        where: {
-          token,
-          status: "PENDING", // Only allow rejecting pending invitations
-        },
-        include: {
-          organization: true,
-          user: true,
-        },
-      });
 
     if (organizationInvitation) {
       // Handle organization invitation rejection

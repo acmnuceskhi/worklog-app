@@ -56,8 +56,11 @@ export function TeamFilters({
   return (
     <div className="flex flex-wrap gap-3">
       <div className="min-w-[220px] flex-1">
-        <Label className="text-slate-300">Search</Label>
+        <Label htmlFor="team-search" className="text-slate-300">
+          Search
+        </Label>
         <Input
+          id="team-search"
           value={value.search}
           onChange={(event) => update({ search: event.target.value })}
           placeholder={searchPlaceholder}
@@ -65,12 +68,17 @@ export function TeamFilters({
         />
       </div>
       <div className="min-w-[160px]">
-        <Label className="text-slate-300">Sort by</Label>
+        <Label htmlFor="team-sort" className="text-slate-300">
+          Sort by
+        </Label>
         <Select
           value={value.sortBy}
           onValueChange={(next) => update({ sortBy: next as TeamSortBy })}
         >
-          <SelectTrigger className="bg-slate-800/60 border-slate-700 text-white">
+          <SelectTrigger
+            id="team-sort"
+            className="bg-slate-800/60 border-slate-700 text-white"
+          >
             <SelectValue placeholder="Sort" />
           </SelectTrigger>
           <SelectContent className="bg-slate-900 border-slate-700">
@@ -83,12 +91,17 @@ export function TeamFilters({
         </Select>
       </div>
       <div className="min-w-[140px]">
-        <Label className="text-slate-300">Direction</Label>
+        <Label htmlFor="team-direction" className="text-slate-300">
+          Direction
+        </Label>
         <Select
           value={value.sortDir}
           onValueChange={(next) => update({ sortDir: next as TeamSortDir })}
         >
-          <SelectTrigger className="bg-slate-800/60 border-slate-700 text-white">
+          <SelectTrigger
+            id="team-direction"
+            className="bg-slate-800/60 border-slate-700 text-white"
+          >
             <SelectValue placeholder="Direction" />
           </SelectTrigger>
           <SelectContent className="bg-slate-900 border-slate-700">

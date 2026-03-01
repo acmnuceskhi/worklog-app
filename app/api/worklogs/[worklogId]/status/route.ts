@@ -47,32 +47,33 @@ function isValidTransition(
 }
 
 /**
- * Check if user can update to a specific status
+ * Worklog shape expected by canUpdateToStatus (pre-fetched with includes)
+ */
+type WorklogWithTeamOrg = {
+  id: string;
+  userId: string;
+  teamId: string;
+  progressStatus: string;
+  team: {
+    organizationId: string | null;
+  };
+};
+
+/**
+ * Check if user can update to a specific status.
+ * Accepts pre-fetched worklog to avoid redundant DB lookups.
  */
 async function canUpdateToStatus(
   userId: string,
-  worklogId: string,
+  worklog: WorklogWithTeamOrg,
   newStatus: ProgressStatus,
 ): Promise<{ allowed: boolean; reason?: string }> {
-  const worklog = await prisma.worklog.findUnique({
-    where: { id: worklogId },
-    include: {
-      team: {
-        include: {
-          organization: true,
-        },
-      },
-    },
-  });
-
-  if (!worklog) {
-    return { allowed: false, reason: "Worklog not found" };
-  }
-
   // Members can update: STARTED → HALF_DONE → COMPLETED
   if (["STARTED", "HALF_DONE", "COMPLETED"].includes(newStatus)) {
-    const isOwner = await isWorklogOwner(userId, worklogId);
-    const isMember = await isTeamMember(userId, worklog.teamId);
+    const [isOwner, isMember] = await Promise.all([
+      isWorklogOwner(userId, worklog.id),
+      isTeamMember(userId, worklog.teamId),
+    ]);
 
     if (isOwner || isMember) {
       return { allowed: true };
@@ -137,9 +138,14 @@ export async function PATCH(
     }
     const { status: newStatus } = validation.data;
 
-    // Get current worklog
+    // Get current worklog with team/org info (single fetch, reused for permission check)
     const worklog = await prisma.worklog.findUnique({
       where: { id: worklogId },
+      include: {
+        team: {
+          select: { organizationId: true },
+        },
+      },
     });
 
     if (!worklog) {
@@ -159,10 +165,10 @@ export async function PATCH(
       );
     }
 
-    // Check if user has permission to update to this status
+    // Check if user has permission to update to this status (uses pre-fetched worklog)
     const permission = await canUpdateToStatus(
       user.id,
-      worklogId,
+      worklog,
       newStatus as ProgressStatus,
     );
     if (!permission.allowed) {

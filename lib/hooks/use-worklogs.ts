@@ -83,6 +83,7 @@ export const useWorklogs = () => {
       return (payload.data || payload) as WorklogPreview[];
     },
     staleTime: 1 * 60 * 1000, // 1 minute for active worklogs
+    gcTime: 10 * 60 * 1000, // Keep in cache 10 minutes
   });
 };
 

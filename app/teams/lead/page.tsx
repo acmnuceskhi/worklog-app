@@ -4,7 +4,7 @@ import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { TeamCreationWizard } from "@/components/teams/team-creation-wizard";
-import { FaPlus, FaUsers, FaCog, FaSearch } from "react-icons/fa";
+import { Plus, Users, Settings, Search } from "lucide-react";
 import { useOwnedTeams, useTeamSearch } from "@/lib/hooks";
 import {
   TeamFilters,
@@ -91,7 +91,7 @@ export default function LeadTeamsPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <FaUsers className="text-blue-400" />
+            <Users className="text-blue-400" />
             Teams I Lead
           </h1>
           <p className="text-muted mt-1">
@@ -112,7 +112,7 @@ export default function LeadTeamsPage() {
           )}
         </div>
         <Button onClick={() => setShowWizard(true)} variant="primary" size="lg">
-          <FaPlus />
+          <Plus />
           Create Team
         </Button>
       </div>
@@ -135,7 +135,7 @@ export default function LeadTeamsPage() {
         <EmptyState
           title="Ready to lead your first team?"
           description="Create a team to start collaborating with members and tracking their worklogs"
-          icon={<FaUsers className="h-8 w-8" />}
+          icon={<Users className="h-8 w-8" />}
           action={{
             label: "Create Team",
             onClick: () => setShowWizard(true),
@@ -145,7 +145,7 @@ export default function LeadTeamsPage() {
         <EmptyState
           title="No matching teams"
           description={`No teams matched "${searchQuery}". Try different keywords.`}
-          icon={<FaSearch className="h-8 w-8" />}
+          icon={<Search className="h-8 w-8" />}
           action={{ label: "Clear Filters", onClick: handleFilterReset }}
         />
       ) : (
@@ -155,7 +155,7 @@ export default function LeadTeamsPage() {
               key={team.id}
               title={team.name}
               subtitle={team.project ? `Project: ${team.project}` : undefined}
-              avatar={<FaUsers className="text-blue-400" />}
+              avatar={<Users className="text-blue-400" />}
               stats={[
                 { label: "Members", value: team._count?.members || 0 },
                 { label: "Worklogs", value: team._count?.worklogs || 0 },
@@ -194,7 +194,7 @@ export default function LeadTeamsPage() {
                   }}
                   aria-label={`Settings for ${team.name}`}
                 >
-                  <FaCog />
+                  <Settings />
                 </Button>
               </div>
             </EntityCard>

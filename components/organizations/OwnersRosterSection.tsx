@@ -143,13 +143,18 @@ export function OwnersRosterSection({
                         ? "opacity-30 cursor-not-allowed"
                         : "text-red-400/70 hover:text-red-400 hover:bg-red-500/10",
                     )}
+                    aria-label={
+                      inv.user?.id === currentOwnerId
+                        ? "Cannot remove the original owner"
+                        : `Remove ${inv.user?.name || inv.email} as co-owner`
+                    }
                     title={
                       inv.user?.id === currentOwnerId
                         ? "Cannot remove the original owner"
                         : "Remove co-owner"
                     }
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                   </Button>
                 </div>
               ))}

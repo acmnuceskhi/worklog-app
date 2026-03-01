@@ -4,8 +4,8 @@ import React, { useState, useCallback, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { FaTimes, FaCheck, FaExclamationCircle } from "react-icons/fa";
-import { motion, AnimatePresence } from "framer-motion";
+import { X, Check, AlertCircle } from "lucide-react";
+import { m, AnimatePresence } from "framer-motion";
 
 interface BulkEmailInputProps {
   emails: string[];
@@ -217,7 +217,7 @@ export const BulkEmailInput: React.FC<BulkEmailInputProps> = ({
         <div className="flex flex-wrap gap-2 mb-2">
           <AnimatePresence>
             {emails.map((email, index) => (
-              <motion.div
+              <m.div
                 key={`${email}-${index}`}
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -238,7 +238,7 @@ export const BulkEmailInput: React.FC<BulkEmailInputProps> = ({
                   handleEmailKeyDown(e, index)
                 }
               >
-                <FaCheck className="text-blue-400" aria-hidden="true" />
+                <Check className="text-blue-400" aria-hidden="true" />
                 <span className="text-xs sm:text-sm">{email}</span>
                 <Button
                   type="button"
@@ -251,9 +251,9 @@ export const BulkEmailInput: React.FC<BulkEmailInputProps> = ({
                   className="ml-1 hover:text-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 rounded-full p-1 md:p-0.5 min-w-[24px] md:min-w-0 h-auto"
                   aria-label={`Remove ${email}`}
                 >
-                  <FaTimes aria-hidden="true" />
+                  <X aria-hidden="true" />
                 </Button>
-              </motion.div>
+              </m.div>
             ))}
           </AnimatePresence>
         </div>
@@ -282,7 +282,7 @@ export const BulkEmailInput: React.FC<BulkEmailInputProps> = ({
       {/* Error Message */}
       <AnimatePresence>
         {error && (
-          <motion.div
+          <m.div
             id="email-error"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -290,9 +290,9 @@ export const BulkEmailInput: React.FC<BulkEmailInputProps> = ({
             className="flex items-center gap-2 mt-2 text-sm text-red-400"
             role="alert"
           >
-            <FaExclamationCircle aria-hidden="true" />
+            <AlertCircle aria-hidden="true" />
             <span>{error}</span>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
 

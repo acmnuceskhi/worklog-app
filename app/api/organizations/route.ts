@@ -7,6 +7,8 @@ import {
   createPaginatedResponse,
 } from "@/lib/api-pagination";
 import { isDevelopment, mockTeams, mockOrganizations } from "@/lib/mock-data";
+import { getRateLimitIdentifier, checkRateLimit } from "@/lib/api-utils";
+import { apiLimiter } from "@/lib/rate-limit";
 
 /**
  * GET /api/organizations
@@ -142,6 +144,11 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const identifier = await getRateLimitIdentifier();
+    const rateLimitResponse = checkRateLimit(apiLimiter, 30, identifier);
+    if (rateLimitResponse) return rateLimitResponse;
+
     const user = await getCurrentUser();
     if (!user) {
       return unauthorized();

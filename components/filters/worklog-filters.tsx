@@ -52,8 +52,11 @@ export function WorklogFilters({
     <div className="space-y-3">
       <div className="flex flex-wrap gap-3">
         <div className="min-w-[220px] flex-1">
-          <Label className="text-slate-300">Search</Label>
+          <Label htmlFor="worklog-search" className="text-slate-300">
+            Search
+          </Label>
           <Input
+            id="worklog-search"
             value={value.search}
             onChange={(event) => update({ search: event.target.value })}
             placeholder="Title or description"
@@ -61,14 +64,19 @@ export function WorklogFilters({
           />
         </div>
         <div className="min-w-[180px]">
-          <Label className="text-slate-300">Team</Label>
+          <Label htmlFor="worklog-team" className="text-slate-300">
+            Team
+          </Label>
           <Select
             value={value.teamId || "all"}
             onValueChange={(next) =>
               update({ teamId: next === "all" ? "" : next })
             }
           >
-            <SelectTrigger className="bg-slate-800/60 border-slate-700 text-white">
+            <SelectTrigger
+              id="worklog-team"
+              className="bg-slate-800/60 border-slate-700 text-white"
+            >
               <SelectValue placeholder="All teams" />
             </SelectTrigger>
             <SelectContent className="bg-slate-900 border-slate-700">
@@ -82,14 +90,19 @@ export function WorklogFilters({
           </Select>
         </div>
         <div className="min-w-[160px]">
-          <Label className="text-slate-300">Status</Label>
+          <Label htmlFor="worklog-status" className="text-slate-300">
+            Status
+          </Label>
           <Select
             value={value.status || "all"}
             onValueChange={(next) =>
               update({ status: next === "all" ? "" : next })
             }
           >
-            <SelectTrigger className="bg-slate-800/60 border-slate-700 text-white">
+            <SelectTrigger
+              id="worklog-status"
+              className="bg-slate-800/60 border-slate-700 text-white"
+            >
               <SelectValue placeholder="All statuses" />
             </SelectTrigger>
             <SelectContent className="bg-slate-900 border-slate-700">
@@ -106,8 +119,11 @@ export function WorklogFilters({
 
       <div className="flex flex-wrap gap-3">
         <div className="min-w-[160px]">
-          <Label className="text-slate-300">From</Label>
+          <Label htmlFor="worklog-date-from" className="text-slate-300">
+            From
+          </Label>
           <DatePicker
+            id="worklog-date-from"
             value={parseDeadline(value.dateFrom) ?? undefined}
             onChange={(date) =>
               update({ dateFrom: date ? toLocalDateString(date) : "" })
@@ -117,8 +133,11 @@ export function WorklogFilters({
           />
         </div>
         <div className="min-w-[160px]">
-          <Label className="text-slate-300">To</Label>
+          <Label htmlFor="worklog-date-to" className="text-slate-300">
+            To
+          </Label>
           <DatePicker
+            id="worklog-date-to"
             value={parseDeadline(value.dateTo) ?? undefined}
             onChange={(date) =>
               update({ dateTo: date ? toLocalDateString(date) : "" })
@@ -128,12 +147,17 @@ export function WorklogFilters({
           />
         </div>
         <div className="min-w-[160px]">
-          <Label className="text-slate-300">Sort by</Label>
+          <Label htmlFor="worklog-sort" className="text-slate-300">
+            Sort by
+          </Label>
           <Select
             value={value.sortBy}
             onValueChange={(next) => update({ sortBy: next as WorklogSortBy })}
           >
-            <SelectTrigger className="bg-slate-800/60 border-slate-700 text-white">
+            <SelectTrigger
+              id="worklog-sort"
+              className="bg-slate-800/60 border-slate-700 text-white"
+            >
               <SelectValue placeholder="Sort" />
             </SelectTrigger>
             <SelectContent className="bg-slate-900 border-slate-700">
@@ -143,14 +167,19 @@ export function WorklogFilters({
           </Select>
         </div>
         <div className="min-w-[140px]">
-          <Label className="text-slate-300">Direction</Label>
+          <Label htmlFor="worklog-direction" className="text-slate-300">
+            Direction
+          </Label>
           <Select
             value={value.sortDir}
             onValueChange={(next) =>
               update({ sortDir: next as WorklogSortDir })
             }
           >
-            <SelectTrigger className="bg-slate-800/60 border-slate-700 text-white">
+            <SelectTrigger
+              id="worklog-direction"
+              className="bg-slate-800/60 border-slate-700 text-white"
+            >
               <SelectValue placeholder="Direction" />
             </SelectTrigger>
             <SelectContent className="bg-slate-900 border-slate-700">

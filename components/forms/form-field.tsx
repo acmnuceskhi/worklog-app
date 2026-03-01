@@ -54,7 +54,11 @@ export const FormField: React.FC<FormFieldProps> = ({
     {helpText && !error && <p className="text-xs text-white/60">{helpText}</p>}
 
     {error && (
-      <p className="flex items-center gap-1 text-xs text-red-400">
+      <p
+        className="flex items-center gap-1 text-xs text-red-400"
+        role="alert"
+        aria-live="polite"
+      >
         <svg
           className="h-3 w-3 shrink-0"
           viewBox="0 0 16 16"

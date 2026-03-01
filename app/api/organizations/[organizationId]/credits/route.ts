@@ -27,20 +27,22 @@ export async function GET(
 
     const { organizationId } = await params;
 
-    // Check if user is organization owner
-    const isOwner = await isOrganizationOwner(user.id, organizationId);
+    // Parallel: check ownership + fetch org data
+    const [isOwner, organization] = await Promise.all([
+      isOrganizationOwner(user.id, organizationId),
+      prisma.organization.findUnique({
+        where: { id: organizationId },
+        select: {
+          id: true,
+          name: true,
+          credits: true,
+        },
+      }),
+    ]);
+
     if (!isOwner) {
       return forbidden("Only organization owners can view credits");
     }
-
-    const organization = await prisma.organization.findUnique({
-      where: { id: organizationId },
-      select: {
-        id: true,
-        name: true,
-        credits: true,
-      },
-    });
 
     if (!organization) {
       return notFound("Organization not found");
@@ -77,15 +79,17 @@ export async function PATCH(
     }
     const { action, amount } = validation.data;
 
-    // Check if user is organization owner
-    const isOwner = await isOrganizationOwner(user.id, organizationId);
+    // Parallel: check ownership + fetch org data
+    const [isOwner, organization] = await Promise.all([
+      isOrganizationOwner(user.id, organizationId),
+      prisma.organization.findUnique({
+        where: { id: organizationId },
+      }),
+    ]);
+
     if (!isOwner) {
       return forbidden("Only organization owners can update credits");
     }
-
-    const organization = await prisma.organization.findUnique({
-      where: { id: organizationId },
-    });
 
     if (!organization) {
       return notFound("Organization not found");

@@ -4,23 +4,24 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Lobster_Two } from "next/font/google";
 import Image from "next/image";
 import {
-  FaHome,
-  FaUsers,
-  FaUserTie,
-  FaSearch,
-  FaBars,
-  FaChevronLeft,
-  FaChevronRight,
-  FaSignOutAlt,
-  FaTh,
-  FaList,
-} from "react-icons/fa";
+  Home,
+  Users,
+  UserCog,
+  Search,
+  Menu,
+  ChevronLeft,
+  ChevronRight,
+  LogOut,
+  LayoutGrid,
+  LayoutList,
+  AlertTriangle,
+  Clock,
+} from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useSharedSession } from "@/components/providers";
 import { usePathname, useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Clock, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { formatLocalDate } from "@/lib/deadline-utils";
 import {
@@ -66,7 +67,10 @@ export default function DashboardPage() {
 
   // Extract data from combined dashboard response
   const sidebarStatsData = dashboardData?.sidebarStats;
-  const allWorklogs = dashboardData?.worklogs || [];
+  const allWorklogs = useMemo(
+    () => dashboardData?.worklogs || [],
+    [dashboardData?.worklogs],
+  );
 
   // Memoize team data to prevent useMemo dependency issues
   const memberTeams = useMemo(
@@ -172,21 +176,21 @@ export default function DashboardPage() {
       id: "dashboard",
       label: "Dashboard",
       href: "/home",
-      icon: <FaHome />,
+      icon: <Home />,
       count: null,
     },
     {
       id: "member",
       label: "My Teams",
       href: "/teams/member",
-      icon: <FaUsers />,
+      icon: <Users />,
       count: sidebarStatsData?.memberTeamsCount ?? 0,
     },
     {
       id: "lead",
       label: "Teams I Lead",
       href: "/teams/lead",
-      icon: <FaUserTie />,
+      icon: <UserCog />,
       count: sidebarStatsData?.leadTeamsCount ?? 0,
       reviewCount: sidebarStatsData?.pendingReviewsCount ?? 0,
     },
@@ -194,7 +198,7 @@ export default function DashboardPage() {
       id: "orgs",
       label: "My Organizations",
       href: "/teams/organisations",
-      icon: <FaUsers />,
+      icon: <Users />,
       count: sidebarStatsData?.organizationsCount ?? 0,
     },
   ];
@@ -263,7 +267,7 @@ export default function DashboardPage() {
             aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
             aria-expanded={isSidebarOpen}
           >
-            <FaBars />
+            <Menu />
           </Button>
           <h1
             className={`${lobster.className} text-2xl font-bold text-white tracking-tight`}
@@ -271,7 +275,7 @@ export default function DashboardPage() {
             Worklog
           </h1>
           <div className="flex items-center gap-2 bg-white/10 px-2.5 py-1.5 rounded-lg w-70">
-            <FaSearch />
+            <Search />
             <input
               className="bg-transparent border-none outline-none text-white placeholder-white/70 w-full"
               placeholder="Search teams & worklogs..."
@@ -325,7 +329,7 @@ export default function DashboardPage() {
             onClick={() => signOut({ callbackUrl: "/" })}
             aria-label="Sign out of account"
           >
-            <FaSignOutAlt className="mr-2" />
+            <LogOut className="mr-2" />
             Sign Out
           </Button>
         </div>
@@ -334,7 +338,7 @@ export default function DashboardPage() {
       <div className="flex gap-4 flex-1 mt-3 w-full">
         <AnimatePresence>
           {isMobile && isSidebarOpen && (
-            <motion.div
+            <m.div
               className="fixed inset-0 bg-black/60 z-90"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -345,7 +349,7 @@ export default function DashboardPage() {
           )}
         </AnimatePresence>
 
-        <motion.aside
+        <m.aside
           className={sidebarClassName}
           aria-label="Main navigation"
           aria-expanded={isSidebarOpen}
@@ -370,7 +374,7 @@ export default function DashboardPage() {
                   isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
                 }
               >
-                {isSidebarCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
+                {isSidebarCollapsed ? <ChevronRight /> : <ChevronLeft />}
               </Button>
             )}
           </div>
@@ -430,7 +434,7 @@ export default function DashboardPage() {
 
             {isLoading && (
               <div className="p-2.5 rounded-xl flex gap-2 opacity-60">
-                <FaUsers /> {showSidebarLabels ? "Loading..." : "..."}
+                <Users /> {showSidebarLabels ? "Loading..." : "..."}
               </div>
             )}
 
@@ -438,11 +442,11 @@ export default function DashboardPage() {
               sidebarStatsData?.memberTeamsCount === 0 &&
               sidebarStatsData?.organizationsCount === 0 && (
                 <div className="p-2.5 rounded-xl flex gap-2 opacity-60">
-                  <FaUsers /> {showSidebarLabels ? "No teams yet" : "0"}
+                  <Users /> {showSidebarLabels ? "No teams yet" : "0"}
                 </div>
               )}
           </div>
-        </motion.aside>
+        </m.aside>
 
         <main className="flex-1 flex flex-col gap-4 overflow-hidden">
           {/* ── Hero Section ─────────────────────────────────── */}
@@ -545,7 +549,7 @@ export default function DashboardPage() {
                     ? `No teams matched "${searchQuery}". Try different keywords.`
                     : "Create or join a team to start collaborating and tracking your worklogs"
                 }
-                icon={<FaUsers className="h-8 w-8" />}
+                icon={<Users className="h-8 w-8" />}
                 action={
                   hasTeamQuery
                     ? {
@@ -707,7 +711,7 @@ export default function DashboardPage() {
                     aria-label="Grid view"
                     aria-pressed={worklogViewMode === "grid"}
                   >
-                    <FaTh className="h-3 w-3" />
+                    <LayoutGrid className="h-3 w-3" />
                   </button>
                   <button
                     className={`p-1.5 text-xs transition-colors ${
@@ -719,7 +723,7 @@ export default function DashboardPage() {
                     aria-label="Table view"
                     aria-pressed={worklogViewMode === "table"}
                   >
-                    <FaList className="h-3 w-3" />
+                    <LayoutList className="h-3 w-3" />
                   </button>
                 </div>
               </div>

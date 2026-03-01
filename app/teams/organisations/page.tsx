@@ -2,13 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import {
-  FaBuilding,
-  FaUsers,
-  FaPlus,
-  FaArrowRight,
-  FaSearch,
-} from "react-icons/fa";
+import { Building2, Users, Plus, ArrowRight, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LoadingState } from "@/components/states/loading-state";
 import { ErrorState } from "@/components/states/error-state";
@@ -101,7 +95,7 @@ export default function OrganisationsPage() {
           </div>
           <Link href="/organizations/create">
             <Button variant="primary" size="lg">
-              <FaPlus className="h-4 w-4" />
+              <Plus className="h-4 w-4" />
               Create Organization
             </Button>
           </Link>
@@ -111,7 +105,7 @@ export default function OrganisationsPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10 shadow-lg shadow-black/20">
             <div className="flex items-center gap-3">
-              <FaBuilding className="h-8 w-8 text-blue-400" />
+              <Building2 className="h-8 w-8 text-blue-400" />
               <div>
                 <p className="text-2xl font-bold text-white">
                   {organizations.length}
@@ -122,7 +116,7 @@ export default function OrganisationsPage() {
           </div>
           <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10 shadow-lg shadow-black/20">
             <div className="flex items-center gap-3">
-              <FaUsers className="h-8 w-8 text-green-400" />
+              <Users className="h-8 w-8 text-green-400" />
               <div>
                 <p className="text-2xl font-bold text-white">
                   {organizations.reduce(
@@ -161,7 +155,7 @@ export default function OrganisationsPage() {
           <EmptyState
             title="Start building your organization"
             description="Create an organization to group your teams and manage them at scale"
-            icon={<FaBuilding className="h-8 w-8" />}
+            icon={<Building2 className="h-8 w-8" />}
             action={{
               label: "Create Organization",
               onClick: () => (window.location.href = "/organizations/create"),
@@ -171,7 +165,7 @@ export default function OrganisationsPage() {
           <EmptyState
             title="No matching organizations"
             description={`No organizations matched "${searchQuery}". Try different keywords.`}
-            icon={<FaSearch className="h-8 w-8" />}
+            icon={<Search className="h-8 w-8" />}
             action={{ label: "Clear Filters", onClick: handleFilterReset }}
           />
         ) : (
@@ -187,11 +181,11 @@ export default function OrganisationsPage() {
                   subtitle={org.description || undefined}
                   avatar={
                     <div className="p-3 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500">
-                      <FaBuilding className="h-6 w-6 text-white" />
+                      <Building2 className="h-6 w-6 text-white" />
                     </div>
                   }
                   actions={
-                    <FaArrowRight className="h-5 w-5 text-muted group-hover:text-white transition-colors" />
+                    <ArrowRight className="h-5 w-5 text-muted group-hover:text-white transition-colors" />
                   }
                   stats={[{ label: "Teams", value: org._count?.teams || 0 }]}
                   className="backdrop-blur-md shadow-lg shadow-black/20 hover:-translate-y-1 group"

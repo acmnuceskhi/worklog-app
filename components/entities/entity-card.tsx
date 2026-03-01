@@ -71,6 +71,19 @@ export const EntityCard: React.FC<EntityCardProps> = ({
       className,
     )}
     onClick={onClick}
+    {...(onClick
+      ? {
+          role: "button" as const,
+          tabIndex: 0,
+          "aria-label": title,
+          onKeyDown: (e: React.KeyboardEvent) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onClick();
+            }
+          },
+        }
+      : {})}
   >
     <CardHeader className="pb-3">
       <div className="flex items-start justify-between">

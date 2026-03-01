@@ -13,15 +13,15 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  FaBold,
-  FaItalic,
-  FaListUl,
-  FaListOl,
-  FaLink,
-  FaUnlink,
-  FaUndo,
-  FaRedo,
-} from "react-icons/fa";
+  Bold,
+  Italic,
+  List,
+  ListOrdered,
+  Link,
+  Unlink,
+  Undo2,
+  Redo2,
+} from "lucide-react";
 import { toast } from "sonner";
 
 interface RichTextEditorProps {
@@ -375,7 +375,7 @@ export function RichTextEditor({
               aria-label="Undo"
               title="Undo (Ctrl+Z)"
             >
-              <FaUndo className="h-3 w-3" />
+              <Undo2 className="h-3 w-3" />
             </Button>
             <Button
               type="button"
@@ -387,7 +387,7 @@ export function RichTextEditor({
               aria-label="Redo"
               title="Redo (Ctrl+Y)"
             >
-              <FaRedo className="h-3 w-3" />
+              <Redo2 className="h-3 w-3" />
             </Button>
           </div>
 
@@ -410,7 +410,7 @@ export function RichTextEditor({
               title="Bold (Ctrl+B)"
               aria-pressed={editor.isActive("bold")}
             >
-              <FaBold className="h-3 w-3" />
+              <Bold className="h-3 w-3" />
             </Button>
             <Button
               type="button"
@@ -427,7 +427,7 @@ export function RichTextEditor({
               title="Italic (Ctrl+I)"
               aria-pressed={editor.isActive("italic")}
             >
-              <FaItalic className="h-3 w-3" />
+              <Italic className="h-3 w-3" />
             </Button>
           </div>
 
@@ -449,7 +449,7 @@ export function RichTextEditor({
               aria-label="Toggle bullet list"
               aria-pressed={editor.isActive("bulletList")}
             >
-              <FaListUl className="h-3 w-3" />
+              <List className="h-3 w-3" />
             </Button>
             <Button
               type="button"
@@ -465,7 +465,7 @@ export function RichTextEditor({
               aria-label="Toggle ordered list"
               aria-pressed={editor.isActive("orderedList")}
             >
-              <FaListOl className="h-3 w-3" />
+              <ListOrdered className="h-3 w-3" />
             </Button>
           </div>
 
@@ -506,7 +506,7 @@ export function RichTextEditor({
                 ) && editor.isActive("link")
               }
             >
-              <FaLink className="h-3 w-3" />
+              <Link className="h-3 w-3" />
             </Button>
             <Button
               type="button"
@@ -530,7 +530,7 @@ export function RichTextEditor({
                   : "Remove link (requires @tiptap/extension-link)"
               }
             >
-              <FaUnlink className="h-3 w-3" />
+              <Unlink className="h-3 w-3" />
             </Button>
           </div>
         </div>
@@ -576,7 +576,7 @@ export function RichTextEditor({
         <DialogContent className="bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-xl border border-amber-500/20 shadow-2xl shadow-amber-500/10">
           <DialogHeader>
             <DialogTitle className="text-amber-100 text-lg font-semibold flex items-center gap-2">
-              <FaLink className="h-5 w-5 text-cyan-400" />
+              <Link className="h-5 w-5 text-cyan-400" />
               Add Link
             </DialogTitle>
           </DialogHeader>
@@ -628,7 +628,7 @@ export function RichTextEditor({
               disabled={!linkUrl.trim()}
               className="bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white shadow-lg shadow-amber-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
             >
-              <FaLink className="h-4 w-4 mr-2" />
+              <Link className="h-4 w-4 mr-2" />
               Add Link
             </Button>
           </DialogFooter>

@@ -3,7 +3,7 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { FaPlus } from "react-icons/fa";
+import { Plus } from "lucide-react";
 
 /* ──────────────────────────────────────────────────────────────────
  * EmptyState
@@ -69,7 +69,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         onClick={action.onClick}
         aria-label={action.label}
       >
-        <FaPlus className="mr-2" />
+        <Plus className="mr-2" />
         {action.label}
       </Button>
     )}

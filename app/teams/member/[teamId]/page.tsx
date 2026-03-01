@@ -13,7 +13,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { FaCheck, FaEdit, FaTimes, FaSpinner } from "react-icons/fa";
+import { Check, Pencil, X, Loader2 } from "lucide-react";
 import { ErrorState } from "@/components/states/error-state";
 import { FormField } from "@/components/forms/form-field";
 import {
@@ -39,7 +39,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { DatePicker } from "@/components/ui/date-picker";
-import { RichTextEditor } from "@/components/worklog/rich-text-editor";
+import dynamic from "next/dynamic";
+
+const RichTextEditor = dynamic(
+  () =>
+    import("@/components/worklog/rich-text-editor").then(
+      (mod) => mod.RichTextEditor,
+    ),
+  {
+    loading: () => (
+      <div className="h-48 bg-white/5 border border-white/20 rounded-md animate-pulse" />
+    ),
+    ssr: false,
+  },
+);
 import { DeadlineStatusBadge } from "@/components/worklog/deadline-status-badge";
 import { DeadlineCountdown } from "@/components/worklog/deadline-countdown";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -740,6 +753,7 @@ function ContributionFlashcardPageContent({
 
               <FormField
                 label="Description"
+                htmlFor="worklog-description"
                 error={errors.description?.message}
               >
                 <RichTextEditor
@@ -768,7 +782,7 @@ function ContributionFlashcardPageContent({
                 />
               </FormField>
 
-              <FormField label="Current Progress">
+              <FormField label="Current Progress" htmlFor="progress-status">
                 <Select
                   value={watch("progressStatus") || "STARTED"}
                   onValueChange={(value) =>
@@ -778,7 +792,10 @@ function ContributionFlashcardPageContent({
                     )
                   }
                 >
-                  <SelectTrigger className="bg-white/5 border-white/20 text-white">
+                  <SelectTrigger
+                    id="progress-status"
+                    className="bg-white/5 border-white/20 text-white"
+                  >
                     <SelectValue placeholder="Select your progress" />
                   </SelectTrigger>
                   <SelectContent className="bg-[var(--panel-strong)] border-white/10">
@@ -798,9 +815,11 @@ function ContributionFlashcardPageContent({
               {canSetDeadline && (
                 <FormField
                   label="Deadline (leaders only)"
+                  htmlFor="worklog-deadline"
                   error={errors.deadline?.message}
                 >
                   <DatePicker
+                    id="worklog-deadline"
                     value={
                       watch("deadline")
                         ? new Date(String(watch("deadline")))
@@ -924,7 +943,7 @@ function ContributionFlashcardPageContent({
               >
                 {isSubmitting || isUploading ? (
                   <>
-                    <FaSpinner className="mr-2 animate-spin" />
+                    <Loader2 className="mr-2 animate-spin" />
                     Submitting...
                   </>
                 ) : (
@@ -1065,7 +1084,7 @@ function ContributionFlashcardPageContent({
                           }
                           aria-label={`Edit deadline for ${worklog.title}`}
                         >
-                          <FaEdit className="mr-2" />
+                          <Pencil className="mr-2" />
                           Edit deadline
                         </Button>
                       )}
@@ -1146,7 +1165,7 @@ function ContributionFlashcardPageContent({
                   onClick={() => setEditingWorklog(null)}
                   aria-label="Cancel deadline edit"
                 >
-                  <FaTimes className="mr-2" />
+                  <X className="mr-2" />
                   Cancel
                 </Button>
                 <Button
@@ -1155,7 +1174,7 @@ function ContributionFlashcardPageContent({
                   onClick={handleDeadlineUpdate}
                   aria-label="Save deadline"
                 >
-                  <FaCheck className="mr-2" />
+                  <Check className="mr-2" />
                   Save deadline
                 </Button>
               </div>

@@ -59,16 +59,6 @@ export async function POST(
       );
     }
 
-    // Check if user is organization owner
-    const isOrgOwner = await isOrganizationOwner(
-      user.id,
-      worklog.team.organizationId,
-    );
-
-    if (!isOrgOwner) {
-      return forbidden("Only organization owners can rate worklogs");
-    }
-
     // Check if worklog is in REVIEWED or GRADED status
     if (!["REVIEWED", "GRADED"].includes(worklog.progressStatus)) {
       return badRequest(
@@ -76,15 +66,22 @@ export async function POST(
       );
     }
 
-    // Check if user already rated this worklog
-    const existingRating = await prisma.rating.findUnique({
-      where: {
-        worklogId_raterId: {
-          worklogId,
-          raterId: user.id,
+    // Parallel: check org ownership + existing rating simultaneously
+    const [isOrgOwner, existingRating] = await Promise.all([
+      isOrganizationOwner(user.id, worklog.team.organizationId),
+      prisma.rating.findUnique({
+        where: {
+          worklogId_raterId: {
+            worklogId,
+            raterId: user.id,
+          },
         },
-      },
-    });
+      }),
+    ]);
+
+    if (!isOrgOwner) {
+      return forbidden("Only organization owners can rate worklogs");
+    }
 
     if (existingRating) {
       return badRequest("You have already rated this worklog");

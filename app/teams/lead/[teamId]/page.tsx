@@ -133,7 +133,10 @@ function TeamDetailsContent({
   const { data: team, isLoading, error, refetch } = useTeam(teamId);
   const { data: paginatedWorklogs, isLoading: worklogsLoading } =
     useTeamWorklogs(teamId);
-  const worklogs = paginatedWorklogs?.items ?? [];
+  const worklogs = useMemo(
+    () => paginatedWorklogs?.items ?? [],
+    [paginatedWorklogs?.items],
+  );
 
   /* ── Mutations ───────────────────────────────────────────────────────── */
   const removeMemberMutation = useRemoveTeamMember(teamId);

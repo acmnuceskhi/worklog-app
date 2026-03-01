@@ -49,10 +49,12 @@ export async function PATCH(
       return notFound("Worklog not found");
     }
 
-    const isOwner = await isTeamOwner(user.id, worklog.teamId);
-    const isOrgOwner = worklog.team.organizationId
-      ? await isOrganizationOwner(user.id, worklog.team.organizationId)
-      : false;
+    const [isOwner, isOrgOwner] = await Promise.all([
+      isTeamOwner(user.id, worklog.teamId),
+      worklog.team.organizationId
+        ? isOrganizationOwner(user.id, worklog.team.organizationId)
+        : Promise.resolve(false),
+    ]);
 
     if (!isOwner && !isOrgOwner) {
       return forbidden("Only team or organization owners can edit deadlines");
@@ -115,10 +117,12 @@ export async function DELETE(
     // 2. Team owner can delete worklogs in their teams
     // 3. Organization owner can delete worklogs in their organizations
     const isWorklogOwner = worklog.userId === user.id;
-    const userIsTeamOwner = await isTeamOwner(user.id, worklog.teamId);
-    const isOrgOwner = worklog.team.organizationId
-      ? await isOrganizationOwner(user.id, worklog.team.organizationId)
-      : false;
+    const [userIsTeamOwner, isOrgOwner] = await Promise.all([
+      isTeamOwner(user.id, worklog.teamId),
+      worklog.team.organizationId
+        ? isOrganizationOwner(user.id, worklog.team.organizationId)
+        : Promise.resolve(false),
+    ]);
 
     if (!isWorklogOwner && !userIsTeamOwner && !isOrgOwner) {
       return forbidden("You don't have permission to delete this worklog");

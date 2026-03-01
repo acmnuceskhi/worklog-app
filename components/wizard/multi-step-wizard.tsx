@@ -1,15 +1,9 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import {
-  FaCheck,
-  FaChevronLeft,
-  FaChevronRight,
-  FaTimes,
-  FaSpinner,
-} from "react-icons/fa";
+import { Check, ChevronLeft, ChevronRight, X, Loader2 } from "lucide-react";
 
 export interface WizardStepProps {
   data: Record<string, unknown>;
@@ -225,7 +219,7 @@ export const MultiStepWizard: React.FC<MultiStepWizardProps> = ({
                     aria-current={isCurrent ? "step" : undefined}
                   >
                     {isCompleted ? (
-                      <FaCheck aria-label="Completed" />
+                      <Check aria-label="Completed" />
                     ) : (
                       <span aria-label={`Step ${index + 1}`}>{index + 1}</span>
                     )}
@@ -264,7 +258,7 @@ export const MultiStepWizard: React.FC<MultiStepWizardProps> = ({
       {/* Step Content */}
       <div className="wizard-content min-h-[300px] md:min-h-[400px] relative overflow-hidden">
         <AnimatePresence mode="wait" custom={direction}>
-          <motion.div
+          <m.div
             key={currentStep.id}
             custom={direction}
             variants={slideVariants}
@@ -282,7 +276,7 @@ export const MultiStepWizard: React.FC<MultiStepWizardProps> = ({
               updateData={updateFormData}
               onNext={handleNext}
             />
-          </motion.div>
+          </m.div>
         </AnimatePresence>
       </div>
 
@@ -298,7 +292,7 @@ export const MultiStepWizard: React.FC<MultiStepWizardProps> = ({
               aria-label="Cancel wizard"
               className="w-full sm:w-auto"
             >
-              <FaTimes className="mr-2" />
+              <X className="mr-2" />
               Cancel
             </Button>
           )}
@@ -313,7 +307,7 @@ export const MultiStepWizard: React.FC<MultiStepWizardProps> = ({
               aria-label="Go to previous step"
               className="w-full sm:w-auto"
             >
-              <FaChevronLeft className="mr-2" />
+              <ChevronLeft className="mr-2" />
               Back
             </Button>
           )}
@@ -327,18 +321,18 @@ export const MultiStepWizard: React.FC<MultiStepWizardProps> = ({
           >
             {isSubmitting ? (
               <>
-                <FaSpinner className="mr-2 animate-spin" />
+                <Loader2 className="mr-2 animate-spin" />
                 Submitting...
               </>
             ) : isLastStep ? (
               <>
-                <FaCheck className="mr-2" />
+                <Check className="mr-2" />
                 Complete
               </>
             ) : (
               <>
                 Next
-                <FaChevronRight className="ml-2" />
+                <ChevronRight className="ml-2" />
               </>
             )}
           </Button>

@@ -1,14 +1,8 @@
 "use client";
 
 import React from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  FaUserPlus,
-  FaCheck,
-  FaTimes,
-  FaClock,
-  FaBuilding,
-} from "react-icons/fa";
+import { m, AnimatePresence } from "framer-motion";
+import { UserPlus, Check, X, Clock, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -60,7 +54,7 @@ function InvitationCard({
   });
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20, scale: 0.95 }}
@@ -76,7 +70,7 @@ function InvitationCard({
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
-                <FaUserPlus className="w-4 h-4 text-white" />
+                <UserPlus className="w-4 h-4 text-white" />
               </div>
               <div className="flex-1 min-w-0">
                 <CardTitle className="text-sm font-semibold text-white truncate">
@@ -87,7 +81,7 @@ function InvitationCard({
                     variant="secondary"
                     className="text-xs bg-slate-700/50 text-slate-300 border-slate-600/50"
                   >
-                    <FaClock className="w-3 h-3 mr-1" />
+                    <Clock className="w-3 h-3 mr-1" />
                     {timeAgo}
                   </Badge>
                 </div>
@@ -105,7 +99,7 @@ function InvitationCard({
               )}
               {invitation.team.organization && (
                 <div className="flex items-center gap-1 text-slate-500">
-                  <FaBuilding className="w-3 h-3" />
+                  <Building2 className="w-3 h-3" />
                   <span className="truncate">
                     {invitation.team.organization.name}
                   </span>
@@ -133,7 +127,7 @@ function InvitationCard({
                 aria-label={`Accept invitation to ${invitation.team.name}`}
               >
                 {isAccepting ? (
-                  <motion.div
+                  <m.div
                     animate={{ rotate: 360 }}
                     transition={{
                       duration: 1,
@@ -141,11 +135,11 @@ function InvitationCard({
                       ease: "linear",
                     }}
                   >
-                    <FaCheck className="w-3 h-3" />
-                  </motion.div>
+                    <Check className="w-3 h-3" />
+                  </m.div>
                 ) : (
                   <>
-                    <FaCheck className="w-3 h-3 mr-1.5" />
+                    <Check className="w-3 h-3 mr-1.5" />
                     Accept
                   </>
                 )}
@@ -160,7 +154,7 @@ function InvitationCard({
                 aria-label={`Decline invitation to ${invitation.team.name}`}
               >
                 {isRejecting ? (
-                  <motion.div
+                  <m.div
                     animate={{ rotate: 360 }}
                     transition={{
                       duration: 1,
@@ -168,11 +162,11 @@ function InvitationCard({
                       ease: "linear",
                     }}
                   >
-                    <FaTimes className="w-3 h-3" />
-                  </motion.div>
+                    <X className="w-3 h-3" />
+                  </m.div>
                 ) : (
                   <>
-                    <FaTimes className="w-3 h-3 mr-1.5" />
+                    <X className="w-3 h-3 mr-1.5" />
                     Decline
                   </>
                 )}
@@ -181,7 +175,7 @@ function InvitationCard({
           </div>
         </CardContent>
       </Card>
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -232,7 +226,7 @@ export function InvitationsPanel() {
   }
 
   return (
-    <motion.aside
+    <m.aside
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
@@ -243,7 +237,7 @@ export function InvitationsPanel() {
         {/* Header */}
         <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-slate-800/60 to-slate-900/60 backdrop-blur-sm border border-slate-700/50">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
-            <FaUserPlus className="w-4 h-4 text-white" />
+            <UserPlus className="w-4 h-4 text-white" />
           </div>
           <div>
             <h3 className="text-sm font-semibold text-white">
@@ -260,7 +254,7 @@ export function InvitationsPanel() {
           <AnimatePresence mode="popLayout">
             {isLoading ? (
               // Loading skeleton
-              <motion.div
+              <m.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -285,10 +279,10 @@ export function InvitationsPanel() {
                     </CardContent>
                   </Card>
                 ))}
-              </motion.div>
+              </m.div>
             ) : error ? (
               // Error state
-              <motion.div
+              <m.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-center"
@@ -304,7 +298,7 @@ export function InvitationsPanel() {
                 >
                   Retry
                 </Button>
-              </motion.div>
+              </m.div>
             ) : (
               // Invitations
               invitations.map((invitation) => (
@@ -327,6 +321,6 @@ export function InvitationsPanel() {
           </AnimatePresence>
         </div>
       </div>
-    </motion.aside>
+    </m.aside>
   );
 }

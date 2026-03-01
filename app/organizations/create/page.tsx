@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useSafeBack } from "@/lib/hooks";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -18,7 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { FaBuilding, FaArrowLeft, FaUsers, FaUserTie } from "react-icons/fa";
+import { Building2, ArrowLeft, Users, UserCog } from "lucide-react";
 import { useCreateOrganization } from "@/lib/hooks";
 import { PageHeader } from "@/components/ui/page-header";
 
@@ -26,6 +27,7 @@ type OrganizationFormData = z.infer<typeof organizationCreateSchema>;
 
 export default function CreateOrganizationPage() {
   const router = useRouter();
+  const safeBack = useSafeBack("/teams/organisations");
   const createOrganization = useCreateOrganization();
 
   const {
@@ -61,18 +63,18 @@ export default function CreateOrganizationPage() {
           {
             label: "My Teams",
             href: "/teams/member",
-            icon: <FaUsers className="h-4 w-4" />,
+            icon: <Users className="h-4 w-4" />,
           },
           {
             label: "Teams I Lead",
             href: "/teams/lead",
-            icon: <FaUserTie className="h-4 w-4" />,
+            icon: <UserCog className="h-4 w-4" />,
           },
           {
             label: "My Organizations",
             href: "/teams/organisations",
             isActive: true,
-            icon: <FaBuilding className="h-4 w-4" />,
+            icon: <Building2 className="h-4 w-4" />,
           },
         ]}
         rightAction={
@@ -88,7 +90,7 @@ export default function CreateOrganizationPage() {
           <CardHeader className="space-y-1">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500">
-                <FaBuilding className="h-6 w-6 text-white" />
+                <Building2 className="h-6 w-6 text-white" />
               </div>
               <div>
                 <CardTitle className="text-2xl text-white">
@@ -144,9 +146,9 @@ export default function CreateOrganizationPage() {
                 type="button"
                 variant="outline"
                 className="flex-1 border-white/20 text-white/70 hover:bg-white/10 hover:text-white"
-                onClick={() => router.back()}
+                onClick={safeBack}
               >
-                <FaArrowLeft className="mr-2 h-4 w-4" />
+                <ArrowLeft className="mr-2 h-4 w-4" />
                 Cancel
               </Button>
               <Button type="submit" variant="primary" className="flex-1">

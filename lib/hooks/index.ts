@@ -105,3 +105,4 @@ export {
 // Client-side hooks (hydration-safe, useSyncExternalStore-based)
 export { useMounted } from "./use-mounted";
 export { useContentTheme } from "./use-content-theme";
+export { useSafeBack } from "./use-safe-back";

@@ -16,10 +16,20 @@
       "sourceType": "local",
       "computedHash": "e9b8f1d4a7c2e5f8b0d3a6c9f2e5b8d1a4c7f0e3b6d9a2c5f8e1b4a7c0d3e6"
     },
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "computedHash": "25872a21881a950edc3db1f3329664d60405d539660ce05b3265db2de06a7dfd"
+    },
     "frontend-design": {
       "source": "anthropic/frontend-design",
       "sourceType": "local",
       "computedHash": "c5f8a1b4e7d0c3f6a9e1b4d7c0f3a6e9d2c5f8b1e4a7d0c3f6a9e1b4c7d0f3"
+    },
+    "next-best-practices": {
+      "source": "vercel-labs/next-skills",
+      "sourceType": "github",
+      "computedHash": "c31ddd68ba5798a79a516c619b1e1fc4408cc4876ad600fefa4f5add4425719d"
     },
     "react-email": {
       "source": "resend/react-email",
@@ -36,10 +46,20 @@
       "sourceType": "local",
       "computedHash": "f0e3d6c9b2a5f8e1d4a7c0f3e6b9d2c5a8f1e4d7a0c3f6b9e2d5a8c1f4e7b0"
     },
+    "vercel-react-best-practices": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "computedHash": "61f8c307aa8ce0c4c52da8886d42e344dab83f76f9b5360cf8923b25fb1d67bb"
+    },
     "web-artifacts-builder": {
       "source": "anthropic/web-artifacts-builder",
       "sourceType": "local",
       "computedHash": "a1d4e7f0c3b6a9d2c5f8e1b4a7d0c3f6a9e2d5b8c1f4a7d0e3f6a9c2b5e8d1"
+    },
+    "web-design-guidelines": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "computedHash": "d8e7d3afe37dcc8a97b99ffb5afdb4d0919ae0092ea8b68f44eb201f035e33ac"
     },
     "webapp-testing": {
       "source": "anthropic/webapp-testing",

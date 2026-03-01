@@ -26,6 +26,8 @@ interface DatePickerProps {
   /** Latest selectable date */
   maxDate?: Date;
   className?: string;
+  /** HTML id – enables `<label htmlFor=…>` association */
+  id?: string;
 }
 
 export function DatePicker({
@@ -39,6 +41,7 @@ export function DatePicker({
   minDate,
   maxDate,
   className,
+  id,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -81,6 +84,7 @@ export function DatePicker({
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
+            id={id}
             variant="outline"
             disabled={disabled}
             data-empty={!value}

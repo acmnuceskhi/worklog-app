@@ -4,6 +4,7 @@ import { Session } from "next-auth";
 import { SessionProvider, useSession } from "next-auth/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { LazyMotion, domAnimation } from "framer-motion";
 import { ReactNode, useState, createContext, useContext } from "react";
 
 // Create a context to share session data across components without multiple useSession() calls
@@ -79,7 +80,9 @@ export function Providers({
     >
       <SessionWrapper>
         <QueryClientProvider client={queryClient}>
-          {children}
+          <LazyMotion features={domAnimation} strict>
+            {children}
+          </LazyMotion>
           {process.env.NODE_ENV === "development" && (
             <ReactQueryDevtools initialIsOpen={false} />
           )}

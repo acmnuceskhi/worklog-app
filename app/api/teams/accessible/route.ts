@@ -13,61 +13,60 @@ export async function GET() {
       return unauthorized();
     }
 
-    // Get owned teams
-    // OPTIMIZATION: Only fetch team metadata, remove expensive members include and _count
-    const ownedTeams = await prisma.team.findMany({
-      where: { ownerId: user.id },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        project: true,
-        credits: true,
-        ownerId: true, // Required to determine role
-        createdAt: true,
-        updatedAt: true,
-        organization: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-    });
-
-    // Get member teams
-    const teamMemberships = await prisma.teamMember.findMany({
-      where: {
-        userId: user.id,
-        status: "ACCEPTED",
-      },
-      select: {
-        team: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            project: true,
-            credits: true,
-            ownerId: true,
-            createdAt: true,
-            updatedAt: true,
-            owner: {
-              select: {
-                name: true,
-                email: true,
-              },
-            },
-            organization: {
-              select: {
-                id: true,
-                name: true,
-              },
+    // Parallel: fetch owned teams + member teams simultaneously
+    const [ownedTeams, teamMemberships] = await Promise.all([
+      prisma.team.findMany({
+        where: { ownerId: user.id },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          project: true,
+          credits: true,
+          ownerId: true, // Required to determine role
+          createdAt: true,
+          updatedAt: true,
+          organization: {
+            select: {
+              id: true,
+              name: true,
             },
           },
         },
-      },
-    });
+      }),
+      prisma.teamMember.findMany({
+        where: {
+          userId: user.id,
+          status: "ACCEPTED",
+        },
+        select: {
+          team: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              project: true,
+              credits: true,
+              ownerId: true,
+              createdAt: true,
+              updatedAt: true,
+              owner: {
+                select: {
+                  name: true,
+                  email: true,
+                },
+              },
+              organization: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+    ]);
 
     const memberTeams = teamMemberships.map((membership) => membership.team);
 

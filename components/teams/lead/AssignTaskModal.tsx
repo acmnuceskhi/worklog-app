@@ -113,12 +113,15 @@ export function AssignTaskModal({
             />
           </FormField>
 
-          <FormField label="Assign To" required>
+          <FormField label="Assign To" required htmlFor="assign-to">
             <Select
               value={form.assignedTo}
               onValueChange={(value) => update({ assignedTo: value })}
             >
-              <SelectTrigger className="bg-white/5 border-white/20 text-white">
+              <SelectTrigger
+                id="assign-to"
+                className="bg-white/5 border-white/20 text-white"
+              >
                 <SelectValue placeholder="Select member…" />
               </SelectTrigger>
               <SelectContent className="bg-[var(--panel-strong)] border-white/10">
@@ -136,8 +139,9 @@ export function AssignTaskModal({
             </Select>
           </FormField>
 
-          <FormField label="Deadline">
+          <FormField label="Deadline" htmlFor="assign-deadline">
             <DatePicker
+              id="assign-deadline"
               value={form.deadline ? new Date(form.deadline) : undefined}
               onChange={(date) =>
                 update({ deadline: date ? toLocalDateString(date) : "" })

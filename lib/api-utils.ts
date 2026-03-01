@@ -1,4 +1,39 @@
 import { NextResponse } from "next/server";
+import { headers } from "next/headers";
+import type { RateLimiter } from "@/lib/rate-limit";
+
+/**
+ * Extract a rate-limit identifier (IP) from the incoming request.
+ */
+export async function getRateLimitIdentifier(): Promise<string> {
+  const headersList = await headers();
+  const forwarded = headersList.get("x-forwarded-for");
+  return forwarded?.split(",")[0]?.trim() || "anonymous";
+}
+
+/**
+ * Check rate limit and return a 429 Response if exceeded, or null if allowed.
+ */
+export function checkRateLimit(
+  limiter: RateLimiter,
+  limit: number,
+  identifier: string,
+): Response | null {
+  const result = limiter.check(limit, identifier);
+  if (!result.success) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": "60",
+          "X-RateLimit-Remaining": "0",
+        },
+      },
+    );
+  }
+  return null;
+}
 
 /**
  * Helper to add cache headers to a Response object
@@ -48,7 +83,9 @@ export function handleApiError(error: unknown) {
   }
 
   if (error instanceof Error) {
-    return apiError(error.message, 500);
+    // Log full error server-side; never expose internals to client
+    console.error("Unhandled error:", error.message, error.stack);
+    return apiError("Internal server error", 500);
   }
 
   return apiError("Internal server error", 500);

@@ -4,12 +4,19 @@ import { emailService } from "@/lib/email/service";
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { validateRequest, teamInviteMultipleSchema } from "@/lib/validations";
+import { getRateLimitIdentifier, checkRateLimit } from "@/lib/api-utils";
+import { inviteLimiter } from "@/lib/rate-limit";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> },
 ) {
   try {
+    // Rate limiting — prevent email spam
+    const identifier = await getRateLimitIdentifier();
+    const rateLimitResponse = checkRateLimit(inviteLimiter, 10, identifier);
+    if (rateLimitResponse) return rateLimitResponse;
+
     // Get current session
     const session = await auth();
 
@@ -59,13 +66,20 @@ export async function POST(
     const results = [];
     const errors = [];
 
+    // Batch: look up all users at once instead of per-email sequential queries
+    const existingUsers = await prisma.user.findMany({
+      where: { email: { in: emails } },
+    });
+    const userByEmail = new Map(
+      existingUsers
+        .filter((u): u is typeof u & { email: string } => u.email !== null)
+        .map((u) => [u.email, u]),
+    );
+
     // Process each email invitation
     for (const email of emails) {
       try {
-        // Check if user already exists
-        const user = await prisma.user.findUnique({
-          where: { email },
-        });
+        const user = userByEmail.get(email) ?? null;
 
         // Generate secure token for invitation
         const token = randomBytes(32).toString("hex");
@@ -125,9 +139,10 @@ export async function POST(
           emailId: emailResult.emailId,
         });
       } catch (error) {
+        console.error(`Failed to invite ${email}:`, error);
         errors.push({
           email,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: "Failed to process invitation",
         });
       }
     }
