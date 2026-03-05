@@ -103,6 +103,7 @@ model TeamMember {
   status    MemberStatus @default(PENDING)
   invitedAt DateTime @default(now())
   joinedAt  DateTime?
+  expiresAt DateTime? @map("expires_at") // Invitation expiration (null = no expiry)
 
   team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
   user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -111,6 +112,7 @@ model TeamMember {
   @@unique([teamId, email])
   @@index([userId])
   @@index([status])
+  @@index([expiresAt]) // For efficient cleanup queries
   @@index([userId, status]) // Composite index for efficient filtering by both userId and status
   @@index([teamId, status]) // Optimize fetching team members by status
   @@map("team_members")
@@ -125,6 +127,7 @@ model OrganizationInvitation {
   status         MemberStatus @default(PENDING)
   invitedAt      DateTime @default(now())
   joinedAt       DateTime?
+  expiresAt      DateTime? @map("expires_at") // Invitation expiration (null = no expiry)
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user          User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -133,6 +136,7 @@ model OrganizationInvitation {
   @@unique([organizationId, email])
   @@index([userId])
   @@index([status])
+  @@index([expiresAt]) // For efficient cleanup queries
   @@index([userId, status])
   @@index([organizationId, status])
   @@map("organization_invitations")
@@ -142,6 +146,7 @@ enum MemberStatus {
   PENDING
   ACCEPTED
   REJECTED
+  EXPIRED
 }
 
 enum ProgressStatus {
@@ -228,7 +233,7 @@ model EmailLog {
   emailType       String    @map("email_type") // TEAM_INVITE, ORG_INVITE, WORKLOG_REVIEW, DEADLINE_REMINDER
   templateName    String    @map("template_name") // TeamInvitation, OrganizationInvitation, etc.
   resendMessageId String?   @unique @map("resend_message_id")
-  idempotencyKey  String?   @unique @map("idempotency_key")
+  idempotencyKey  String?   @map("idempotency_key")
   status          String    @default("QUEUED") // QUEUED, SENT, DELIVERED, BOUNCED, COMPLAINED, FAILED
   requestId       String    @unique @map("request_id")
   sentAt          DateTime? @map("sent_at")

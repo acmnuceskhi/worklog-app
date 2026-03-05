@@ -11,9 +11,10 @@ export interface TeamInvitation {
   teamId: string;
   userId?: string;
   email: string;
-  status: "PENDING" | "ACCEPTED" | "REJECTED";
+  status: "PENDING" | "ACCEPTED" | "REJECTED" | "EXPIRED";
   invitedAt: string;
   joinedAt?: string;
+  expiresAt?: string | null;
   team: {
     id: string;
     name: string;
@@ -79,6 +80,9 @@ export const useAcceptInvitation = () => {
         queryKey: queryKeys.teams.invitations(),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.teams.member() });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.user.sidebarStats(),
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() });
     },
   });
@@ -108,6 +112,9 @@ export const useRejectInvitation = () => {
       // Invalidate related queries
       queryClient.invalidateQueries({
         queryKey: queryKeys.teams.invitations(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.user.sidebarStats(),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() });
     },

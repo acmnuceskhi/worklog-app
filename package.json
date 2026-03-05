@@ -8,8 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "prettier": "prettier --write .",
-    "db:seed": "prisma db seed",
-    "test:oauth-bypass": "tsx scripts/test-oauth-bypass.ts"
+    "db:seed": "prisma db seed"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",

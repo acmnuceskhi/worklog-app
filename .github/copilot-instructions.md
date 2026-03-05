@@ -416,11 +416,10 @@ Use Resend Node.js SDK for team and organization invitations. Follow [Resend Nex
 ## Development Workflow
 
 - **Database Setup**: Run `npx prisma migrate dev` after schema changes
-- **Database Seeding**: Run `npm run db:seed` for initial data and `npm run db:seed:test-users` for test user creation
+- **Database Seeding**: Run `npm run db:seed` for initial data
 - **Client Generation**: Prisma client auto-generates to `app/generated/prisma/` on build/migrate
 - **Environment**: Requires `DATABASE_URL` in `.env` file
 - **Email Setup**: Configure email service for team invitations
-- **OAuth Testing**: Run `npm run test:oauth-bypass` for OAuth bypass testing
 - **Mock Data Development**: All data-fetching hooks include `process.env.NODE_ENV === "development"` guards that return mock data instantly without network calls (see lib/mock-data.ts for mock data structure)
 - **Linting and Formatting**: Use `npm run lint` for ESLint (with Next.js config) and `npx prettier --write .` for code formatting (Prettier integrated to avoid conflicts)
 

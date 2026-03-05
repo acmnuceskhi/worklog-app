@@ -14,6 +14,7 @@ export const teamInvitationEmailSchema = baseEmailSchema.extend({
   rejectUrl: z.string().url("Reject URL must be a valid URL"),
   expiresAt: z.date(),
   organizationName: z.string().optional(),
+  idempotencyToken: z.string().optional(), // Per-send token to prevent duplicate emails on re-invite
 });
 
 // Worklog review email validation
@@ -51,6 +52,7 @@ export const organizationInvitationEmailSchema = baseEmailSchema.extend({
   acceptUrl: z.string().url("Accept URL must be a valid URL"),
   rejectUrl: z.string().url("Reject URL must be a valid URL"),
   expiresAt: z.date(),
+  idempotencyToken: z.string().optional(), // Per-send token to prevent duplicate emails on re-invite
 });
 
 // Generic email validation for custom emails

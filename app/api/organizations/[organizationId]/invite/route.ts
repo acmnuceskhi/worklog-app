@@ -9,6 +9,10 @@ import {
 } from "@/lib/validations";
 import { getRateLimitIdentifier, checkRateLimit } from "@/lib/api-utils";
 import { inviteLimiter } from "@/lib/rate-limit";
+import {
+  isAllowedEmailDomain,
+  ALLOWED_EMAIL_DOMAINS,
+} from "@/lib/config/email-domains";
 
 export async function POST(
   request: NextRequest,
@@ -37,19 +41,19 @@ export async function POST(
     }
     const { emails } = validation.data;
 
-    // Validate email domains (university only) - COMMENTED OUT FOR TESTING
-    // const universityDomain = '@nu.edu.pk';
-    // const invalidEmails = emails.filter(email => !email.endsWith(universityDomain));
-
-    // if (invalidEmails.length > 0) {
-    //   return NextResponse.json(
-    //     {
-    //       error: 'All email addresses must be from the university domain (@nu.edu.pk)',
-    //       invalidEmails
-    //     },
-    //     { status: 400 }
-    //   );
-    // }
+    // Validate email domains (university only)
+    const invalidEmails = emails.filter(
+      (email) => !isAllowedEmailDomain(email),
+    );
+    if (invalidEmails.length > 0) {
+      return NextResponse.json(
+        {
+          error: `All email addresses must be from a university domain (${ALLOWED_EMAIL_DOMAINS.join(" or ")})`,
+          invalidEmails,
+        },
+        { status: 400 },
+      );
+    }
 
     // Check if user is the organization owner or an accepted co-owner
     const organization = await prisma.organization.findFirst({
@@ -73,7 +77,8 @@ export async function POST(
       );
     }
 
-    // Batch: look up all users + existing invitations at once
+    // Batch: look up all users + existing ACCEPTED invitations at once
+    // (Re-inviting a PENDING/EXPIRED/REJECTED email is valid — we upsert with a fresh token)
     const [allExistingUsers, allExistingInvitations] = await Promise.all([
       prisma.user.findMany({
         where: { email: { in: emails } },
@@ -82,7 +87,7 @@ export async function POST(
         where: {
           organizationId,
           email: { in: emails },
-          status: { in: ["PENDING", "ACCEPTED"] },
+          status: "ACCEPTED",
         },
       }),
     ]);
@@ -91,8 +96,8 @@ export async function POST(
         .filter((u): u is typeof u & { email: string } => u.email !== null)
         .map((u) => [u.email, u]),
     );
-    const invitationByEmail = new Map(
-      allExistingInvitations.map((inv) => [inv.email, inv]),
+    const acceptedByEmail = new Set(
+      allExistingInvitations.map((inv) => inv.email),
     );
 
     // Process each email invitation
@@ -111,19 +116,8 @@ export async function POST(
           continue;
         }
 
-        // Check if invitation already exists (PENDING or ACCEPTED)
-        const existingInvitation = invitationByEmail.get(email) ?? null;
-
-        if (existingInvitation?.status === "PENDING") {
-          results.push({
-            email,
-            status: "skipped",
-            reason: "Invitation already sent",
-          });
-          continue;
-        }
-
-        if (existingInvitation?.status === "ACCEPTED") {
+        // Skip only if already accepted (already a co-owner)
+        if (acceptedByEmail.has(email)) {
           results.push({
             email,
             status: "skipped",
@@ -134,21 +128,35 @@ export async function POST(
 
         // Generate secure token
         const token = randomBytes(32).toString("hex");
+        const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14 days for org invites
 
-        // Create invitation record
-        const invitation = await prisma.organizationInvitation.create({
-          data: {
+        // Upsert: creates new invitation or refreshes token on re-invite
+        const invitation = await prisma.organizationInvitation.upsert({
+          where: {
+            organizationId_email: { organizationId, email },
+          },
+          update: {
+            token,
+            status: "PENDING",
+            invitedAt: new Date(),
+            expiresAt,
+            userId: existingUser?.id ?? null,
+          },
+          create: {
             organizationId,
             userId: existingUser?.id,
             email,
             token,
             status: "PENDING",
+            expiresAt,
           },
         });
 
-        // Send invitation email
-        const acceptUrl = `${process.env.NEXTAUTH_URL}/api/invitations/${token}/accept`;
-        const rejectUrl = `${process.env.NEXTAUTH_URL}/api/invitations/${token}/reject`;
+        // Send invitation email — use env var with localhost fallback so URLs are
+        // never "undefined/..." if NEXTAUTH_URL is temporarily unset
+        const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+        const acceptUrl = `${baseUrl}/api/invitations/${token}/accept`;
+        const rejectUrl = `${baseUrl}/api/invitations/${token}/reject`;
 
         await emailService.sendOrganizationOwnerInvitation({
           recipientEmail: email,
@@ -156,7 +164,8 @@ export async function POST(
           inviterName: session.user.name || "Organization Owner",
           acceptUrl,
           rejectUrl,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+          expiresAt, // use already-computed expiry
+          idempotencyToken: token, // unique per send — prevents collision on re-invite
         });
 
         results.push({

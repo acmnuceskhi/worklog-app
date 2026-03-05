@@ -3,9 +3,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getRateLimitIdentifier, checkRateLimit } from "@/lib/api-utils";
 import { authLimiter } from "@/lib/rate-limit";
 
-export async function POST(
+type RouteContext = { params: Promise<{ token: string }> };
+
+// Shared handler used by both GET (email link click) and POST (programmatic)
+async function processRejectInvitation(
   request: NextRequest,
-  { params }: { params: Promise<{ token: string }> },
+  { params }: RouteContext,
 ) {
   try {
     // Rate limiting — public endpoint, strict limits
@@ -16,30 +19,34 @@ export async function POST(
     const { token } = await params;
 
     // Parallel: check both team + org invitations simultaneously
+    // Support both hex token (from email links) and CUID id (from frontend buttons)
     const [teamMember, organizationInvitation] = await Promise.all([
       prisma.teamMember.findFirst({
-        where: {
-          token,
-          status: "PENDING",
-        },
-        include: {
-          team: true,
-          user: true,
-        },
+        where: { OR: [{ token }, { id: token }] },
+        include: { team: true, user: true },
       }),
       prisma.organizationInvitation.findFirst({
-        where: {
-          token,
-          status: "PENDING",
-        },
-        include: {
-          organization: true,
-          user: true,
-        },
+        where: { OR: [{ token }, { id: token }] },
+        include: { organization: true, user: true },
       }),
     ]);
 
     if (teamMember) {
+      // Block if already accepted or already declined — no other states should stop a decline
+      if (teamMember.status === "ACCEPTED") {
+        return NextResponse.json(
+          { error: "Invitation is already accepted" },
+          { status: 400 },
+        );
+      }
+      if (teamMember.status === "REJECTED") {
+        return NextResponse.json(
+          { error: "Invitation is already declined" },
+          { status: 400 },
+        );
+      }
+      // PENDING and EXPIRED statuses can both be declined
+
       // Handle team member invitation rejection
       const updatedTeamMember = await prisma.teamMember.update({
         where: {
@@ -73,6 +80,21 @@ export async function POST(
     }
 
     if (organizationInvitation) {
+      // Block if already accepted or already declined — no other states should stop a decline
+      if (organizationInvitation.status === "ACCEPTED") {
+        return NextResponse.json(
+          { error: "Invitation is already accepted" },
+          { status: 400 },
+        );
+      }
+      if (organizationInvitation.status === "REJECTED") {
+        return NextResponse.json(
+          { error: "Invitation is already declined" },
+          { status: 400 },
+        );
+      }
+      // PENDING and EXPIRED statuses can both be declined
+
       // Handle organization invitation rejection
       const updatedInvitation = await prisma.organizationInvitation.update({
         where: {
@@ -117,4 +139,19 @@ export async function POST(
       { status: 500 },
     );
   }
+}
+
+// GET: handles clicks from email links (browsers issue GET for hyperlinks)
+// On success, redirect to /home so users see a proper page instead of raw JSON.
+export async function GET(request: NextRequest, context: RouteContext) {
+  const response = await processRejectInvitation(request, context);
+  if (response.status === 200) {
+    return NextResponse.redirect(new URL("/home", request.url));
+  }
+  return response;
+}
+
+// POST: programmatic use (fetch calls from client-side code)
+export async function POST(request: NextRequest, context: RouteContext) {
+  return processRejectInvitation(request, context);
 }

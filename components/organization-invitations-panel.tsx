@@ -111,34 +111,80 @@ export function OrganizationInvitationsPanel({
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to send invitations");
+        const errorMsg =
+          error.error || error.message || "Failed to send invitations";
+        const details =
+          error.invalidEmails?.length > 0
+            ? ` (${error.invalidEmails.join(", ")})`
+            : "";
+        throw new Error(errorMsg + details);
       }
 
       const result = await response.json();
 
-      if (result.success) {
+      const sentCount =
+        result.results?.filter((r: { status: string }) => r.status === "sent")
+          .length ?? 0;
+      const skippedCount =
+        result.results?.filter(
+          (r: { status: string }) => r.status === "skipped",
+        ).length ?? 0;
+      const failedCount =
+        result.results?.filter((r: { status: string }) => r.status === "failed")
+          .length ?? 0;
+
+      if (sentCount > 0 && failedCount === 0) {
         toast.success("Invitations Sent", {
-          description: `Successfully invited ${validEmails.length} team leader(s).`,
+          description:
+            skippedCount > 0
+              ? `${sentCount} invitation(s) sent. ${skippedCount} already accepted (skipped).`
+              : `Successfully invited ${sentCount} team leader(s).`,
           duration: 3000,
         });
         // Reset form
         setInviteEmails([""]);
         setSelectedOrgId("");
+      } else if (sentCount > 0 && failedCount > 0) {
+        toast.warning("Partial Success", {
+          description: `${sentCount} sent, ${failedCount} failed, ${skippedCount} skipped.`,
+          duration: 4000,
+        });
+        setInviteEmails([""]);
+        setSelectedOrgId("");
+      } else if (skippedCount > 0 && sentCount === 0) {
+        toast.info("Already Invited", {
+          description: `All ${skippedCount} email(s) are already co-owners or have accepted invitations.`,
+          duration: 3500,
+        });
       } else {
-        toast.info("Under Development", {
-          description: result.message || "This feature is under development.",
-          duration: 3000,
+        toast.error("Invitations Failed", {
+          description: result.message || "Failed to send invitations.",
+          duration: 4000,
         });
       }
     } catch (error) {
       console.error("Failed to send invitations:", error);
-      toast.error("Invitation Failed", {
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to send invitations. Please try again.",
-        duration: 3500,
-      });
+      const errorMsg =
+        error instanceof Error
+          ? error.message
+          : "Failed to send invitations. Please try again.";
+
+      // Check if this is a domain validation error
+      if (
+        errorMsg.includes("university domain") ||
+        errorMsg.includes("@nu.edu.pk") ||
+        errorMsg.includes("@isb.nu.edu.pk")
+      ) {
+        toast.error("Invalid Email Domain", {
+          description: errorMsg,
+          duration: 4500,
+        });
+      } else {
+        toast.error("Invitation Failed", {
+          description: errorMsg,
+          duration: 3500,
+        });
+      }
     } finally {
       setIsSending(false);
     }

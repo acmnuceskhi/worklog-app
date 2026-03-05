@@ -107,26 +107,63 @@ export function TeamLeaderInvitationsPanel({
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to send invitations");
+        const errorMsg =
+          error.error || error.message || "Failed to send invitations";
+        const details =
+          error.invalidEmails?.length > 0
+            ? ` (${error.invalidEmails.join(", ")})`
+            : "";
+        throw new Error(errorMsg + details);
       }
 
-      toast.success("Invitations Sent", {
-        description: `Successfully invited ${validEmails.length} member(s).`,
-        duration: 3000,
-      });
+      const result = await response.json();
+
+      const sentCount = result.results?.length ?? validEmails.length;
+      const failedCount = result.errors?.length ?? 0;
+
+      if (failedCount > 0 && sentCount === 0) {
+        toast.error("Invitations Failed", {
+          description: `Failed to send all ${failedCount} invitation(s). Check console for details.`,
+          duration: 4000,
+        });
+      } else if (failedCount > 0) {
+        toast.warning("Partial Success", {
+          description: `${sentCount} invitation(s) sent, ${failedCount} failed.`,
+          duration: 4000,
+        });
+      } else {
+        toast.success("Invitations Sent", {
+          description: `Successfully invited ${sentCount} member(s).`,
+          duration: 3000,
+        });
+      }
 
       // Reset form
       setInviteEmails([""]);
       setSelectedTeamId("");
     } catch (error) {
       console.error("Failed to send invitations:", error);
-      toast.error("Invitation Failed", {
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to send invitations. Please try again.",
-        duration: 3500,
-      });
+      const errorMsg =
+        error instanceof Error
+          ? error.message
+          : "Failed to send invitations. Please try again.";
+
+      // Check if this is a domain validation error
+      if (
+        errorMsg.includes("university domain") ||
+        errorMsg.includes("@nu.edu.pk") ||
+        errorMsg.includes("@isb.nu.edu.pk")
+      ) {
+        toast.error("Invalid Email Domain", {
+          description: errorMsg,
+          duration: 4500,
+        });
+      } else {
+        toast.error("Invitation Failed", {
+          description: errorMsg,
+          duration: 3500,
+        });
+      }
     } finally {
       setIsSending(false);
     }

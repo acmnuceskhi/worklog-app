@@ -84,7 +84,9 @@ export class EmailService {
 
   /** Sender address from env or sensible default */
   private getFromAddress(): string {
-    return process.env.EMAIL_FROM || "Worklog App <noreply@worklog-app.com>";
+    // EMAIL_FROM should be a monitored inbox — never noreply@ per deliverability best practices.
+    // Example: "Worklog App <hello@mail.worklog-app.com>"
+    return process.env.EMAIL_FROM || "Worklog App <hello@worklog-app.com>";
   }
 
   /** Whether the Resend API key is available */
@@ -227,7 +229,7 @@ export class EmailService {
       templateName: "TeamInvitation",
       idempotencyKey: generateIdempotencyKey(
         "TEAM_INVITE",
-        `${data.recipientEmail}-${data.teamName}`,
+        data.idempotencyToken ?? `${data.recipientEmail}-${data.teamName}`,
       ),
     });
   }
@@ -260,7 +262,8 @@ export class EmailService {
       templateName: "OrganizationInvitation",
       idempotencyKey: generateIdempotencyKey(
         "ORG_INVITE",
-        `${data.recipientEmail}-${data.organizationName}`,
+        data.idempotencyToken ??
+          `${data.recipientEmail}-${data.organizationName}`,
       ),
     });
   }
@@ -293,7 +296,8 @@ export class EmailService {
       templateName: "OrganizationOwnerInvitation",
       idempotencyKey: generateIdempotencyKey(
         "ORG_INVITE",
-        `owner-${data.recipientEmail}-${data.organizationName}`,
+        data.idempotencyToken ??
+          `owner-${data.recipientEmail}-${data.organizationName}`,
       ),
     });
   }

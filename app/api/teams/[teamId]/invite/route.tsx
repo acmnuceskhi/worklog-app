@@ -6,6 +6,10 @@ import { randomBytes } from "crypto";
 import { validateRequest, teamInviteMultipleSchema } from "@/lib/validations";
 import { getRateLimitIdentifier, checkRateLimit } from "@/lib/api-utils";
 import { inviteLimiter } from "@/lib/rate-limit";
+import {
+  isAllowedEmailDomain,
+  ALLOWED_EMAIL_DOMAINS,
+} from "@/lib/config/email-domains";
 
 export async function POST(
   request: NextRequest,
@@ -31,19 +35,19 @@ export async function POST(
     }
     const { emails } = validation.data;
 
-    // Validate email domains (university only) - COMMENTED OUT FOR TESTING
-    // const universityDomain = '@nu.edu.pk';
-    // const invalidEmails = emails.filter(email => !email.endsWith(universityDomain));
-
-    // if (invalidEmails.length > 0) {
-    //   return NextResponse.json(
-    //     {
-    //       error: 'All email addresses must be from the university domain (@nu.edu.pk)',
-    //       invalidEmails
-    //     },
-    //     { status: 400 }
-    //   );
-    // }
+    // Validate email domains (university only)
+    const invalidEmails = emails.filter(
+      (email) => !isAllowedEmailDomain(email),
+    );
+    if (invalidEmails.length > 0) {
+      return NextResponse.json(
+        {
+          error: `All email addresses must be from a university domain (${ALLOWED_EMAIL_DOMAINS.join(" or ")})`,
+          invalidEmails,
+        },
+        { status: 400 },
+      );
+    }
 
     // Check if user is the team owner
     const team = await prisma.team.findFirst({
@@ -83,6 +87,7 @@ export async function POST(
 
         // Generate secure token for invitation
         const token = randomBytes(32).toString("hex");
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
         // Create or update TeamMember record
         const teamMember = await prisma.teamMember.upsert({
@@ -96,6 +101,7 @@ export async function POST(
             status: "PENDING",
             invitedAt: new Date(),
             token, // Update token for re-invites
+            expiresAt, // Refresh expiry on re-invite
           },
           create: {
             teamId,
@@ -104,6 +110,7 @@ export async function POST(
             token,
             status: "PENDING",
             invitedAt: new Date(),
+            expiresAt,
           },
         });
 
@@ -118,10 +125,11 @@ export async function POST(
           inviterName: session.user.name || session.user.email || "Team Owner",
           acceptUrl,
           rejectUrl,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+          expiresAt, // use already-computed expiry
           recipientEmail: email,
           recipientName: user?.name ?? undefined,
           organizationName: team.organization?.name,
+          idempotencyToken: token, // unique per send — prevents collision on re-invite
         });
 
         if (!emailResult.success) {

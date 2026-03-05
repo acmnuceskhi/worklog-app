@@ -64,7 +64,5 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 - `npm run lint` - Run ESLint
 - `npm run prettier` - Format code with Prettier
 - `npm run db:seed` - Seed database with initial data
-- `npm run db:seed:test-users` - Seed database with test users
-- `npm run test:oauth-bypass` - Test OAuth bypass functionality
 - `npx prisma studio` - Open Prisma Studio (database GUI)
 - `npx prisma migrate dev` - Run database migrations
