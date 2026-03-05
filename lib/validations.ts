@@ -101,6 +101,12 @@ export const teamUpdateSchema = z.object({
     .string()
     .max(100, "Project name must be at most 100 characters")
     .optional(),
+  // null = explicitly remove org link; undefined = no change; string = set/change org
+  organizationId: z
+    .string()
+    .cuid("Invalid organization ID format")
+    .nullable()
+    .optional(),
 });
 
 export const teamInviteSchema = z.object({

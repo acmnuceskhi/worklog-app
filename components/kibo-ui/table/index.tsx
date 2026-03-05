@@ -64,6 +64,8 @@ export function TableProvider<TData, TValue>({
   // Note: TanStack Table's useReactTable returns functions that cannot be memoized.
   // This is a known React Compiler incompatibility and documented limitation:
   // https://github.com/TanStack/table/issues/4241
+  // React Compiler will skip memoizing this hook, which is safe for our usage.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,

@@ -16,6 +16,7 @@ import {
 import { BulkEmailInput } from "@/components/forms/bulk-email-input";
 import { Info, Users, Mail, CheckCircle2 } from "lucide-react";
 import type { WizardStepProps } from "@/components/wizard/multi-step-wizard";
+import { useOrganizations } from "@/lib/hooks/use-organizations";
 
 interface Organization {
   id: string;
@@ -158,33 +159,21 @@ export const TeamOrganizationStep: React.FC<WizardStepProps> = ({
   data,
   updateData,
 }) => {
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const teamData = data as TeamFormData;
 
-  useEffect(() => {
-    const fetchOrganizations = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch("/api/organizations");
-        if (!response.ok) {
-          throw new Error("Failed to fetch organizations");
-        }
-        const data = await response.json();
-        setOrganizations(data.organizations || []);
-      } catch (err) {
-        console.error("Error fetching organizations:", err);
-        setError(
-          "Failed to load organizations. You can continue without selecting one.",
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchOrganizations();
-  }, []);
+  // Use React Query to fetch organizations — automatically refetches when cache invalidates
+  const {
+    data: paginatedOrgs,
+    isLoading: loading,
+    error: queryError,
+  } = useOrganizations();
+  const organizations = (paginatedOrgs?.items ?? []) as Organization[];
+  const error =
+    queryError instanceof Error
+      ? queryError.message
+      : queryError
+        ? "Failed to load organizations"
+        : null;
 
   const handleOrganizationChange = (value: string) => {
     updateData({ organizationId: value === "none" ? null : value });
@@ -309,6 +298,16 @@ export const TeamMemberInvitationStep: React.FC<WizardStepProps> = ({
 // Step 4: Review and Confirm
 export const TeamReviewStep: React.FC<WizardStepProps> = ({ data }) => {
   const teamData = data as TeamFormData;
+
+  // Resolve the selected organization name from the React Query cache —
+  // the same data the OrganizationStep already fetched, so no extra network
+  // request is ever made here.
+  const { data: paginatedOrgs } = useOrganizations();
+  const organizations = (paginatedOrgs?.items ?? []) as Organization[];
+  const selectedOrg = teamData.organizationId
+    ? organizations.find((org) => org.id === teamData.organizationId)
+    : null;
+
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-3 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
@@ -358,7 +357,13 @@ export const TeamReviewStep: React.FC<WizardStepProps> = ({ data }) => {
                 Organization
               </dt>
               <dd className="text-base text-white mt-1">
-                {teamData.organizationId ? (
+                {selectedOrg ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                    <span aria-hidden="true">🏢</span>
+                    {selectedOrg.name}
+                  </span>
+                ) : teamData.organizationId ? (
+                  // organizationId set but orgs not yet loaded — show a safe fallback
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300">
                     Assigned to organization
                   </span>

@@ -4,7 +4,8 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Share_Tech_Mono } from "next/font/google"; // Techy font
 import { GoogleIcon } from "@/components/ui/brand-icons";
-import { GithubIcon } from "@/components/ui/brand-icons";
+// GitHub OAuth removed per requirements - Using Google OAuth (@nu.edu.pk only) instead
+// import { GithubIcon } from "@/components/ui/brand-icons";
 import { signIn } from "next-auth/react";
 import { useSharedSession } from "@/components/providers";
 import { Button } from "@/components/ui/button";
@@ -51,9 +52,10 @@ export default function Home() {
     signIn("google", { callbackUrl: "/home" });
   };
 
-  const handleGithubLogin = () => {
-    signIn("github", { callbackUrl: "/home" });
-  };
+  // GitHub OAuth removed per requirements
+  // const handleGithubLogin = () => {
+  //   signIn("github", { callbackUrl: "/home" });
+  // };
 
   // Prevent hydration mismatch by waiting for client mount
   if (!isMounted) {
@@ -143,14 +145,15 @@ export default function Home() {
               <GoogleIcon size={20} />
               Google
             </Button>
-            <Button
+            {/* GitHub OAuth removed per requirements - Using Google OAuth (@nu.edu.pk only) instead */}
+            {/* <Button
               onClick={handleGithubLogin}
               className={styles.socialButton}
               aria-label="Sign in with GitHub"
             >
               <GithubIcon size={20} />
               GitHub
-            </Button>
+            </Button> */}
           </div>
         </div>
       </div>

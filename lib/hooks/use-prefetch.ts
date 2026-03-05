@@ -8,8 +8,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import { DEFAULT_PAGE, DEFAULT_LIMIT } from "@/lib/types/pagination";
 
-const isDev = process.env.NODE_ENV === "development";
-
 /**
  * Prefetch teams data before navigating to teams page
  */
@@ -17,7 +15,6 @@ export const usePrefetchTeams = () => {
   const queryClient = useQueryClient();
 
   return useCallback(() => {
-    if (isDev) return; // Main hooks provide mock data instantly in dev
     queryClient.prefetchQuery({
       queryKey: queryKeys.teams.list(),
       queryFn: async () => {
@@ -37,7 +34,6 @@ export const usePrefetchOwnedTeams = () => {
   const queryClient = useQueryClient();
 
   return useCallback(() => {
-    if (isDev) return;
     queryClient.prefetchQuery({
       queryKey: queryKeys.teams.owned(DEFAULT_PAGE, DEFAULT_LIMIT),
       queryFn: async () => {
@@ -59,7 +55,6 @@ export const usePrefetchMemberTeams = () => {
   const queryClient = useQueryClient();
 
   return useCallback(() => {
-    if (isDev) return;
     queryClient.prefetchQuery({
       queryKey: queryKeys.teams.member(DEFAULT_PAGE, DEFAULT_LIMIT),
       queryFn: async () => {
@@ -81,7 +76,6 @@ export const usePrefetchOrganizations = () => {
   const queryClient = useQueryClient();
 
   return useCallback(() => {
-    if (isDev) return;
     const orgLimit = 50;
     queryClient.prefetchQuery({
       queryKey: queryKeys.organizations.list(DEFAULT_PAGE, orgLimit),
@@ -104,7 +98,7 @@ export const usePrefetchOrganization = (organizationId: string) => {
   const queryClient = useQueryClient();
 
   return useCallback(() => {
-    if (isDev || !organizationId) return;
+    if (!organizationId) return;
 
     queryClient.prefetchQuery({
       queryKey: queryKeys.organizations.detail(organizationId),
@@ -125,7 +119,7 @@ export const usePrefetchTeamWorklogs = (teamId: string) => {
   const queryClient = useQueryClient();
 
   return useCallback(() => {
-    if (isDev || !teamId) return;
+    if (!teamId) return;
 
     queryClient.prefetchQuery({
       queryKey: queryKeys.teams.worklogs(teamId, DEFAULT_PAGE, DEFAULT_LIMIT),
@@ -148,7 +142,7 @@ export const usePrefetchTeamMembers = (teamId: string) => {
   const queryClient = useQueryClient();
 
   return useCallback(() => {
-    if (isDev || !teamId) return;
+    if (!teamId) return;
 
     const membersLimit = 50;
     queryClient.prefetchQuery({
@@ -172,7 +166,6 @@ export const usePrefetchUserPermissions = () => {
   const queryClient = useQueryClient();
 
   return useCallback(() => {
-    if (isDev) return;
     queryClient.prefetchQuery({
       queryKey: queryKeys.user.permissions(),
       queryFn: async () => {
@@ -202,7 +195,6 @@ export const usePrefetchSidebarStats = () => {
   const queryClient = useQueryClient();
 
   return useCallback(() => {
-    if (isDev) return;
     queryClient.prefetchQuery({
       queryKey: queryKeys.user.sidebarStats(),
       queryFn: async () => {

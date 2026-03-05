@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+export const dynamic = "force-dynamic";
 import prisma from "@/lib/prisma";
 import {
   getCurrentUser,
@@ -10,15 +11,6 @@ import {
   badRequest,
 } from "@/lib/auth-utils";
 import { validateRequest, organizationUpdateSchema } from "@/lib/validations";
-import {
-  isDevelopment,
-  getMockOrganization,
-  mockTeams,
-  mockTeamMembers,
-  mockWorklogs,
-  mockRatings,
-  mockUsers,
-} from "@/lib/mock-data";
 
 /**
  * GET /api/organizations/[organizationId]
@@ -35,111 +27,6 @@ export async function GET(
 ) {
   try {
     const { organizationId } = await params;
-
-    // In development, return mock data
-    if (isDevelopment) {
-      const mockOrg = getMockOrganization(organizationId);
-      if (!mockOrg) {
-        return notFound("Organization not found");
-      }
-
-      // Get teams for this organization
-      const orgTeams = mockTeams.filter(
-        (t) => t.organizationId === organizationId,
-      );
-
-      // Get members across all organization teams
-      const orgMembers = mockTeamMembers.filter(
-        (m) =>
-          orgTeams.some((t) => t.id === m.teamId) && m.status === "ACCEPTED",
-      );
-
-      // Get worklogs for organization teams
-      const orgWorklogs = mockWorklogs.filter((w) =>
-        orgTeams.some((t) => t.id === w.teamId),
-      );
-
-      // Build the response data
-      const result = {
-        id: mockOrg.id,
-        name: mockOrg.name,
-        description: mockOrg.description,
-        credits: mockOrg.credits,
-        ownerId: mockOrg.ownerId,
-        createdAt: mockOrg.createdAt.toISOString(),
-        updatedAt: mockOrg.updatedAt.toISOString(),
-        owner: mockUsers.find((u) => u.id === mockOrg.ownerId)
-          ? {
-              id: mockOrg.ownerId,
-              name: mockUsers.find((u) => u.id === mockOrg.ownerId)?.name,
-              email: mockUsers.find((u) => u.id === mockOrg.ownerId)?.email,
-              image: mockUsers.find((u) => u.id === mockOrg.ownerId)?.image,
-            }
-          : null,
-        teams: orgTeams.map((team) => ({
-          id: team.id,
-          name: team.name,
-          description: team.description,
-          project: team.project,
-          credits: team.credits,
-          members: mockTeamMembers
-            .filter((m) => m.teamId === team.id && m.status === "ACCEPTED")
-            .map((m) => ({
-              id: m.id,
-              user: mockUsers.find((u) => u.id === m.userId)
-                ? {
-                    id: m.userId!,
-                    name: mockUsers.find((u) => u.id === m.userId)?.name,
-                    email: mockUsers.find((u) => u.id === m.userId)?.email,
-                    image: mockUsers.find((u) => u.id === m.userId)?.image,
-                  }
-                : null,
-            })),
-          worklogs: mockWorklogs
-            .filter((w) => w.teamId === team.id)
-            .map((w) => ({
-              id: w.id,
-              title: w.title,
-              description: w.description,
-              progressStatus: w.progressStatus,
-              createdAt: w.createdAt.toISOString(),
-              user: mockUsers.find((u) => u.id === w.userId)
-                ? {
-                    id: w.userId,
-                    name: mockUsers.find((u) => u.id === w.userId)?.name,
-                    image: mockUsers.find((u) => u.id === w.userId)?.image,
-                  }
-                : null,
-              ratings: mockRatings
-                .filter((r) => r.worklogId === w.id)
-                .map((r) => ({
-                  id: r.id,
-                  value: r.value,
-                  comment: r.comment,
-                  rater: mockUsers.find((u) => u.id === r.raterId)
-                    ? {
-                        id: r.raterId,
-                        name: mockUsers.find((u) => u.id === r.raterId)?.name,
-                      }
-                    : null,
-                })),
-            })),
-          _count: {
-            members: mockTeamMembers.filter(
-              (m) => m.teamId === team.id && m.status === "ACCEPTED",
-            ).length,
-            worklogs: mockWorklogs.filter((w) => w.teamId === team.id).length,
-          },
-        })),
-        stats: {
-          totalTeams: orgTeams.length,
-          totalMembers: orgMembers.length,
-          totalWorklogs: orgWorklogs.length,
-        },
-      };
-
-      return NextResponse.json({ data: result });
-    }
 
     const user = await getCurrentUser();
     if (!user) {
@@ -322,11 +209,16 @@ export async function GET(
       totalWorklogs: worklogs.length,
     };
 
-    return success({
-      ...organization,
-      teams: teamsWithDetails,
-      stats,
-    });
+    return NextResponse.json(
+      {
+        data: {
+          ...organization,
+          teams: teamsWithDetails,
+          stats,
+        },
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (error) {
     console.error("Get organization detail error:", error);
     return NextResponse.json(

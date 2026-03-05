@@ -53,19 +53,34 @@ export function Providers({
             staleTime: 5 * 60 * 1000,
             // Keep unused data in cache for 10 minutes
             gcTime: 10 * 60 * 1000,
-            // Retry failed requests 3 times, but not on 4xx errors
+            // Retry failed requests 3 times with exponential backoff
+            // Don't retry on 4xx errors (client errors)
+            retry: (failureCount, error) => {
+              // Don't retry on 4xx errors (client errors like 401, 403, 404)
+              if (error instanceof Error && error.message.includes("4")) {
+                return false;
+              }
+              // Retry up to 3 times for network/server errors
+              return failureCount < 3;
+            },
+            // Exponential backoff: 1s, 2s, 4s (max 30s)
+            retryDelay: (attemptIndex) =>
+              Math.min(1000 * 2 ** attemptIndex, 30000),
+            // Refetch on window focus for fresh data
+            refetchOnWindowFocus: false,
+            // Refetch on reconnect
+            refetchOnReconnect: true,
+          },
+          mutations: {
+            // Retry mutations once on failure (for network errors only)
             retry: (failureCount, error) => {
               if (error instanceof Error && error.message.includes("4")) {
                 return false; // Don't retry 4xx errors
               }
-              return failureCount < 3;
+              return failureCount < 1; // Retry once
             },
-            // Refetch on window focus for fresh data
-            refetchOnWindowFocus: false,
-          },
-          mutations: {
-            // Retry mutations once on failure
-            retry: 1,
+            retryDelay: (attemptIndex) =>
+              Math.min(1000 * 2 ** attemptIndex, 30000),
           },
         },
       }),

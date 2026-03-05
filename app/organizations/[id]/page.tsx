@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -33,27 +34,23 @@ import { EmptyState } from "@/components/states/empty-state";
 import { ErrorState } from "@/components/states/error-state";
 import { TeamCreationWizard } from "@/components/teams/team-creation-wizard";
 import { useDeleteWorklog, useTeamSearch } from "@/lib/hooks";
+import {
+  useOrganization as useOrgHook,
+  type OrganizationTeam,
+} from "@/lib/hooks/use-organizations";
+import { queryKeys } from "@/lib/query-keys";
 import { PageHeader } from "@/components/ui/page-header";
 import { OrganizationWorklogTable } from "@/components/tables";
-import type {
-  OrganizationWorklogRow,
-  ProgressStatus,
-} from "@/components/tables";
+import type { OrganizationWorklogRow } from "@/components/tables";
+import { type ProgressStatus } from "@/lib/hooks/use-worklogs";
 import { formatTableDate } from "@/lib/tables";
 import {
   TeamCardEnhanced,
+  type TeamCardEnhancedProps,
   OwnersRosterSection,
 } from "@/components/organizations";
 
-interface TeamMember {
-  id: string;
-  user: {
-    id: string;
-    name: string | null;
-    email: string | null;
-    image: string | null;
-  } | null;
-}
+// Unused interfaces removed
 
 interface Rating {
   id: string;
@@ -65,19 +62,7 @@ interface Rating {
   };
 }
 
-interface Worklog {
-  id: string;
-  title: string;
-  description: string;
-  progressStatus: ProgressStatus;
-  createdAt: string;
-  user: {
-    id: string;
-    name: string | null;
-    image: string | null;
-  };
-  ratings: Rating[];
-}
+// Unused Worklog interface removed
 
 interface WorklogListItem {
   id: string;
@@ -98,41 +83,9 @@ interface WorklogListItem {
   ratings: Rating[];
 }
 
-interface Team {
-  id: string;
-  name: string;
-  description: string | null;
-  project: string | null;
-  credits: number;
-  members: TeamMember[];
-  worklogs: Worklog[];
-  _count: {
-    members: number;
-    worklogs: number;
-  };
-}
+// Organization and OrganizationTeam types are imported from useOrgHook
 
-interface Organization {
-  id: string;
-  name: string;
-  description: string | null;
-  credits: number;
-  ownerId: string;
-  createdAt: string;
-  updatedAt: string;
-  owner: {
-    id: string;
-    name: string | null;
-    email: string | null;
-    image: string | null;
-  };
-  teams: Team[];
-  stats: {
-    totalTeams: number;
-    totalMembers: number;
-    totalWorklogs: number;
-  };
-}
+// Use Organization type from useOrgHook instead
 
 const DEFAULT_WORKLOG_FILTERS: WorklogFilterState = {
   search: "",
@@ -161,18 +114,12 @@ export default function OrganizationDashboardPage({
   params: Promise<{ id: string }>;
 }) {
   const { id: organizationId } = use(params);
+  // Standard hooks
   const router = useRouter();
-  const [organization, setOrganization] = useState<Organization | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  // Mutations
-  const deleteWorklogMutation = useDeleteWorklog();
-
-  // Create team modal state
+  // 1. Page State
   const [showCreateTeam, setShowCreateTeam] = useState(false);
-
-  // Rating modal state
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [selectedWorklog, setSelectedWorklog] = useState<{
     id: string;
@@ -184,14 +131,9 @@ export default function OrganizationDashboardPage({
       comment: string | null;
     } | null;
   } | null>(null);
-
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
 
-  const [worklogFilters, setWorklogFilters] = useState<WorklogFilterState>(
-    DEFAULT_WORKLOG_FILTERS,
-  );
-  const [sortBy, setSortBy] = useState<TeamSortBy>("name");
-  const [sortDir, setSortDir] = useState<TeamSortDir>("asc");
+  // 2. Worklog List State
   const [worklogs, setWorklogs] = useState<WorklogListItem[]>([]);
   const [worklogsLoading, setWorklogsLoading] = useState(false);
   const [worklogsError, setWorklogsError] = useState<string | null>(null);
@@ -199,27 +141,48 @@ export default function OrganizationDashboardPage({
   const [worklogTotal, setWorklogTotal] = useState(0);
   const worklogPageSize = 10;
 
+  // 3. Filters & Search State
+  const [worklogFilters, setWorklogFilters] = useState<WorklogFilterState>(
+    DEFAULT_WORKLOG_FILTERS,
+  );
+  const [sortBy, setSortBy] = useState<TeamSortBy>("name");
+  const [sortDir, setSortDir] = useState<TeamSortDir>("asc");
+  const [teamSearchQuery, setTeamSearchQuery] = useState("");
+
+  // 4. Data Hooks (tanstack query)
+  const {
+    data: organization,
+    isLoading: isOrgLoading,
+    error: orgError,
+  } = useOrgHook(organizationId);
+
+  const deleteWorklogMutation = useDeleteWorklog();
+
   const debouncedWorklogFilters = useDebouncedValue(worklogFilters, 300);
 
+  // Refetch critical data when page regains focus
+  useEffect(() => {
+    const handleFocus = () => {
+      queryClient.refetchQueries({
+        queryKey: queryKeys.organizations.detail(organizationId),
+      });
+      queryClient.refetchQueries({
+        queryKey: queryKeys.user.sidebarStats(),
+      });
+    };
+    if (typeof window === "undefined") return;
+
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [organizationId, queryClient]);
+
   const fetchOrganization = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const response = await fetch(`/api/organizations/${organizationId}`);
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to load organization");
-      }
-
-      setOrganization(result.data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [organizationId]);
+    // Eagerly refetch org detail to guarantee fresh data after mutations
+    // (ratings, settings, team creation, team linking/unlinking)
+    queryClient.refetchQueries({
+      queryKey: queryKeys.organizations.detail(organizationId),
+    });
+  }, [organizationId, queryClient]);
 
   const fetchWorklogs = useCallback(async () => {
     if (!organizationId) {
@@ -272,16 +235,18 @@ export default function OrganizationDashboardPage({
     } finally {
       setWorklogsLoading(false);
     }
-  }, [organizationId, debouncedWorklogFilters, worklogPage, worklogPageSize]);
+  }, [
+    organizationId,
+    debouncedWorklogFilters,
+    worklogPage,
+    worklogPageSize,
+    setWorklogs,
+  ]);
 
   const totalWorklogPages = Math.max(
     1,
     Math.ceil(worklogTotal / worklogPageSize),
   );
-
-  useEffect(() => {
-    fetchOrganization();
-  }, [organizationId, fetchOrganization]);
 
   useEffect(() => {
     fetchWorklogs();
@@ -299,7 +264,7 @@ export default function OrganizationDashboardPage({
   ) => {
     // The hook internally confirms, then deletes and invalidates cache
     toast.promise(
-      deleteWorklogMutation.mutateAsync({ worklogId, worklogTitle }),
+      deleteWorklogMutation.mutateAsync({ worklogId, title: worklogTitle }),
       {
         loading: `Deleting "${worklogTitle}"...`,
         success: () => {
@@ -319,26 +284,24 @@ export default function OrganizationDashboardPage({
   }, []);
 
   // Team search (consistent with lead/member pages)
-  const orgTeams = useMemo(
-    () => organization?.teams || [],
-    [organization?.teams],
-  );
+  // Search results
+  const { searchQuery: teamSearch, filteredTeams: searchedTeams } =
+    useTeamSearch<OrganizationTeam>({ teams: organization?.teams || [] });
 
-  const {
-    searchQuery: teamSearchQuery,
-    setSearchQuery: setTeamSearchQuery,
-    filteredTeams: searchedTeams,
-  } = useTeamSearch({ teams: orgTeams });
+  // Sync teamSearchQuery state with useTeamSearch
+  useEffect(() => {
+    setTeamSearchQuery(teamSearch);
+  }, [teamSearch]);
 
   const filteredTeams = useMemo(() => {
     const sorted = [...searchedTeams].sort((a, b) => {
       if (sortBy === "members") {
-        return a._count.members - b._count.members;
+        return (a._count?.members || 0) - (b._count?.members || 0);
       }
       if (sortBy === "worklogs") {
-        return a._count.worklogs - b._count.worklogs;
+        return (a._count?.worklogs || 0) - (b._count?.worklogs || 0);
       }
-      return a.name.localeCompare(b.name);
+      return (a.name || "").localeCompare(b.name || "");
     });
     return sortDir === "desc" ? sorted.reverse() : sorted;
   }, [searchedTeams, sortBy, sortDir]);
@@ -383,7 +346,7 @@ export default function OrganizationDashboardPage({
     setShowRatingModal(true);
   };
 
-  if (isLoading) {
+  if (isOrgLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <LoadingState fullPage text="Loading organization..." />
@@ -391,13 +354,19 @@ export default function OrganizationDashboardPage({
     );
   }
 
-  if (error) {
+  if (orgError) {
+    const errorMessage =
+      orgError instanceof Error ? orgError.message : "An error occurred";
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
         <ErrorState
           title="Failed to load organization"
-          message={error}
-          onRetry={fetchOrganization}
+          message={errorMessage}
+          onRetry={() =>
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.organizations.detail(organizationId),
+            })
+          }
         />
       </div>
     );
@@ -469,7 +438,7 @@ export default function OrganizationDashboardPage({
                   )}
                   <p className="text-xs text-white/30 mt-2">
                     Owned by{" "}
-                    {organization.owner.name || organization.owner.email} ·
+                    {organization.owner?.name || organization.owner?.email} ·
                     Created {formatTableDate(organization.createdAt)}
                   </p>
                 </div>
@@ -503,7 +472,7 @@ export default function OrganizationDashboardPage({
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-white tabular-nums">
-                    {organization.stats.totalTeams}
+                    {organization.stats?.totalTeams ?? 0}
                   </p>
                   <p className="text-xs text-white/40">Teams</p>
                 </div>
@@ -516,7 +485,7 @@ export default function OrganizationDashboardPage({
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-white tabular-nums">
-                    {organization.stats.totalMembers}
+                    {organization.stats?.totalMembers ?? 0}
                   </p>
                   <p className="text-xs text-white/40">Members</p>
                 </div>
@@ -529,7 +498,7 @@ export default function OrganizationDashboardPage({
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-white tabular-nums">
-                    {organization.stats.totalWorklogs}
+                    {organization.stats?.totalWorklogs ?? 0}
                   </p>
                   <p className="text-xs text-white/40">Worklogs</p>
                 </div>
@@ -601,8 +570,11 @@ export default function OrganizationDashboardPage({
               />
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredTeams.map((team) => (
-                  <TeamCardEnhanced key={team.id} team={team} />
+                {filteredTeams.map((team: OrganizationTeam) => (
+                  <TeamCardEnhanced
+                    key={team.id}
+                    team={team as unknown as TeamCardEnhancedProps["team"]}
+                  />
                 ))}
               </div>
             )}
@@ -627,10 +599,12 @@ export default function OrganizationDashboardPage({
                     value={worklogFilters}
                     onChange={handleWorklogFiltersChange}
                     onReset={resetWorklogFilters}
-                    teamOptions={(organization.teams || []).map((team) => ({
-                      id: team.id,
-                      name: team.name,
-                    }))}
+                    teamOptions={(organization.teams || []).map(
+                      (t: OrganizationTeam) => ({
+                        id: t.id,
+                        name: t.name,
+                      }),
+                    )}
                   />
                 </div>
 
@@ -662,7 +636,9 @@ export default function OrganizationDashboardPage({
           isOpen={showCreateTeam}
           onClose={() => setShowCreateTeam(false)}
           onSuccess={() => {
-            fetchOrganization();
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.organizations.detail(organizationId),
+            });
             setShowCreateTeam(false);
           }}
           initialData={{ organizationId }}

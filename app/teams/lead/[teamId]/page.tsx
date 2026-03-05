@@ -26,11 +26,38 @@ import {
 import { formatLocalDate, getDeadlineStatus } from "@/lib/deadline-utils";
 import type { ProgressStatus } from "@/lib/hooks/use-worklogs";
 
+import dynamic from "next/dynamic";
+
+const TeamStatsCards = dynamic(
+  () => import("@/components/teams/lead").then((mod) => mod.TeamStatsCards),
+  {
+    loading: () => <Skeleton className="h-48 w-full rounded-xl" />,
+  },
+);
+
+const AssignTaskModal = dynamic(
+  () => import("@/components/teams/lead").then((mod) => mod.AssignTaskModal),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-64 w-full rounded-xl" />,
+  },
+);
+
+const TeamWorklogTable = dynamic(
+  () => import("@/components/teams/lead").then((mod) => mod.TeamWorklogTable),
+  {
+    loading: () => <Skeleton className="h-64 w-full rounded-xl" />,
+  },
+);
+
+const TeamMembersPanel = dynamic(
+  () => import("@/components/teams/lead").then((mod) => mod.TeamMembersPanel),
+  {
+    loading: () => <Skeleton className="h-48 w-full rounded-xl" />,
+  },
+);
+
 import {
-  TeamStatsCards,
-  AssignTaskModal,
-  TeamWorklogTable,
-  TeamMembersPanel,
   type WorklogRow,
   type MemberRow,
   type MemberOption,
@@ -309,7 +336,7 @@ function TeamDetailsContent({
 
   const handleDeleteWorklog = (worklogId: string, worklogTitle: string) => {
     toast.promise(
-      deleteWorklogMutation.mutateAsync({ worklogId, worklogTitle }),
+      deleteWorklogMutation.mutateAsync({ worklogId, title: worklogTitle }),
       {
         loading: `Deleting ${worklogTitle}…`,
         success: "Worklog deleted successfully",
@@ -330,7 +357,7 @@ function TeamDetailsContent({
 
   /* ── Early returns ───────────────────────────────────────────────────── */
 
-  if (isLoading) return <TeamLoadingSkeleton />;
+  if (isLoading || worklogsLoading) return <TeamLoadingSkeleton />;
 
   if (error) {
     return (

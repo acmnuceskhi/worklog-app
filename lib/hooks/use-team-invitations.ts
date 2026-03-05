@@ -30,31 +30,6 @@ export interface TeamInvitation {
   };
 }
 
-// Dev-only mock pending invitation for InvitationsPanel testing
-const DEV_MOCK_INVITATIONS: TeamInvitation[] = [
-  {
-    id: "mock-pending-invite-alice-team-3",
-    teamId: "mock-team-3",
-    email: "alice@techcorp.com",
-    status: "PENDING",
-    invitedAt: new Date("2026-02-25").toISOString(),
-    team: {
-      id: "mock-team-3",
-      name: "QA & Testing",
-      description: "Quality assurance and testing team",
-      project: "Worklog App",
-      owner: {
-        name: "Bob Smith",
-        email: "bob@techcorp.com",
-      },
-      organization: {
-        id: "mock-org-1",
-        name: "TechCorp Solutions",
-      },
-    },
-  },
-];
-
 /**
  * Fetch pending team invitations for current user
  */
@@ -62,12 +37,13 @@ export const useTeamInvitations = () => {
   return useQuery({
     queryKey: queryKeys.teams.invitations(),
     queryFn: async () => {
-      // In development, return mock pending invitations directly without API call
-      if (process.env.NODE_ENV === "development") {
-        return DEV_MOCK_INVITATIONS;
-      }
       const response = await fetch("/api/teams/invitations");
       if (!response.ok) {
+        // Handle 401 (Unauthorized) - redirect to login
+        if (response.status === 401) {
+          window.location.href = "/api/auth/signin";
+          throw new Error("Unauthorized");
+        }
         throw new Error("Failed to fetch team invitations");
       }
       const payload = await response.json();

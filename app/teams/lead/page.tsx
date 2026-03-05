@@ -1,26 +1,39 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import dynamic from "next/dynamic";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { TeamCreationWizard } from "@/components/teams/team-creation-wizard";
-import { Plus, Users, Settings, Search } from "lucide-react";
+import { Plus, Users, Settings, Search, Building2 } from "lucide-react";
 import { useOwnedTeams, useTeamSearch } from "@/lib/hooks";
+import { queryKeys } from "@/lib/query-keys";
 import {
   TeamFilters,
   type TeamSortBy,
   type TeamSortDir,
 } from "@/components/filters/team-filters";
-import { toast } from "sonner";
 import { LoadingState } from "@/components/states/loading-state";
 import { ErrorState } from "@/components/states/error-state";
 import { EmptyState } from "@/components/states/empty-state";
 import { EntityCard } from "@/components/entities/entity-card";
 import { EntityList } from "@/components/entities/entity-list";
 
+// Lazy-load team settings dialog — it's a heavy component only needed on interaction
+const TeamSettingsDialog = dynamic(
+  () =>
+    import("@/components/team-settings-dialog").then((m) => ({
+      default: m.TeamSettingsDialog,
+    })),
+  { loading: () => null },
+);
+
 export default function LeadTeamsPage() {
   const router = useRouter();
   const [showWizard, setShowWizard] = useState(false);
+  const [settingsTeam, setSettingsTeam] = useState<string | null>(null);
 
   const { data: paginatedTeams, isLoading, error, refetch } = useOwnedTeams();
   const teams = paginatedTeams?.items ?? [];
@@ -32,6 +45,22 @@ export default function LeadTeamsPage() {
   const { searchQuery, setSearchQuery, filteredTeams } = useTeamSearch({
     teams,
   });
+
+  // Refetch critical data when page regains focus
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const handleFocus = () => {
+      queryClient.refetchQueries({
+        queryKey: queryKeys.teams.owned(),
+      });
+      queryClient.refetchQueries({
+        queryKey: queryKeys.user.sidebarStats(),
+      });
+    };
+
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [queryClient]);
 
   // Sort the filtered results
   const sortedTeams = useMemo(() => {
@@ -161,8 +190,26 @@ export default function LeadTeamsPage() {
                 { label: "Worklogs", value: team._count?.worklogs || 0 },
               ]}
               onClick={() => router.push(`/teams/lead/${team.id}`)}
-              className="border border-white/10 bg-white/5 backdrop-blur-md shadow-lg shadow-black/20 hover:-translate-y-1 hover:shadow-xl"
+              className={`backdrop-blur-md shadow-lg shadow-black/20 hover:-translate-y-1 hover:shadow-xl ${
+                team.organization
+                  ? "border border-blue-500/30 bg-blue-500/5"
+                  : "border border-white/10 bg-white/5"
+              }`}
             >
+              {/* Organization badge — only rendered when team is linked to an org */}
+              {team.organization && (
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Building2 className="h-3 w-3 text-blue-400 shrink-0" />
+                  <span className="text-xs text-blue-300 font-medium truncate">
+                    {team.organization.name}
+                  </span>
+                </div>
+              )}
+              {!team.organization && (
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="text-xs text-white/35">Standalone team</span>
+                </div>
+              )}
               {team.description && (
                 <p className="text-sm text-muted line-clamp-2">
                   {team.description}
@@ -186,11 +233,7 @@ export default function LeadTeamsPage() {
                   className="border-white/20 text-white/80 hover:text-white hover:border-white/40"
                   onClick={(e) => {
                     e.stopPropagation();
-                    toast.info("Feature Coming Soon", {
-                      description:
-                        "Team settings will be available in the next update.",
-                      duration: 3000,
-                    });
+                    setSettingsTeam(team.id);
                   }}
                   aria-label={`Settings for ${team.name}`}
                 >
@@ -208,6 +251,21 @@ export default function LeadTeamsPage() {
         onClose={() => setShowWizard(false)}
         onSuccess={handleTeamCreated}
       />
+
+      {/* Team Settings Dialog */}
+      {settingsTeam && (
+        <TeamSettingsDialog
+          team={teams.find((t) => t.id === settingsTeam)!}
+          open={!!settingsTeam}
+          onOpenChange={(open) => {
+            if (!open) setSettingsTeam(null);
+          }}
+          onSuccess={() => {
+            refetch();
+            setSettingsTeam(null);
+          }}
+        />
+      )}
     </div>
   );
 }

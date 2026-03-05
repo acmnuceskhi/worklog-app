@@ -6,14 +6,6 @@ import {
   parsePaginationParams,
   buildPaginationMeta,
 } from "@/lib/api-pagination";
-import {
-  isDevelopment,
-  mockTeams,
-  mockTeamMembers,
-  mockWorklogs,
-  mockUsers,
-  mockOrganizations,
-} from "@/lib/mock-data";
 
 /**
  * GET /api/dashboard
@@ -32,114 +24,6 @@ export async function GET(request: NextRequest) {
     );
 
     const user = await getCurrentUser();
-
-    // In development mode without auth, return mock dashboard data
-    if (!user && isDevelopment) {
-      console.log(
-        "[Dashboard Debug] Development mode: returning mock data without authentication",
-      );
-      const defaultUserId = "mock-org-owner-1";
-
-      const mockOwnedTeams = mockTeams.filter(
-        (t) => t.ownerId === defaultUserId,
-      );
-      const mockMemberTeams = mockTeams.filter((t) =>
-        mockTeamMembers.some(
-          (tm) =>
-            tm.teamId === t.id &&
-            tm.userId === defaultUserId &&
-            tm.status === "ACCEPTED",
-        ),
-      );
-      const mockUserWorklogs = mockWorklogs.filter(
-        (w) => w.userId === defaultUserId,
-      );
-      const mockOwnedOrgs = mockOrganizations.filter(
-        (o) => o.ownerId === defaultUserId,
-      );
-
-      return apiResponse({
-        sidebarStats: {
-          memberTeamsCount: mockMemberTeams.length,
-          leadTeamsCount: mockOwnedTeams.length,
-          organizationsCount: mockOwnedOrgs.length,
-          worklogsCount: mockUserWorklogs.length,
-          pendingReviewsCount: mockUserWorklogs.filter(
-            (w) => w.progressStatus === "COMPLETED",
-          ).length,
-          hasPendingItems: mockUserWorklogs.some(
-            (w) => w.progressStatus === "COMPLETED",
-          ),
-        },
-        worklogs: mockUserWorklogs.slice(skip, skip + take).map((w) => ({
-          id: w.id,
-          title: w.title,
-          description: w.description,
-          githubLink: w.githubLink || null,
-          progressStatus: w.progressStatus,
-          deadline: w.deadline || null,
-          createdAt: w.createdAt,
-          updatedAt: w.updatedAt,
-          teamId: w.teamId,
-          userId: w.userId,
-        })),
-        worklogsPagination: buildPaginationMeta(
-          mockUserWorklogs.length,
-          page,
-          limit,
-        ),
-        memberTeams: mockMemberTeams.map((t) => ({
-          id: t.id,
-          name: t.name,
-          description: t.description || null,
-          project: t.project || null,
-          owner: {
-            name:
-              mockUsers.find((u) => u.id === t.ownerId)?.name ||
-              "Unknown Owner",
-            email: mockUsers.find((u) => u.id === t.ownerId)?.email || "",
-          },
-          organization: t.organizationId
-            ? {
-                id: t.organizationId,
-                name:
-                  mockOrganizations.find((o) => o.id === t.organizationId)
-                    ?.name || "",
-              }
-            : null,
-          _count: {
-            members: mockTeamMembers.filter(
-              (tm) => tm.teamId === t.id && tm.status === "ACCEPTED",
-            ).length,
-            worklogs: mockWorklogs.filter((w) => w.teamId === t.id).length,
-          },
-        })),
-        ownedTeams: mockOwnedTeams.map((t) => ({
-          id: t.id,
-          name: t.name,
-          description: t.description || null,
-          credits: t.credits,
-          project: t.project || null,
-          createdAt: t.createdAt,
-          updatedAt: t.updatedAt,
-          organization: t.organizationId
-            ? {
-                id: t.organizationId,
-                name:
-                  mockOrganizations.find((o) => o.id === t.organizationId)
-                    ?.name || "",
-              }
-            : null,
-          _count: {
-            members: mockTeamMembers.filter(
-              (tm) => tm.teamId === t.id && tm.status === "ACCEPTED",
-            ).length,
-            worklogs: mockWorklogs.filter((w) => w.teamId === t.id).length,
-          },
-        })),
-      });
-    }
-
     if (!user) {
       console.log("[Dashboard Debug] Unauthorized access attempt");
       return unauthorized();

@@ -8,10 +8,10 @@ import {
   handleApiError,
   getRateLimitIdentifier,
   checkRateLimit,
+  withCacheHeaders,
 } from "@/lib/api-utils";
 import { validateRequest, worklogCreateSchema } from "@/lib/validations";
 import { apiLimiter } from "@/lib/rate-limit";
-import { isDevelopment, mockWorklogs, mockUsers } from "@/lib/mock-data";
 
 /**
  * GET /api/worklogs
@@ -19,37 +19,6 @@ import { isDevelopment, mockWorklogs, mockUsers } from "@/lib/mock-data";
  */
 export async function GET() {
   try {
-    // In development mode, return mock worklogs for the default user
-    if (isDevelopment) {
-      const defaultUserId = "mock-org-owner-1";
-      const userWorklogs = mockWorklogs
-        .filter((w) => w.userId === defaultUserId)
-        .map((w) => {
-          const user = mockUsers.find((u) => u.id === w.userId);
-          return {
-            id: w.id,
-            title: w.title,
-            description: w.description,
-            githubLink: w.githubLink || null,
-            progressStatus: w.progressStatus,
-            deadline: w.deadline ? w.deadline.toISOString() : null,
-            userId: w.userId,
-            teamId: w.teamId,
-            createdAt: w.createdAt.toISOString(),
-            updatedAt: w.updatedAt.toISOString(),
-            user: user
-              ? { id: user.id, name: user.name, email: user.email }
-              : null,
-            ratings: [],
-          };
-        })
-        .sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-        );
-      return apiResponse(userWorklogs);
-    }
-
     const user = await getCurrentUser();
     if (!user) {
       return unauthorized();
@@ -86,7 +55,7 @@ export async function GET() {
 
     // Early return if no worklogs
     if (worklogs.length === 0) {
-      return NextResponse.json({ data: [] });
+      return withCacheHeaders(NextResponse.json({ data: [] }), 30);
     }
 
     // Get unique team IDs and worklog IDs for efficient batch queries
@@ -143,7 +112,7 @@ export async function GET() {
       ratings: ratingsByWorklog.get(worklog.id) || [],
     }));
 
-    return apiResponse(worklogsWithDetails);
+    return withCacheHeaders(apiResponse(worklogsWithDetails), 30);
   } catch (error) {
     return handleApiError(error);
   }

@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Lobster_Two } from "next/font/google";
 import Image from "next/image";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import {
   Home,
   Users,
@@ -121,6 +123,22 @@ export default function DashboardPage() {
     () => getUrgentCounts(allWorklogs as HomepageWorklog[]),
     [allWorklogs],
   );
+
+  // Refetch critical data when page regains focus
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const handleFocus = () => {
+      queryClient.refetchQueries({
+        queryKey: queryKeys.dashboard.all(),
+      });
+      queryClient.refetchQueries({
+        queryKey: queryKeys.user.sidebarStats(),
+      });
+    };
+
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [queryClient]);
 
   // Show deadline notifications
   useEffect(() => {

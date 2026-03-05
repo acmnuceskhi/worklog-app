@@ -4,10 +4,13 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
+        // Google profile pictures (OAuth sign-in via Google).
+        // pathname "/**" covers all path formats Google may use (not just /a/).
+        // Omitting `search` allows any query parameters per Next.js docs.
         protocol: "https",
-        hostname: "avatars.githubusercontent.com",
+        hostname: "lh3.googleusercontent.com",
         port: "",
-        pathname: "/u/**",
+        pathname: "/**",
       },
       {
         protocol: "https",
@@ -55,7 +58,7 @@ const nextConfig: NextConfig = {
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
-              "img-src 'self' data: blob: https://avatars.githubusercontent.com https://api.dicebear.com https://*.googleusercontent.com",
+              "img-src 'self' data: blob: https://api.dicebear.com https://*.googleusercontent.com",
               "connect-src 'self' https://vitals.vercel-insights.com https://va.vercel-scripts.com",
               "frame-ancestors 'none'",
               "base-uri 'self'",

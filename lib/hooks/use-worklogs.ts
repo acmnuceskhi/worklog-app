@@ -5,7 +5,6 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { mockWorklogs, mockUsers } from "@/lib/mock-data";
 import type { PaginatedResponse } from "@/lib/types/pagination";
 import { DEFAULT_PAGE, DEFAULT_LIMIT } from "@/lib/types/pagination";
 
@@ -46,37 +45,13 @@ export const useWorklogs = () => {
   return useQuery({
     queryKey: queryKeys.worklogs.list(),
     queryFn: async () => {
-      // In development, return mock data directly without any network call
-      if (process.env.NODE_ENV === "development") {
-        const defaultUserId = "mock-org-owner-1";
-        return mockWorklogs
-          .filter((w) => w.userId === defaultUserId)
-          .map((w) => {
-            const user = mockUsers.find((u) => u.id === w.userId);
-            return {
-              id: w.id,
-              title: w.title,
-              description: w.description,
-              githubLink: w.githubLink || undefined,
-              progressStatus: w.progressStatus as ProgressStatus,
-              deadline: w.deadline ? w.deadline.toISOString() : undefined,
-              userId: w.userId,
-              teamId: w.teamId,
-              createdAt: w.createdAt.toISOString(),
-              updatedAt: w.updatedAt.toISOString(),
-              user: user
-                ? { id: user.id, name: user.name, email: user.email }
-                : undefined,
-              ratings: [],
-            } as WorklogPreview;
-          })
-          .sort(
-            (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-          );
-      }
       const response = await fetch("/api/worklogs");
       if (!response.ok) {
+        // Handle 401 (Unauthorized) - redirect to login
+        if (response.status === 401) {
+          window.location.href = "/api/auth/signin";
+          throw new Error("Unauthorized");
+        }
         throw new Error("Failed to fetch worklogs");
       }
       const payload = await response.json();
@@ -98,53 +73,19 @@ export const useTeamWorklogs = (
   return useQuery({
     queryKey: queryKeys.teams.worklogs(teamId, page, limit),
     queryFn: async (): Promise<PaginatedResponse<WorklogPreview>> => {
-      // In development, return mock data directly without any network call
-      if (process.env.NODE_ENV === "development") {
-        const filtered = mockWorklogs
-          .filter((w) => w.teamId === teamId)
-          .map((w) => {
-            const user = mockUsers.find((u) => u.id === w.userId);
-            return {
-              id: w.id,
-              title: w.title,
-              description: w.description,
-              githubLink: w.githubLink || undefined,
-              progressStatus: w.progressStatus as ProgressStatus,
-              deadline: w.deadline ? w.deadline.toISOString() : undefined,
-              userId: w.userId,
-              teamId: w.teamId,
-              createdAt: w.createdAt.toISOString(),
-              updatedAt: w.updatedAt.toISOString(),
-              user: user
-                ? { id: user.id, name: user.name, email: user.email }
-                : undefined,
-              ratings: [],
-            } as WorklogPreview;
-          })
-          .sort(
-            (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-          );
-        const total = filtered.length;
-        const skip = (page - 1) * limit;
-        const items = filtered.slice(skip, skip + limit);
-        const totalPages = Math.max(1, Math.ceil(total / limit));
-        return {
-          items,
-          meta: {
-            page,
-            limit,
-            total,
-            totalPages,
-            hasNextPage: page < totalPages,
-            hasPreviousPage: page > 1,
-          },
-        };
-      }
       const response = await fetch(
         `/api/teams/${teamId}/worklogs?page=${page}&limit=${limit}`,
       );
       if (!response.ok) {
+        // Handle 401 (Unauthorized) - redirect to login
+        if (response.status === 401) {
+          window.location.href = "/api/auth/signin";
+          throw new Error("Unauthorized");
+        }
+        // Handle 403 (Forbidden) - show permission error
+        if (response.status === 403) {
+          throw new Error("You don't have permission to access team worklogs");
+        }
         throw new Error("Failed to fetch team worklogs");
       }
       return (await response.json()) as PaginatedResponse<WorklogPreview>;
@@ -163,6 +104,19 @@ export const useWorklog = (worklogId: string) => {
     queryFn: async () => {
       const response = await fetch(`/api/worklogs/${worklogId}`);
       if (!response.ok) {
+        // Handle 401 (Unauthorized) - redirect to login
+        if (response.status === 401) {
+          window.location.href = "/api/auth/signin";
+          throw new Error("Unauthorized");
+        }
+        // Handle 403 (Forbidden) - show permission error
+        if (response.status === 403) {
+          throw new Error("You don't have permission to access this worklog");
+        }
+        // Handle 404 (Not Found)
+        if (response.status === 404) {
+          throw new Error("Worklog not found");
+        }
         throw new Error("Failed to fetch worklog");
       }
       const payload = await response.json();
@@ -199,14 +153,91 @@ export const useCreateWorklog = () => {
       const payload = await response.json();
       return payload.data || payload;
     },
+    onMutate: async (data) => {
+      // Cancel in-flight worklog queries to prevent stale overwrites
+      await queryClient.cancelQueries({ queryKey: queryKeys.worklogs.all() });
+      await queryClient.cancelQueries({ queryKey: ["teams"] });
+
+      // Snapshot the flat list (dashboard)
+      const previousWorklogs = queryClient.getQueryData<WorklogPreview[]>(
+        queryKeys.worklogs.list(),
+      );
+
+      // Snapshot potentially affected team-specific lists
+      const previousTeamLists = queryClient.getQueriesData<
+        PaginatedResponse<WorklogPreview>
+      >({
+        queryKey: queryKeys.teams.worklogs(data.teamId),
+      });
+
+      // Build a temporary placeholder
+      const optimisticWorklog: WorklogPreview = {
+        id: `temp-${Date.now()}`,
+        title: data.title,
+        description: data.description,
+        githubLink: data.githubLink,
+        progressStatus: "STARTED",
+        deadline: data.deadline,
+        userId: data.userId ?? "",
+        teamId: data.teamId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      // 1. Update dashboard list (flat array)
+      queryClient.setQueryData<WorklogPreview[]>(
+        queryKeys.worklogs.list(),
+        (old) =>
+          Array.isArray(old)
+            ? [optimisticWorklog, ...old]
+            : [optimisticWorklog],
+      );
+
+      // 2. Update team-specific paginated lists
+      queryClient.setQueriesData<PaginatedResponse<WorklogPreview>>(
+        { queryKey: queryKeys.teams.worklogs(data.teamId) },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            items: [optimisticWorklog, ...(old.items ?? [])],
+            meta: {
+              ...old.meta,
+              total: (old.meta?.total ?? 0) + 1,
+            },
+          };
+        },
+      );
+
+      return { previousWorklogs, previousTeamLists };
+    },
+    onError: (_err, _data, context) => {
+      // Rollback dashboard
+      if (context?.previousWorklogs !== undefined) {
+        queryClient.setQueryData(
+          queryKeys.worklogs.list(),
+          context.previousWorklogs,
+        );
+      }
+      // Rollback team lists
+      if (context?.previousTeamLists) {
+        for (const [key, value] of context.previousTeamLists) {
+          queryClient.setQueryData(key, value);
+        }
+      }
+    },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.worklogs.list() });
+      // Side-effect invalidations for team-specific and dashboard caches
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() });
       if (data.teamId) {
         queryClient.invalidateQueries({
           queryKey: queryKeys.teams.worklogs(data.teamId),
         });
       }
+    },
+    onSettled: () => {
+      // Always sync all worklog data with the server
+      queryClient.invalidateQueries({ queryKey: queryKeys.worklogs.all() });
     },
   });
 };
@@ -239,22 +270,25 @@ export const useUpdateWorklogStatus = () => {
     },
     onMutate: async ({ worklogId, newStatus }) => {
       // Cancel outgoing refetches to prevent race conditions
-      await queryClient.cancelQueries({
-        queryKey: queryKeys.worklogs.list(),
-      });
+      await queryClient.cancelQueries({ queryKey: queryKeys.worklogs.all() });
+      await queryClient.cancelQueries({ queryKey: ["teams"] });
 
-      // Snapshot previous value for rollback
+      // Snapshot previous values for rollback
       const previousWorklogs = queryClient.getQueryData<WorklogPreview[]>(
         queryKeys.worklogs.list(),
       );
+      const previousTeamLists = queryClient.getQueriesData<
+        PaginatedResponse<WorklogPreview>
+      >({
+        queryKey: ["teams"],
+      });
 
-      // Optimistically update to show instant feedback
+      // 1. Optimistically update dashboard list
       queryClient.setQueryData(
         queryKeys.worklogs.list(),
         (old: WorklogPreview[] | undefined) => {
           if (!old || !Array.isArray(old)) return old;
-
-          return old.map((worklog: WorklogPreview) =>
+          return old.map((worklog) =>
             worklog.id === worklogId
               ? { ...worklog, progressStatus: newStatus }
               : worklog,
@@ -262,15 +296,37 @@ export const useUpdateWorklogStatus = () => {
         },
       );
 
-      return { previousWorklogs };
+      // 2. Optimistically update all team-specific lists that might contain this worklog
+      queryClient.setQueriesData<PaginatedResponse<WorklogPreview>>(
+        { queryKey: ["teams"] },
+        (old) => {
+          if (!old || !old.items) return old;
+          return {
+            ...old,
+            items: old.items.map((worklog) =>
+              worklog.id === worklogId
+                ? { ...worklog, progressStatus: newStatus }
+                : worklog,
+            ),
+          };
+        },
+      );
+
+      return { previousWorklogs, previousTeamLists };
     },
-    onError: (err, variables, context) => {
-      // Rollback on error to maintain data consistency
+    onError: (_err, _variables, context) => {
+      // Rollback dashboard
       if (context?.previousWorklogs) {
         queryClient.setQueryData(
           queryKeys.worklogs.list(),
           context.previousWorklogs,
         );
+      }
+      // Rollback team lists
+      if (context?.previousTeamLists) {
+        for (const [key, value] of context.previousTeamLists) {
+          queryClient.setQueryData(key, value);
+        }
       }
     },
     onSettled: () => {
@@ -307,36 +363,65 @@ export const useUpdateWorklogDeadline = () => {
       return payload.data || payload;
     },
     onMutate: async ({ worklogId, deadline }) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.worklogs.list() });
+      await queryClient.cancelQueries({ queryKey: queryKeys.worklogs.all() });
+      await queryClient.cancelQueries({ queryKey: ["teams"] });
 
       const previousWorklogs = queryClient.getQueryData<WorklogPreview[]>(
         queryKeys.worklogs.list(),
       );
+      const previousTeamLists = queryClient.getQueriesData<
+        PaginatedResponse<WorklogPreview>
+      >({
+        queryKey: ["teams"],
+      });
 
+      // 1. Dashboard
       queryClient.setQueryData(
         queryKeys.worklogs.list(),
         (old: WorklogPreview[] | undefined) => {
           if (!old || !Array.isArray(old)) return old;
-
-          return old.map((worklog: WorklogPreview) =>
-            worklog.id === worklogId ? { ...worklog, deadline } : worklog,
+          return old.map((worklog) =>
+            worklog.id === worklogId
+              ? { ...worklog, deadline: deadline ?? undefined }
+              : worklog,
           );
         },
       );
 
-      return { previousWorklogs };
+      // 2. Teams
+      queryClient.setQueriesData<PaginatedResponse<WorklogPreview>>(
+        { queryKey: ["teams"] },
+        (old) => {
+          if (!old || !old.items) return old;
+          return {
+            ...old,
+            items: old.items.map((worklog) =>
+              worklog.id === worklogId
+                ? { ...worklog, deadline: deadline ?? undefined }
+                : worklog,
+            ),
+          };
+        },
+      );
+
+      return { previousWorklogs, previousTeamLists };
     },
-    onError: (err, variables, context) => {
+    onError: (_err, _variables, context) => {
       if (context?.previousWorklogs) {
         queryClient.setQueryData(
           queryKeys.worklogs.list(),
           context.previousWorklogs,
         );
       }
+      if (context?.previousTeamLists) {
+        for (const [key, value] of context.previousTeamLists) {
+          queryClient.setQueryData(key, value);
+        }
+      }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.worklogs.list() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() }); // Invalidate dashboard cache
+      queryClient.invalidateQueries({ queryKey: queryKeys.worklogs.all() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() });
     },
   });
 };
@@ -348,36 +433,79 @@ export const useDeleteWorklog = (teamId?: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      worklogId,
-      worklogTitle,
-    }: {
-      worklogId: string;
-      worklogTitle: string;
-    }) => {
-      const confirmed = window.confirm(
-        `Are you sure you want to delete "${worklogTitle}"? This action cannot be undone.`,
-      );
-      if (!confirmed) throw new Error("User cancelled");
-
+    mutationFn: async ({ worklogId }: { worklogId: string; title: string }) => {
       const response = await fetch(`/api/worklogs/${worklogId}`, {
         method: "DELETE",
       });
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to delete worklog");
+        throw new Error("Failed to delete worklog");
       }
-      return { success: true, worklogId, worklogTitle };
+      return { worklogId };
+    },
+    onMutate: async ({ worklogId }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.worklogs.all() });
+      await queryClient.cancelQueries({ queryKey: ["teams"] });
+
+      const previousWorklogs = queryClient.getQueryData<WorklogPreview[]>(
+        queryKeys.worklogs.list(),
+      );
+      const previousTeamLists = queryClient.getQueriesData<
+        PaginatedResponse<WorklogPreview>
+      >({
+        queryKey: ["teams"],
+      });
+
+      // 1. Dashboard
+      queryClient.setQueryData(
+        queryKeys.worklogs.list(),
+        (old: WorklogPreview[] | undefined) => {
+          if (!old || !Array.isArray(old)) return old;
+          return old.filter((w) => w.id !== worklogId);
+        },
+      );
+
+      // 2. Teams
+      queryClient.setQueriesData<PaginatedResponse<WorklogPreview>>(
+        { queryKey: ["teams"] },
+        (old) => {
+          if (!old || !old.items) return old;
+          return {
+            ...old,
+            items: old.items.filter((w) => w.id !== worklogId),
+            meta: {
+              ...old.meta,
+              total: Math.max(0, (old.meta?.total ?? 1) - 1),
+            },
+          };
+        },
+      );
+
+      return { previousWorklogs, previousTeamLists };
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousWorklogs) {
+        queryClient.setQueryData(
+          queryKeys.worklogs.list(),
+          context.previousWorklogs,
+        );
+      }
+      if (context?.previousTeamLists) {
+        for (const [key, value] of context.previousTeamLists) {
+          queryClient.setQueryData(key, value);
+        }
+      }
     },
     onSuccess: () => {
-      // Invalidate both global and team-specific worklog lists
-      queryClient.invalidateQueries({ queryKey: queryKeys.worklogs.all() });
+      // General invalidation as fallback
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() });
       if (teamId) {
         queryClient.invalidateQueries({
           queryKey: queryKeys.teams.worklogs(teamId),
         });
       }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.worklogs.all() });
     },
   });
 };

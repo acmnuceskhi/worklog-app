@@ -35,24 +35,19 @@ export const useWorklogRatings = (
   return useQuery({
     queryKey: queryKeys.ratings.byWorklog(worklogId, page, limit),
     queryFn: async (): Promise<PaginatedResponse<Rating>> => {
-      // In development, return empty ratings (no mock ratings exist)
-      if (process.env.NODE_ENV === "development") {
-        return {
-          items: [],
-          meta: {
-            page,
-            limit,
-            total: 0,
-            totalPages: 1,
-            hasNextPage: false,
-            hasPreviousPage: false,
-          },
-        };
-      }
       const response = await fetch(
         `/api/worklogs/${worklogId}/ratings?page=${page}&limit=${limit}`,
       );
       if (!response.ok) {
+        // Handle 401 (Unauthorized) - redirect to login
+        if (response.status === 401) {
+          window.location.href = "/api/auth/signin";
+          throw new Error("Unauthorized");
+        }
+        // Handle 403 (Forbidden) - show permission error
+        if (response.status === 403) {
+          throw new Error("You don't have permission to view ratings");
+        }
         throw new Error("Failed to fetch ratings");
       }
       return (await response.json()) as PaginatedResponse<Rating>;
@@ -69,14 +64,21 @@ export const useOrganizationRatings = (organizationId: string) => {
   return useQuery({
     queryKey: queryKeys.ratings.byOrganization(organizationId),
     queryFn: async () => {
-      // In development, return empty ratings
-      if (process.env.NODE_ENV === "development") {
-        return [] as Rating[];
-      }
       const response = await fetch(
         `/api/organizations/${organizationId}/ratings`,
       );
       if (!response.ok) {
+        // Handle 401 (Unauthorized) - redirect to login
+        if (response.status === 401) {
+          window.location.href = "/api/auth/signin";
+          throw new Error("Unauthorized");
+        }
+        // Handle 403 (Forbidden) - show permission error
+        if (response.status === 403) {
+          throw new Error(
+            "You don't have permission to view organization ratings",
+          );
+        }
         throw new Error("Failed to fetch ratings");
       }
       const payload = await response.json();
@@ -114,12 +116,68 @@ export const useCreateRating = () => {
       const payload = await response.json();
       return payload.data || payload;
     },
-    onSuccess: (data, variables) => {
+    onMutate: async (newData) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.ratings.byWorklog(newData.worklogId),
+      });
+
+      // Snapshot the previous state
+      const previousRatings = queryClient.getQueriesData<
+        PaginatedResponse<Rating>
+      >({
+        queryKey: queryKeys.ratings.byWorklog(newData.worklogId),
+      });
+
+      // Optimistic rating (minimal data)
+      const optimisticRating: Rating = {
+        id: `temp-${Date.now()}`,
+        value: newData.value,
+        comment: newData.comment ?? null,
+        worklogId: newData.worklogId,
+        raterId: "me", // Placeholder
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Apply optimistic update to all paginated versions of this worklog's ratings
+      queryClient.setQueriesData<PaginatedResponse<Rating>>(
+        { queryKey: queryKeys.ratings.byWorklog(newData.worklogId) },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            items: [optimisticRating, ...(old.items ?? [])],
+            meta: {
+              ...old.meta,
+              total: (old.meta?.total ?? 0) + 1,
+            },
+          };
+        },
+      );
+
+      return { previousRatings };
+    },
+    onError: (_err, variables, context) => {
+      // Rollback
+      if (context?.previousRatings) {
+        for (const [key, value] of context.previousRatings) {
+          queryClient.setQueryData(key, value);
+        }
+      }
+    },
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.ratings.byWorklog(variables.worklogId),
       });
       queryClient.invalidateQueries({
         queryKey: queryKeys.ratings.list(),
+      });
+    },
+    onSettled: () => {
+      // Sync everything
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.ratings.all(),
       });
     },
   });

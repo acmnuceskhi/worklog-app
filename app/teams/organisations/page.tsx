@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import { Building2, Users, Plus, ArrowRight, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LoadingState } from "@/components/states/loading-state";
@@ -10,6 +11,7 @@ import { EmptyState } from "@/components/states/empty-state";
 import { EntityCard } from "@/components/entities/entity-card";
 import { EntityList } from "@/components/entities/entity-list";
 import { useOrganizations, useTeamSearch } from "@/lib/hooks";
+import { queryKeys } from "@/lib/query-keys";
 import {
   TeamFilters,
   type TeamSortBy,
@@ -51,6 +53,33 @@ export default function OrganisationsPage() {
     setSortBy("name");
     setSortDir("asc");
   };
+
+  // Refetch critical data when component mounts (user navigated here)
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    // Ensure fresh data when user navigates to this page
+    queryClient.refetchQueries({
+      queryKey: queryKeys.organizations.list(),
+    });
+    queryClient.refetchQueries({
+      queryKey: queryKeys.user.sidebarStats(),
+    });
+  }, [queryClient]);
+
+  // Also refetch when browser window regains focus (tab switcher)
+  useEffect(() => {
+    const handleFocus = () => {
+      queryClient.refetchQueries({
+        queryKey: queryKeys.organizations.list(),
+      });
+      queryClient.refetchQueries({
+        queryKey: queryKeys.user.sidebarStats(),
+      });
+    };
+
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [queryClient]);
 
   if (isLoading) {
     return <LoadingState text="Loading organizations..." fullPage />;

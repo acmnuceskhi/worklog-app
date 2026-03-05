@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+import { Prisma, ProgressStatus } from "@/app/generated/prisma/client";
 import {
-  getMockOrganization,
-  mockTeams,
-  mockWorklogs,
-  mockUsers,
-  mockRatings,
-} from "@/lib/mock-data";
+  getCurrentUser,
+  isOrganizationOwnerOrCoOwner,
+  unauthorized,
+  forbidden,
+} from "@/lib/auth-utils";
 import { buildPaginationMeta } from "@/lib/api-pagination";
 
 const MAX_PAGE_SIZE = 50;
@@ -35,7 +36,7 @@ function normalizeDate(value: string | null) {
 
 /**
  * GET /api/organizations/[organizationId]/worklogs
- * Filtered worklogs for an organization
+ * Filtered worklogs for an organization (owner/co-owner only)
  */
 export async function GET(
   request: NextRequest,
@@ -44,12 +45,18 @@ export async function GET(
   try {
     const { organizationId } = await params;
 
-    // Always return mock data for development
-    const mockOrg = getMockOrganization(organizationId);
-    if (!mockOrg) {
-      return NextResponse.json(
-        { error: "Organization not found" },
-        { status: 404 },
+    const user = await getCurrentUser();
+    if (!user) {
+      return unauthorized();
+    }
+
+    const canAccess = await isOrganizationOwnerOrCoOwner(
+      user.id,
+      organizationId,
+    );
+    if (!canAccess) {
+      return forbidden(
+        "Only organization owners can view organization worklogs",
       );
     }
 
@@ -73,120 +80,73 @@ export async function GET(
       Math.max(1, parseNumber(searchParams.get("pageSize"), 20)),
     );
 
-    // Get teams for this organization
-    const orgTeams = mockTeams.filter(
-      (t) => t.organizationId === organizationId,
-    );
-    const teamIds = orgTeams.map((t) => t.id);
+    // Build Prisma where clause based on filters
+    const where: Prisma.WorklogWhereInput = {
+      team: {
+        organizationId,
+      },
+      ...(statusParam && ALLOWED_STATUSES.has(statusParam)
+        ? { progressStatus: statusParam as ProgressStatus }
+        : {}),
+      ...(teamId ? { teamId } : {}),
+      ...(dateFrom || dateTo
+        ? {
+            createdAt: {
+              ...(dateFrom ? { gte: dateFrom } : {}),
+              ...(dateTo ? { lte: dateTo } : {}),
+            },
+          }
+        : {}),
+      ...(search
+        ? {
+            OR: [
+              { title: { contains: search, mode: "insensitive" } },
+              { description: { contains: search, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    };
 
-    // Filter worklogs
-    let filteredWorklogs = mockWorklogs.filter((w) =>
-      teamIds.includes(w.teamId),
-    );
-
-    // Apply search filter
-    if (search) {
-      const searchLower = search.toLowerCase();
-      filteredWorklogs = filteredWorklogs.filter(
-        (w) =>
-          w.title.toLowerCase().includes(searchLower) ||
-          w.description.toLowerCase().includes(searchLower),
-      );
-    }
-
-    // Apply status filter
-    if (statusParam && ALLOWED_STATUSES.has(statusParam)) {
-      filteredWorklogs = filteredWorklogs.filter(
-        (w) => w.progressStatus === statusParam,
-      );
-    }
-
-    // Apply team filter
-    if (teamId && teamIds.includes(teamId)) {
-      filteredWorklogs = filteredWorklogs.filter((w) => w.teamId === teamId);
-    }
-
-    // Apply date filters
-    if (dateFrom) {
-      filteredWorklogs = filteredWorklogs.filter(
-        (w) => new Date(w.createdAt) >= dateFrom,
-      );
-    }
-    if (dateTo) {
-      filteredWorklogs = filteredWorklogs.filter(
-        (w) => new Date(w.createdAt) <= dateTo,
-      );
-    }
-
-    // Apply sorting
-    filteredWorklogs.sort((a, b) => {
-      let comparison = 0;
-      switch (sortBy) {
-        case "date":
-          comparison =
-            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-          break;
-        case "status":
-          comparison = a.progressStatus.localeCompare(b.progressStatus);
-          break;
-        default:
-          comparison =
-            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      }
-      return sortDir === "desc" ? -comparison : comparison;
-    });
-
-    // Apply pagination
-    const total = filteredWorklogs.length;
-    const startIndex = (page - 1) * pageSize;
-    const paginatedWorklogs = filteredWorklogs.slice(
-      startIndex,
-      startIndex + pageSize,
-    );
-
-    // Build response with enriched data
-    const worklogs = paginatedWorklogs
-      .map((w) => {
-        const team = orgTeams.find((t) => t.id === w.teamId);
-        const user = mockUsers.find((u) => u.id === w.userId);
-
-        // Skip worklogs with missing team or user data
-        if (!team || !user) {
-          return null;
-        }
-
-        return {
-          id: w.id,
-          title: w.title,
-          description: w.description,
-          progressStatus: w.progressStatus,
-          createdAt: w.createdAt.toISOString(),
-          deadline: w.deadline ? w.deadline.toISOString() : null,
+    const [total, worklogs] = await Promise.all([
+      prisma.worklog.count({ where }),
+      prisma.worklog.findMany({
+        where,
+        include: {
           team: {
-            id: team.id,
-            name: team.name,
+            select: {
+              id: true,
+              name: true,
+            },
           },
           user: {
-            id: user.id,
-            name: user.name,
-            image: user.image,
+            select: {
+              id: true,
+              name: true,
+              image: true,
+            },
           },
-          ratings: mockRatings
-            .filter((r) => r.worklogId === w.id)
-            .map((r) => ({
-              id: r.id,
-              value: r.value,
-              comment: r.comment || null,
-              rater: mockUsers.find((u) => u.id === r.raterId)
-                ? {
-                    id: r.raterId,
-                    name: mockUsers.find((u) => u.id === r.raterId)?.name,
-                  }
-                : null,
-            })),
-        };
-      })
-      .filter(Boolean); // Remove null entries
+          ratings: {
+            select: {
+              id: true,
+              value: true,
+              comment: true,
+              rater: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy:
+          sortBy === "status"
+            ? { progressStatus: sortDir === "desc" ? "desc" : "asc" }
+            : { createdAt: sortDir === "desc" ? "desc" : "asc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+    ]);
 
     return NextResponse.json({
       items: worklogs,

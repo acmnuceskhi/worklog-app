@@ -12,7 +12,7 @@ interface SearchableTeam {
   name: string;
   description?: string | null;
   project?: string | null;
-  owner?: { name?: string | null; email?: string } | null;
+  owner?: { name?: string | null; email?: string | null } | null;
   organization?: { id: string; name: string } | null;
 }
 

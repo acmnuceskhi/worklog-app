@@ -1,18 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getCurrentUser, unauthorized } from "@/lib/auth-utils";
+import { getCurrentUser } from "@/lib/auth-utils";
 import {
   parsePaginationParams,
   createPaginatedResponse,
 } from "@/lib/api-pagination";
 import {
-  isDevelopment,
-  mockTeams,
-  mockTeamMembers,
-  mockUsers,
-  mockOrganizations,
-  mockWorklogs,
-} from "@/lib/mock-data";
+  unauthorized,
+  withCacheHeaders,
+  handleApiError,
+} from "@/lib/api-utils";
 
 /**
  * GET /api/teams/member
@@ -23,49 +20,6 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const { skip, take, page, limit } = parsePaginationParams(searchParams);
-
-    // In development mode without auth, return mock data
-    if (isDevelopment) {
-      const defaultUserId = "mock-org-owner-1";
-      const allMemberTeams = mockTeams
-        .filter((t) =>
-          mockTeamMembers.some(
-            (tm) =>
-              tm.teamId === t.id &&
-              tm.userId === defaultUserId &&
-              tm.status === "ACCEPTED",
-          ),
-        )
-        .map((team) => ({
-          id: team.id,
-          name: team.name,
-          description: team.description || null,
-          project: team.project || null,
-          owner: {
-            name:
-              mockUsers.find((u) => u.id === team.ownerId)?.name ||
-              "Unknown Owner",
-            email: mockUsers.find((u) => u.id === team.ownerId)?.email || "",
-          },
-          organization: team.organizationId
-            ? {
-                id: team.organizationId,
-                name:
-                  mockOrganizations.find((o) => o.id === team.organizationId)
-                    ?.name || "",
-              }
-            : null,
-          myWorklogCount: mockWorklogs.filter(
-            (w) => w.teamId === team.id && w.userId === defaultUserId,
-          ).length,
-        }));
-
-      const total = allMemberTeams.length;
-      const items = allMemberTeams.slice(skip, skip + take);
-      return NextResponse.json(
-        createPaginatedResponse(items, total, page, limit),
-      );
-    }
 
     const user = await getCurrentUser();
     if (!user) {
@@ -158,14 +112,11 @@ export async function GET(request: NextRequest) {
       role: "member",
     }));
 
-    return NextResponse.json(
-      createPaginatedResponse(teams, total, page, limit),
+    return withCacheHeaders(
+      NextResponse.json(createPaginatedResponse(teams, total, page, limit)),
+      60,
     );
   } catch (error) {
-    console.error("Get member teams error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleApiError(error);
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+export const dynamic = "force-dynamic";
 import prisma from "@/lib/prisma";
 import { getCurrentUser, unauthorized, badRequest } from "@/lib/auth-utils";
 import { validateRequest, organizationCreateSchema } from "@/lib/validations";
@@ -6,7 +7,6 @@ import {
   parsePaginationParams,
   createPaginatedResponse,
 } from "@/lib/api-pagination";
-import { isDevelopment, mockTeams, mockOrganizations } from "@/lib/mock-data";
 import { getRateLimitIdentifier, checkRateLimit } from "@/lib/api-utils";
 import { apiLimiter } from "@/lib/rate-limit";
 
@@ -25,37 +25,6 @@ export async function GET(request: NextRequest) {
     const { skip, take, page, limit } = parsePaginationParams(searchParams, {
       defaultLimit: 50,
     });
-
-    // In development mode without auth, return mock data
-    if (isDevelopment) {
-      const defaultUserId = "mock-org-owner-1";
-      const allOrgs = mockOrganizations
-        .filter((o) => o.ownerId === defaultUserId)
-        .map((org) => ({
-          id: org.id,
-          name: org.name,
-          description: org.description || null,
-          credits: org.credits,
-          ownerId: org.ownerId,
-          createdAt: org.createdAt.toISOString(),
-          updatedAt: org.updatedAt.toISOString(),
-          teams: mockTeams
-            .filter((t) => t.organizationId === org.id)
-            .map((t) => ({
-              id: t.id,
-              name: t.name,
-            })),
-          _count: {
-            teams: mockTeams.filter((t) => t.organizationId === org.id).length,
-          },
-        }));
-
-      const total = allOrgs.length;
-      const items = allOrgs.slice(skip, skip + take);
-      return NextResponse.json(
-        createPaginatedResponse(items, total, page, limit),
-      );
-    }
 
     const user = await getCurrentUser();
     if (!user) {
@@ -128,6 +97,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(
       createPaginatedResponse(result, total, page, limit),
+      { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
     console.error("Get organizations error:", error);

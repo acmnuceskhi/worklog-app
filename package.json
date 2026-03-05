@@ -9,7 +9,6 @@
     "lint": "eslint",
     "prettier": "prettier --write .",
     "db:seed": "prisma db seed",
-    "db:seed:test-users": "tsx prisma/seed-test-users.ts",
     "test:oauth-bypass": "tsx scripts/test-oauth-bypass.ts"
   },
   "dependencies": {
@@ -73,5 +72,8 @@
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }

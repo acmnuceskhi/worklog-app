@@ -301,3 +301,17 @@ export const notFound = apiNotFound;
 export const success = (data: unknown, status: number = 200) => {
   return apiResponse(data, status);
 };
+
+/**
+ * Enforce authentication on protected routes
+ * Throws redirect if no session exists
+ * Use in server components/layouts to protect routes
+ */
+export async function enforceAuth() {
+  const session = await getCachedSession();
+  if (!session) {
+    const { redirect } = await import("next/navigation");
+    redirect("/api/auth/signin");
+  }
+  return session;
+}

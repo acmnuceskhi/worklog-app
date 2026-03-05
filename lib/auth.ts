@@ -1,7 +1,8 @@
 import NextAuth, { type NextAuthConfig } from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import prisma from "@/lib/prisma";
-import GitHub from "next-auth/providers/github";
+// GitHub OAuth removed per requirements - Using Google OAuth (@nu.edu.pk only) instead
+// import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 
@@ -94,43 +95,71 @@ const config = {
   },
 
   providers: [
-    GitHub,
+    // GitHub OAuth disabled - Using Google OAuth (@nu.edu.pk only) + Credentials auth instead
+    // import GitHub from "next-auth/providers/github"; // REMOVED
+    // GitHub, // COMMENTED OUT per requirements
+
     Google({
-      // Temporarily commented out for testing
-      // authorization: {
-      //   params: {
-      //     hd: 'nu.edu.pk',
-      //   },
-      // },
+      // Enforce @nu.edu.pk domain restriction per Google OpenID Connect spec
+      // See: https://developers.google.com/identity/openid-connect/openid-connect
+      // The 'hd' parameter restricts sign-in to Google accounts with @nu.edu.pk domain
+      authorization: {
+        params: {
+          hd: "nu.edu.pk", // ENABLED: Only university accounts allowed
+        },
+      },
+      // Validate domain in callback (defense in depth)
+      async profile(profile: Record<string, unknown>) {
+        if (
+          !profile.email ||
+          typeof profile.email !== "string" ||
+          !profile.email.endsWith("@nu.edu.pk")
+        ) {
+          throw new Error("Only @nu.edu.pk email addresses are allowed");
+        }
+        return {
+          id: profile.sub as string,
+          name: profile.name as string,
+          email: profile.email as string,
+          image: profile.picture as string,
+        };
+      },
     }),
-    // Development-only test authentication provider
+
+    // Credentials-based authentication (Email/Password)
     Credentials({
-      id: "test",
-      name: "Test Login",
+      id: "credentials",
+      name: "Email & Password",
       credentials: {
-        userId: { label: "User ID", type: "text" },
+        email: { label: "Email", type: "email", placeholder: "user@nu.edu.pk" },
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        // Only allow in development environment
-        if (process.env.NODE_ENV === "production") {
-          return null;
+        // For development: Allow test users with test- prefix using userId
+        // For production: Implement full email/password validation
+        if (process.env.NODE_ENV === "development") {
+          const { userId } = credentials as { userId?: string };
+          if (userId && userId.startsWith("test-")) {
+            const user = await prisma.user.findUnique({
+              where: { id: userId },
+            });
+            if (user) {
+              return {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                image: user.image,
+              };
+            }
+          }
         }
 
-        const { userId } = credentials as { userId: string };
-
-        // Validate test user exists and has test- prefix
-        const user = await prisma.user.findUnique({
-          where: { id: userId },
-        });
-
-        if (user && userId.startsWith("test-")) {
-          return {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            image: user.image,
-          };
-        }
+        // Production: Implement in CREDENTIALS_AUTH_IMPLEMENTATION_PLAN.md
+        // This is a placeholder until full credentials auth is implemented
+        // TODO: Replace with actual email/password validation using bcrypt
+        console.warn(
+          "[Auth] Credentials provider: Full implementation pending (see CREDENTIALS_AUTH_IMPLEMENTATION_PLAN.md)",
+        );
         return null;
       },
     }),

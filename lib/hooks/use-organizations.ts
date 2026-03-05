@@ -5,9 +5,51 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { mockOrganizations, mockTeams } from "@/lib/mock-data";
 import type { PaginatedResponse } from "@/lib/types/pagination";
 import { DEFAULT_PAGE } from "@/lib/types/pagination";
+
+export interface OrganizationTeam {
+  id: string;
+  name: string;
+  description: string | null;
+  project: string | null;
+  credits: number;
+  createdAt: string;
+  updatedAt: string;
+  _count: {
+    members: number;
+    worklogs: number;
+  };
+  members?: {
+    id: string;
+    teamId: string;
+    user: {
+      id: string;
+      name: string | null;
+      email: string | null;
+      image: string | null;
+    } | null;
+  }[];
+  worklogs?: {
+    id: string;
+    title: string;
+    progressStatus: string;
+    teamId: string;
+    userId: string;
+    createdAt: string;
+    user: {
+      id: string;
+      name: string | null;
+      image: string | null;
+    } | null;
+    ratings: {
+      id: string;
+      value: number;
+      comment: string | null;
+      worklogId: string;
+    }[];
+  }[];
+}
 
 export interface Organization {
   id: string;
@@ -17,10 +59,18 @@ export interface Organization {
   ownerId: string;
   createdAt: string;
   updatedAt: string;
-  teams?: {
+  owner?: {
     id: string;
-    name: string;
-  }[];
+    name: string | null;
+    email: string | null;
+    image: string | null;
+  };
+  teams?: OrganizationTeam[];
+  stats?: {
+    totalTeams: number;
+    totalMembers: number;
+    totalWorklogs: number;
+  };
   _count?: {
     teams: number;
   };
@@ -40,51 +90,26 @@ export const useOrganizations = (
   return useQuery({
     queryKey: queryKeys.organizations.list(page, limit),
     queryFn: async (): Promise<PaginatedResponse<Organization>> => {
-      // In development, return mock data directly without any network call
-      if (process.env.NODE_ENV === "development") {
-        const defaultUserId = "mock-org-owner-1";
-        const all = mockOrganizations
-          .filter((o) => o.ownerId === defaultUserId)
-          .map((o) => ({
-            id: o.id,
-            name: o.name,
-            description: o.description || undefined,
-            credits: o.credits,
-            ownerId: o.ownerId,
-            createdAt: o.createdAt.toISOString(),
-            updatedAt: o.updatedAt.toISOString(),
-            teams: mockTeams
-              .filter((t) => t.organizationId === o.id)
-              .map((t) => ({ id: t.id, name: t.name })),
-            _count: {
-              teams: mockTeams.filter((t) => t.organizationId === o.id).length,
-            },
-          })) as Organization[];
-        const total = all.length;
-        const skip = (page - 1) * limit;
-        const items = all.slice(skip, skip + limit);
-        const totalPages = Math.max(1, Math.ceil(total / limit));
-        return {
-          items,
-          meta: {
-            page,
-            limit,
-            total,
-            totalPages,
-            hasNextPage: page < totalPages,
-            hasPreviousPage: page > 1,
-          },
-        };
-      }
       const response = await fetch(
         `/api/organizations?page=${page}&limit=${limit}`,
       );
       if (!response.ok) {
+        // Handle 401 (Unauthorized) - redirect to login
+        if (response.status === 401) {
+          window.location.href = "/api/auth/signin";
+          throw new Error("Unauthorized");
+        }
+        // Handle 403 (Forbidden) - show permission error
+        if (response.status === 403) {
+          throw new Error("You don't have permission to access this resource");
+        }
         throw new Error("Failed to fetch organizations");
       }
       return (await response.json()) as PaginatedResponse<Organization>;
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 };
 
@@ -97,13 +122,28 @@ export const useOrganization = (id: string) => {
     queryFn: async () => {
       const response = await fetch(`/api/organizations/${id}`);
       if (!response.ok) {
+        // Handle 401 (Unauthorized) - redirect to login
+        if (response.status === 401) {
+          window.location.href = "/api/auth/signin";
+          throw new Error("Unauthorized");
+        }
+        // Handle 403 (Forbidden) - show permission error
+        if (response.status === 403) {
+          throw new Error("You don't have permission to access this resource");
+        }
+        // Handle 404 (Not Found)
+        if (response.status === 404) {
+          throw new Error("Organization not found");
+        }
         throw new Error("Failed to fetch organization");
       }
       const payload = await response.json();
       return payload.data || payload;
     },
     enabled: !!id,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 };
 
@@ -118,13 +158,24 @@ export const useOrganizationTeams = (organizationId: string) => {
         `/api/organizations/${organizationId}/teams`,
       );
       if (!response.ok) {
+        // Handle 401 (Unauthorized) - redirect to login
+        if (response.status === 401) {
+          window.location.href = "/api/auth/signin";
+          throw new Error("Unauthorized");
+        }
+        // Handle 403 (Forbidden) - show permission error
+        if (response.status === 403) {
+          throw new Error("You don't have permission to access this resource");
+        }
         throw new Error("Failed to fetch organization teams");
       }
       const payload = await response.json();
       return payload.data || payload;
     },
     enabled: !!organizationId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 };
 
@@ -147,13 +198,69 @@ export const useCreateOrganization = () => {
       const payload = await response.json();
       return payload.data || payload;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.organizations.list(),
+    onMutate: async (data) => {
+      // Cancel in-flight org queries to prevent stale overwrites
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.organizations.all(),
       });
+
+      // Snapshot all list query variants (any pagination params) for rollback
+      const previousOrgLists = queryClient.getQueriesData<
+        PaginatedResponse<Organization>
+      >({ queryKey: ["organizations", "list"] });
+
+      // Build a temporary placeholder so the new page sees data immediately
+      const optimisticOrg: Organization = {
+        id: `temp-${Date.now()}`,
+        name: data.name,
+        description: data.description,
+        credits: 0,
+        ownerId: "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        teams: [],
+        _count: { teams: 0 },
+      };
+
+      queryClient.setQueriesData<PaginatedResponse<Organization>>(
+        { queryKey: ["organizations", "list"] },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            items: [optimisticOrg, ...(old.items ?? [])],
+            meta: {
+              ...old.meta,
+              total: (old.meta?.total ?? 0) + 1,
+            },
+          };
+        },
+      );
+
+      return { previousOrgLists };
+    },
+    onError: (_err, _data, context) => {
+      // Restore every list variant to its pre-mutation snapshot
+      if (context?.previousOrgLists) {
+        for (const [key, value] of context.previousOrgLists) {
+          queryClient.setQueryData(key, value);
+        }
+      }
+    },
+    onSuccess: () => {
+      // Eagerly refetch the org list so the new org shows immediately,
+      // even if the component has already navigated away (no active subscriber).
+      queryClient.refetchQueries({ queryKey: queryKeys.organizations.list() });
+      // Side-effect invalidations for unrelated caches
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() });
-      queryClient.invalidateQueries({
+      queryClient.refetchQueries({
         queryKey: queryKeys.user.sidebarStats(),
+      });
+    },
+    onSettled: () => {
+      // Always sync all organization data with the server
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.organizations.all(),
       });
     },
   });
@@ -178,12 +285,60 @@ export const useUpdateOrganization = (organizationId: string) => {
       const payload = await response.json();
       return payload.data || payload;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.organizations.detail(organizationId),
+    onMutate: async (data) => {
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.organizations.all(),
       });
+
+      const previousOrg = queryClient.getQueryData<Organization>(
+        queryKeys.organizations.detail(organizationId),
+      );
+      const previousOrgLists = queryClient.getQueriesData<
+        PaginatedResponse<Organization>
+      >({ queryKey: ["organizations", "list"] });
+
+      // Optimistically update the detail cache
+      queryClient.setQueryData<Organization>(
+        queryKeys.organizations.detail(organizationId),
+        (old) => (old ? { ...old, ...data } : old),
+      );
+
+      // Optimistically update every list variant
+      queryClient.setQueriesData<PaginatedResponse<Organization>>(
+        { queryKey: ["organizations", "list"] },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            items: old.items.map((org) =>
+              org.id === organizationId ? { ...org, ...data } : org,
+            ),
+          };
+        },
+      );
+
+      return { previousOrg, previousOrgLists };
+    },
+    onError: (_err, _data, context) => {
+      if (context?.previousOrg) {
+        queryClient.setQueryData(
+          queryKeys.organizations.detail(organizationId),
+          context.previousOrg,
+        );
+      }
+      if (context?.previousOrgLists) {
+        for (const [key, value] of context.previousOrgLists) {
+          queryClient.setQueryData(key, value);
+        }
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.organizations.list(),
+        queryKey: queryKeys.organizations.all(),
+      });
+      // Keep sidebar organization count in sync after updates
+      queryClient.refetchQueries({
+        queryKey: queryKeys.user.sidebarStats(),
       });
     },
   });
@@ -212,11 +367,13 @@ export const useDeleteOrganization = () => {
       return { success: true, organizationId };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.organizations.list(),
-      });
-      queryClient.invalidateQueries({
+      queryClient.refetchQueries({
         queryKey: queryKeys.user.sidebarStats(),
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.organizations.all(),
       });
     },
   });
@@ -250,12 +407,42 @@ export const useUpdateOrganizationCredits = (organizationId: string) => {
       const payload = await response.json();
       return payload.data || payload;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.organizations.detail(organizationId),
+    onMutate: async (data) => {
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.organizations.all(),
       });
+
+      const previousOrg = queryClient.getQueryData<Organization>(
+        queryKeys.organizations.detail(organizationId),
+      );
+
+      // Optimistically apply the credit change so the UI reflects it instantly
+      queryClient.setQueryData<Organization>(
+        queryKeys.organizations.detail(organizationId),
+        (old) => {
+          if (!old) return old;
+          let newCredits = old.credits;
+          if (data.action === "add") newCredits += data.amount;
+          else if (data.action === "subtract")
+            newCredits = Math.max(0, newCredits - data.amount);
+          else if (data.action === "set") newCredits = data.amount;
+          return { ...old, credits: newCredits };
+        },
+      );
+
+      return { previousOrg };
+    },
+    onError: (_err, _data, context) => {
+      if (context?.previousOrg) {
+        queryClient.setQueryData(
+          queryKeys.organizations.detail(organizationId),
+          context.previousOrg,
+        );
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.organizations.list(),
+        queryKey: queryKeys.organizations.all(),
       });
     },
   });

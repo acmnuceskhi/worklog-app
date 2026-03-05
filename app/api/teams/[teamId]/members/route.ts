@@ -7,7 +7,6 @@ import {
   parsePaginationParams,
   createPaginatedResponse,
 } from "@/lib/api-pagination";
-import { isDevelopment, mockTeamMembers, mockUsers } from "@/lib/mock-data";
 
 export async function GET(
   request: NextRequest,
@@ -20,34 +19,6 @@ export async function GET(
       defaultLimit: 50,
       maxLimit: 200,
     });
-
-    // In development mode, return mock members for the team
-    if (isDevelopment) {
-      const allMembers = mockTeamMembers
-        .filter((tm) => tm.teamId === teamId)
-        .map((tm) => {
-          const user = tm.userId
-            ? mockUsers.find((u) => u.id === tm.userId)
-            : undefined;
-          return {
-            id: tm.id,
-            teamId: tm.teamId,
-            userId: tm.userId || null,
-            email: tm.email,
-            status: tm.status,
-            invitedAt: tm.invitedAt.toISOString(),
-            joinedAt: tm.joinedAt ? tm.joinedAt.toISOString() : null,
-            user: user
-              ? { id: user.id, name: user.name, email: user.email }
-              : null,
-          };
-        });
-      const total = allMembers.length;
-      const items = allMembers.slice(skip, skip + take);
-      return NextResponse.json(
-        createPaginatedResponse(items, total, page, limit),
-      );
-    }
 
     const session = await auth();
     if (!session?.user?.id) {

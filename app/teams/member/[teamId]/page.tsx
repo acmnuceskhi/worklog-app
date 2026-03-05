@@ -692,7 +692,7 @@ function ContributionFlashcardPageContent({
     }
 
     toast.promise(
-      deleteWorklogMutation.mutateAsync({ worklogId, worklogTitle }),
+      deleteWorklogMutation.mutateAsync({ worklogId, title: worklogTitle }),
       {
         loading: `Deleting "${worklogTitle}"...`,
         success: () => `"${worklogTitle}" deleted successfully`,

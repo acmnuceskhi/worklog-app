@@ -48,13 +48,25 @@ export function withCache(
 }
 
 /**
- * Helper to add cache headers to a NextResponse object
+ * Attaches Cache-Control headers to an existing NextResponse for GET routes.
+ *
+ * Uses `private` to prevent CDN/shared-cache storage of user-specific data.
+ * `stale-while-revalidate` lets the browser serve the cached copy immediately
+ * while refreshing in the background, eliminating perceived latency on repeat
+ * visits within the TTL window.
+ *
+ * @param response  The NextResponse to annotate and return.
+ * @param ttlSeconds  How long (s) the browser may serve a cached response
+ *                    before treating it as stale (default: 300 s).
  */
 export function withCacheHeaders(
   response: NextResponse,
   ttlSeconds: number = 300,
 ): NextResponse {
-  response.headers.set("Cache-Control", `private, max-age=${ttlSeconds}`);
+  response.headers.set(
+    "Cache-Control",
+    `private, max-age=${ttlSeconds}, stale-while-revalidate=${ttlSeconds}`,
+  );
   return response;
 }
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+export const dynamic = "force-dynamic";
 import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-utils";
 import { handleApiError, unauthorized } from "@/lib/api-utils";
@@ -6,7 +7,6 @@ import {
   parsePaginationParams,
   createPaginatedResponse,
 } from "@/lib/api-pagination";
-import { isDevelopment, mockTeams, mockOrganizations } from "@/lib/mock-data";
 
 /**
  * GET /api/teams/owned
@@ -16,37 +16,6 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const { skip, take, page, limit } = parsePaginationParams(searchParams);
-
-    // In development mode without auth, return mock data
-    if (isDevelopment) {
-      const defaultUserId = "mock-org-owner-1";
-      const allOwnedTeams = mockTeams
-        .filter((t) => t.ownerId === defaultUserId)
-        .map((team) => {
-          const organization = mockOrganizations.find(
-            (org) => org.id === team.organizationId,
-          );
-          return {
-            ...team,
-            createdAt: team.createdAt.toISOString(),
-            updatedAt: team.updatedAt.toISOString(),
-            organization: organization
-              ? { id: organization.id, name: organization.name }
-              : null,
-            _count: {
-              members: 0,
-              worklogs: 0,
-            },
-            role: "owner",
-          };
-        });
-
-      const total = allOwnedTeams.length;
-      const items = allOwnedTeams.slice(skip, skip + take);
-      return NextResponse.json(
-        createPaginatedResponse(items, total, page, limit),
-      );
-    }
 
     const user = await getCurrentUser();
     if (!user) {
@@ -67,6 +36,10 @@ export async function GET(request: NextRequest) {
           description: true,
           credits: true,
           project: true,
+          // organizationId must be fetched alongside the relation so that
+          // the client can initialise TeamSettingsDialog and invalidate the
+          // correct org cache when the link is added/changed/removed.
+          organizationId: true,
           createdAt: true,
           updatedAt: true,
           organization: {
@@ -94,6 +67,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(
       createPaginatedResponse(teamsWithDetails, total, page, limit),
+      { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
     return handleApiError(error);

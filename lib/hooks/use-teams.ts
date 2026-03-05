@@ -5,13 +5,6 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import {
-  mockTeams,
-  mockTeamMembers,
-  mockOrganizations,
-  mockWorklogs,
-  mockUsers,
-} from "@/lib/mock-data";
 import type { PaginatedResponse } from "@/lib/types/pagination";
 import { DEFAULT_PAGE, DEFAULT_LIMIT } from "@/lib/types/pagination";
 
@@ -21,7 +14,8 @@ export interface Team {
   description?: string;
   project?: string;
   credits: number;
-  organizationId?: string;
+  /** null means the team has no org link; undefined means the field was not fetched */
+  organizationId?: string | null;
   ownerId: string;
   createdAt: string;
   updatedAt: string;
@@ -65,12 +59,19 @@ export const useTeams = () => {
     queryFn: async () => {
       const response = await fetch("/api/teams");
       if (!response.ok) {
+        // Handle 401 (Unauthorized) - redirect to login
+        if (response.status === 401) {
+          window.location.href = "/api/auth/signin";
+          throw new Error("Unauthorized");
+        }
         throw new Error("Failed to fetch teams");
       }
       const payload = await response.json();
       return (payload.data || payload) as Team[];
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000, // 30 s — short enough to stay fresh after mutations
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 };
 
@@ -84,66 +85,22 @@ export const useOwnedTeams = (
   return useQuery({
     queryKey: queryKeys.teams.owned(page, limit),
     queryFn: async (): Promise<PaginatedResponse<Team>> => {
-      // In development, return mock data directly without any network call
-      if (process.env.NODE_ENV === "development") {
-        const defaultUserId = "mock-org-owner-1";
-        const all = mockTeams
-          .filter((t) => t.ownerId === defaultUserId)
-          .map((t) => ({
-            id: t.id,
-            name: t.name,
-            description: t.description || null,
-            project: t.project || null,
-            credits: t.credits,
-            organizationId: t.organizationId || null,
-            ownerId: t.ownerId,
-            createdAt: t.createdAt.toISOString(),
-            updatedAt: t.updatedAt.toISOString(),
-            owner: {
-              name: mockUsers.find((u) => u.id === t.ownerId)?.name || null,
-              email: mockUsers.find((u) => u.id === t.ownerId)?.email || "",
-            },
-            organization: t.organizationId
-              ? {
-                  id: t.organizationId,
-                  name:
-                    mockOrganizations.find((o) => o.id === t.organizationId)
-                      ?.name || "",
-                }
-              : null,
-            _count: {
-              members: mockTeamMembers.filter(
-                (tm) => tm.teamId === t.id && tm.status === "ACCEPTED",
-              ).length,
-              worklogs: mockWorklogs.filter((w) => w.teamId === t.id).length,
-            },
-            role: "owner",
-          })) as Team[];
-        const total = all.length;
-        const skip = (page - 1) * limit;
-        const items = all.slice(skip, skip + limit);
-        const totalPages = Math.max(1, Math.ceil(total / limit));
-        return {
-          items,
-          meta: {
-            page,
-            limit,
-            total,
-            totalPages,
-            hasNextPage: page < totalPages,
-            hasPreviousPage: page > 1,
-          },
-        };
-      }
       const response = await fetch(
         `/api/teams/owned?page=${page}&limit=${limit}`,
       );
       if (!response.ok) {
+        // Handle 401 (Unauthorized) - redirect to login
+        if (response.status === 401) {
+          window.location.href = "/api/auth/signin";
+          throw new Error("Unauthorized");
+        }
         throw new Error("Failed to fetch owned teams");
       }
       return (await response.json()) as PaginatedResponse<Team>;
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000, // 30 s — allows invalidation to trigger prompt refetch
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 };
 
@@ -157,69 +114,22 @@ export const useMemberTeams = (
   return useQuery({
     queryKey: queryKeys.teams.member(page, limit),
     queryFn: async (): Promise<PaginatedResponse<Team>> => {
-      // In development, return mock data directly without any network call
-      if (process.env.NODE_ENV === "development") {
-        const defaultUserId = "mock-org-owner-1";
-        const all = mockTeams
-          .filter((t) =>
-            mockTeamMembers.some(
-              (tm) =>
-                tm.teamId === t.id &&
-                tm.userId === defaultUserId &&
-                tm.status === "ACCEPTED",
-            ),
-          )
-          .map((t) => ({
-            id: t.id,
-            name: t.name,
-            description: t.description || null,
-            project: t.project || null,
-            credits: t.credits,
-            organizationId: t.organizationId || null,
-            ownerId: t.ownerId,
-            createdAt: t.createdAt.toISOString(),
-            updatedAt: t.updatedAt.toISOString(),
-            owner: {
-              name: mockUsers.find((u) => u.id === t.ownerId)?.name || null,
-              email: mockUsers.find((u) => u.id === t.ownerId)?.email || "",
-            },
-            organization: t.organizationId
-              ? {
-                  id: t.organizationId,
-                  name:
-                    mockOrganizations.find((o) => o.id === t.organizationId)
-                      ?.name || "",
-                }
-              : undefined,
-            myWorklogCount: mockWorklogs.filter(
-              (w) => w.teamId === t.id && w.userId === defaultUserId,
-            ).length,
-          })) as Team[];
-        const total = all.length;
-        const skip = (page - 1) * limit;
-        const items = all.slice(skip, skip + limit);
-        const totalPages = Math.max(1, Math.ceil(total / limit));
-        return {
-          items,
-          meta: {
-            page,
-            limit,
-            total,
-            totalPages,
-            hasNextPage: page < totalPages,
-            hasPreviousPage: page > 1,
-          },
-        };
-      }
       const response = await fetch(
         `/api/teams/member?page=${page}&limit=${limit}`,
       );
       if (!response.ok) {
+        // Handle 401 (Unauthorized) - redirect to login
+        if (response.status === 401) {
+          window.location.href = "/api/auth/signin";
+          throw new Error("Unauthorized");
+        }
         throw new Error("Failed to fetch member teams");
       }
       return (await response.json()) as PaginatedResponse<Team>;
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000, // 30 s — allows invalidation to trigger prompt refetch
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 };
 
@@ -230,70 +140,28 @@ export const useTeam = (teamId: string) => {
   return useQuery({
     queryKey: queryKeys.teams.detail(teamId),
     queryFn: async () => {
-      // In development, return mock data directly without any network call
-      if (process.env.NODE_ENV === "development") {
-        const team = mockTeams.find((t) => t.id === teamId);
-        if (!team) throw new Error("Team not found");
-
-        const owner = mockUsers.find((u) => u.id === team.ownerId);
-        const organization = mockOrganizations.find(
-          (o) => o.id === team.organizationId,
-        );
-        const members = mockTeamMembers
-          .filter((tm) => tm.teamId === teamId && tm.status === "ACCEPTED")
-          .map((tm) => {
-            const user = mockUsers.find((u) => u.id === tm.userId);
-            return {
-              id: tm.id,
-              email: tm.email,
-              status: tm.status,
-              user: user
-                ? {
-                    id: user.id,
-                    name: user.name,
-                    email: user.email,
-                    image: user.image ?? null,
-                  }
-                : null,
-            };
-          });
-
-        return {
-          id: team.id,
-          name: team.name,
-          description: team.description || null,
-          credits: team.credits,
-          project: team.project || null,
-          ownerId: team.ownerId,
-          organizationId: team.organizationId || null,
-          createdAt: team.createdAt.toISOString(),
-          updatedAt: team.updatedAt.toISOString(),
-          _count: {
-            worklogs: mockWorklogs.filter((w) => w.teamId === teamId).length,
-          },
-          owner: owner
-            ? {
-                id: owner.id,
-                name: owner.name,
-                email: owner.email,
-                image: owner.image ?? null,
-              }
-            : null,
-          organization: organization
-            ? { id: organization.id, name: organization.name }
-            : null,
-          members,
-        };
-      }
       const response = await fetch(`/api/teams/${teamId}`);
       if (!response.ok) {
+        // Handle 401 (Unauthorized) - redirect to login
+        if (response.status === 401) {
+          window.location.href = "/api/auth/signin";
+          throw new Error("Unauthorized");
+        }
+        // Handle 403 (Forbidden) - show permission error
+        if (response.status === 403) {
+          throw new Error("You don't have permission to access this team");
+        }
+        // Handle 404 (Not Found)
+        if (response.status === 404) {
+          throw new Error("Team not found");
+        }
         throw new Error("Failed to fetch team");
       }
       const payload = await response.json();
       return payload.team || payload.data || payload;
     },
     enabled: !!teamId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
   });
 };
 
@@ -308,53 +176,25 @@ export const useTeamMembers = (
   return useQuery({
     queryKey: queryKeys.teams.members(teamId, page, limit),
     queryFn: async (): Promise<PaginatedResponse<TeamMember>> => {
-      // In development, return mock data directly without any network call
-      if (process.env.NODE_ENV === "development") {
-        const all = mockTeamMembers
-          .filter((tm) => tm.teamId === teamId)
-          .map((tm) => {
-            const user = tm.userId
-              ? mockUsers.find((u) => u.id === tm.userId)
-              : undefined;
-            return {
-              id: tm.id,
-              teamId: tm.teamId,
-              userId: tm.userId || null,
-              email: tm.email,
-              status: tm.status,
-              invitedAt: tm.invitedAt.toISOString(),
-              joinedAt: tm.joinedAt ? tm.joinedAt.toISOString() : null,
-              user: user
-                ? { id: user.id, name: user.name, email: user.email }
-                : null,
-            } as TeamMember;
-          });
-        const total = all.length;
-        const skip = (page - 1) * limit;
-        const items = all.slice(skip, skip + limit);
-        const totalPages = Math.max(1, Math.ceil(total / limit));
-        return {
-          items,
-          meta: {
-            page,
-            limit,
-            total,
-            totalPages,
-            hasNextPage: page < totalPages,
-            hasPreviousPage: page > 1,
-          },
-        };
-      }
       const response = await fetch(
         `/api/teams/${teamId}/members?page=${page}&limit=${limit}`,
       );
       if (!response.ok) {
+        // Handle 401 (Unauthorized) - redirect to login
+        if (response.status === 401) {
+          window.location.href = "/api/auth/signin";
+          throw new Error("Unauthorized");
+        }
+        // Handle 403 (Forbidden) - show permission error
+        if (response.status === 403) {
+          throw new Error("You don't have permission to access team members");
+        }
         throw new Error("Failed to fetch team members");
       }
       return (await response.json()) as PaginatedResponse<TeamMember>;
     },
     enabled: !!teamId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
   });
 };
 
@@ -380,13 +220,72 @@ export const useCreateTeam = () => {
       const payload = await response.json();
       return payload.data || payload;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.teams.list() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.teams.owned() });
+    onMutate: async (data) => {
+      // Cancel in-flight team queries to prevent stale overwrites
+      await queryClient.cancelQueries({ queryKey: queryKeys.teams.all() });
+
+      // Snapshot all owned-team list variants for rollback
+      const previousOwnedTeamLists = queryClient.getQueriesData<
+        PaginatedResponse<Team>
+      >({ queryKey: [...queryKeys.teams.all(), "owned"] });
+
+      // Build a temporary placeholder so the new page sees data immediately
+      const optimisticTeam: Team = {
+        id: `temp-${Date.now()}`,
+        name: data.name,
+        description: data.description,
+        project: data.project,
+        credits: 0,
+        organizationId: data.organizationId,
+        ownerId: "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        _count: { members: 0, worklogs: 0 },
+      };
+
+      queryClient.setQueriesData<PaginatedResponse<Team>>(
+        { queryKey: [...queryKeys.teams.all(), "owned"] },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            items: [optimisticTeam, ...(old.items ?? [])],
+            meta: {
+              ...old.meta,
+              total: (old.meta?.total ?? 0) + 1,
+            },
+          };
+        },
+      );
+
+      return { previousOwnedTeamLists };
+    },
+    onError: (_err, _data, context) => {
+      if (context?.previousOwnedTeamLists) {
+        for (const [key, value] of context.previousOwnedTeamLists) {
+          queryClient.setQueryData(key, value);
+        }
+      }
+    },
+    onSuccess: (_result, variables) => {
+      // Side-effect invalidations for unrelated caches
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() });
-      queryClient.invalidateQueries({
+      queryClient.refetchQueries({
         queryKey: queryKeys.user.sidebarStats(),
       });
+      if (variables.organizationId) {
+        queryClient.refetchQueries({
+          queryKey: queryKeys.organizations.detail(variables.organizationId),
+        });
+        queryClient.refetchQueries({
+          queryKey: queryKeys.organizations.list(),
+        });
+      }
+    },
+    onSettled: () => {
+      // Invalidate ALL team queries — marks active ones for immediate refetch
+      // and inactive ones for refetch on next mount.
+      queryClient.invalidateQueries({ queryKey: queryKeys.teams.all() });
     },
   });
 };
@@ -443,11 +342,150 @@ export const useUpdateTeam = (teamId: string) => {
       const payload = await response.json();
       return payload.data || payload;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.teams.detail(teamId),
+    onMutate: async (data) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.teams.all() });
+
+      // Snapshot detail cache (populated on team detail pages).
+      const previousTeam = queryClient.getQueryData<Team>(
+        queryKeys.teams.detail(teamId),
+      );
+
+      // Snapshot every owned-list page in cache for rollback.
+      const previousOwnedTeamLists = queryClient.getQueriesData<
+        PaginatedResponse<Team>
+      >({ queryKey: queryKeys.teams.owned() });
+
+      // Scan owned-list pages for the current org binding — on /teams/lead
+      // the detail cache is empty so the list is the only reliable source.
+      const teamInList = previousOwnedTeamLists
+        .flatMap(([, page]) => page?.items ?? [])
+        .find((t) => t.id === teamId);
+
+      const previousOrgId =
+        previousTeam?.organizationId ??
+        previousTeam?.organization?.id ??
+        teamInList?.organizationId ??
+        teamInList?.organization?.id ??
+        null;
+
+      // Resolve the new organization relation object for the optimistic update.
+      // When linking, look up the org name from the organizations list cache.
+      // When unlinking (organizationId === null), set organization to undefined.
+      let newOrganization: Team["organization"] = undefined;
+      if (data.organizationId === null) {
+        // Unlinking — clear the relation
+        newOrganization = undefined;
+      } else if (data.organizationId) {
+        // Linking — resolve org name from cached org list
+        const orgListPages = queryClient.getQueriesData<
+          PaginatedResponse<{ id: string; name: string }>
+        >({ queryKey: queryKeys.organizations.list() });
+        const org = orgListPages
+          .flatMap(([, page]) => page?.items ?? [])
+          .find((o) => o.id === data.organizationId);
+        newOrganization = org
+          ? { id: org.id, name: org.name }
+          : { id: data.organizationId, name: "Organization" };
+      }
+
+      // Build the optimistic patch: merge mutation data + resolved organization
+      const optimisticPatch: Partial<Team> = {
+        ...data,
+        ...(data.organizationId !== undefined && {
+          organization: newOrganization,
+        }),
+      };
+
+      // Optimistically update the detail cache
+      queryClient.setQueryData<Team>(queryKeys.teams.detail(teamId), (old) =>
+        old ? { ...old, ...optimisticPatch } : old,
+      );
+
+      // Optimistically update every owned-teams list page so team cards
+      // on /teams/lead render the correct org badge immediately.
+      queryClient.setQueriesData<PaginatedResponse<Team>>(
+        { queryKey: queryKeys.teams.owned() },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            items: old.items.map((t) =>
+              t.id === teamId ? { ...t, ...optimisticPatch } : t,
+            ),
+          };
+        },
+      );
+
+      return { previousTeam, previousOwnedTeamLists, previousOrgId };
+    },
+    onError: (_err, _data, context) => {
+      if (context?.previousTeam) {
+        queryClient.setQueryData(
+          queryKeys.teams.detail(teamId),
+          context.previousTeam,
+        );
+      }
+      // Rollback every owned-list page to its pre-mutation snapshot
+      if (context?.previousOwnedTeamLists) {
+        for (const [key, value] of context.previousOwnedTeamLists) {
+          queryClient.setQueryData(key, value);
+        }
+      }
+    },
+    onSuccess: (serverTeam) => {
+      // Write the server's response into the detail cache immediately.
+      queryClient.setQueryData<Team>(queryKeys.teams.detail(teamId), (old) =>
+        old ? { ...old, ...serverTeam } : serverTeam,
+      );
+
+      // Write the server's response into every owned-teams list page.
+      // This ensures team cards show the exact data the server committed,
+      // eliminating any gap between the optimistic update and the refetch.
+      queryClient.setQueriesData<PaginatedResponse<Team>>(
+        { queryKey: queryKeys.teams.owned() },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            items: old.items.map((t) =>
+              t.id === teamId ? { ...t, ...serverTeam } : t,
+            ),
+          };
+        },
+      );
+    },
+    onSettled: async (_data, _error, variables, context) => {
+      // Invalidate ALL team queries (prefix ["teams"]) — marks them stale so
+      // inactive queries (other pages) refetch when the user navigates there.
+      queryClient.invalidateQueries({ queryKey: queryKeys.teams.all() });
+      // Await the owned-teams list refetch so that the cache is guaranteed
+      // fresh BEFORE mutateAsync resolves and the caller re-renders.
+      await queryClient.refetchQueries({ queryKey: queryKeys.teams.owned() });
+
+      // Keep sidebar counts in sync — sidebar is always mounted so refetch works.
+      queryClient.refetchQueries({
+        queryKey: queryKeys.user.sidebarStats(),
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.teams.list() });
+
+      const newOrgId = variables.organizationId ?? null;
+      const prevOrgId = context?.previousOrgId ?? null;
+
+      if (newOrgId) {
+        queryClient.refetchQueries({
+          queryKey: queryKeys.organizations.detail(newOrgId),
+        });
+        queryClient.refetchQueries({
+          queryKey: queryKeys.organizations.list(),
+        });
+      }
+      if (prevOrgId && prevOrgId !== newOrgId) {
+        queryClient.refetchQueries({
+          queryKey: queryKeys.organizations.detail(prevOrgId),
+        });
+        queryClient.refetchQueries({
+          queryKey: queryKeys.organizations.list(),
+        });
+      }
     },
   });
 };
@@ -515,11 +553,14 @@ export const useDeleteTeam = () => {
       return { success: true, teamId };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.teams.all() });
+      // Side-effect invalidations for unrelated caches
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() });
-      queryClient.invalidateQueries({
+      queryClient.refetchQueries({
         queryKey: queryKeys.user.sidebarStats(),
       });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.teams.all() });
     },
   });
 };
@@ -547,11 +588,36 @@ export const useUpdateTeamCredits = (teamId: string) => {
       const payload = await response.json();
       return payload.data || payload;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.teams.detail(teamId),
+    onMutate: async (data) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.teams.all() });
+
+      const previousTeam = queryClient.getQueryData<Team>(
+        queryKeys.teams.detail(teamId),
+      );
+
+      // Optimistically apply the credit change so the UI reflects it instantly
+      queryClient.setQueryData<Team>(queryKeys.teams.detail(teamId), (old) => {
+        if (!old) return old;
+        let newCredits = old.credits;
+        if (data.action === "add") newCredits += data.amount;
+        else if (data.action === "subtract")
+          newCredits = Math.max(0, newCredits - data.amount);
+        else if (data.action === "set") newCredits = data.amount;
+        return { ...old, credits: newCredits };
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.teams.list() });
+
+      return { previousTeam };
+    },
+    onError: (_err, _data, context) => {
+      if (context?.previousTeam) {
+        queryClient.setQueryData(
+          queryKeys.teams.detail(teamId),
+          context.previousTeam,
+        );
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.teams.all() });
     },
   });
 };

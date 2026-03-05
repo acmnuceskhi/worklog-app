@@ -14,12 +14,19 @@ export async function GET() {
     let databaseVersion = "";
 
     try {
-      const result = await prisma.$queryRaw<
-        Array<{ version: string }>
-      >`SELECT version()`;
-      if (result && result[0]) {
-        databaseStatus = "ok";
-        databaseVersion = result[0].version;
+      // Use a simple count query instead of version() for better compatibility
+      await prisma.user.count();
+      databaseStatus = "ok";
+      // Try to get version if possible (may fail on some DB setups)
+      try {
+        const result = await prisma.$queryRaw<
+          Array<{ version: string }>
+        >`SELECT version()`;
+        if (result && result[0]) {
+          databaseVersion = result[0].version;
+        }
+      } catch {
+        // Version query failed, but DB connection is OK
       }
     } catch (dbError) {
       console.error("Database health check failed:", dbError);
@@ -29,8 +36,9 @@ export async function GET() {
     // Check auth configuration
     let authStatus = "ok";
     try {
-      const session = await auth();
-      // Session may or may not exist, but auth() should not throw
+      // Session may or may not exist, but auth() should not throw.
+      // We only care that the auth() call itself succeeds.
+      await auth();
     } catch (authError) {
       console.error("Auth health check failed:", authError);
       authStatus = "error";
