@@ -455,13 +455,6 @@ export const useUpdateTeam = (teamId: string) => {
       );
     },
     onSettled: async (_data, _error, variables, context) => {
-      // Invalidate ALL team queries (prefix ["teams"]) — marks them stale so
-      // inactive queries (other pages) refetch when the user navigates there.
-      queryClient.invalidateQueries({ queryKey: queryKeys.teams.all() });
-      // Await the owned-teams list refetch so that the cache is guaranteed
-      // fresh BEFORE mutateAsync resolves and the caller re-renders.
-      await queryClient.refetchQueries({ queryKey: queryKeys.teams.owned() });
-
       // Keep sidebar counts in sync — sidebar is always mounted so refetch works.
       queryClient.refetchQueries({
         queryKey: queryKeys.user.sidebarStats(),
@@ -470,19 +463,21 @@ export const useUpdateTeam = (teamId: string) => {
       const newOrgId = variables.organizationId ?? null;
       const prevOrgId = context?.previousOrgId ?? null;
 
+      // Force immediate refetch regardless of observer status to ensure caches
+      // are fresh before any subsequent navigation to organization list/detail pages.
       if (newOrgId) {
-        queryClient.refetchQueries({
+        await queryClient.refetchQueries({
           queryKey: queryKeys.organizations.detail(newOrgId),
         });
-        queryClient.refetchQueries({
+        await queryClient.refetchQueries({
           queryKey: queryKeys.organizations.list(),
         });
       }
       if (prevOrgId && prevOrgId !== newOrgId) {
-        queryClient.refetchQueries({
+        await queryClient.refetchQueries({
           queryKey: queryKeys.organizations.detail(prevOrgId),
         });
-        queryClient.refetchQueries({
+        await queryClient.refetchQueries({
           queryKey: queryKeys.organizations.list(),
         });
       }
@@ -519,7 +514,22 @@ export const useRemoveTeamMember = (teamId: string) => {
       }
       return { memberId, memberName };
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      // Immediately remove from paginated members list to prevent stale visualization
+      queryClient.setQueriesData<PaginatedResponse<TeamMember>>(
+        { queryKey: queryKeys.teams.members(teamId) },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            items: old.items.filter((m) => m.id !== variables.memberId),
+            meta: old.meta
+              ? { ...old.meta, total: Math.max(0, old.meta.total - 1) }
+              : old.meta,
+          };
+        },
+      );
+
       queryClient.invalidateQueries({
         queryKey: queryKeys.teams.detail(teamId),
       });
@@ -552,7 +562,28 @@ export const useDeleteTeam = () => {
       }
       return { success: true, teamId };
     },
-    onSuccess: () => {
+    onSuccess: (_, teamId) => {
+      // Remove from list caches immediately to prevent stale data
+      queryClient.setQueriesData<PaginatedResponse<Team>>(
+        { queryKey: queryKeys.teams.owned() },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            items: old.items.filter((t) => t.id !== teamId),
+            meta: old.meta
+              ? { ...old.meta, total: Math.max(0, old.meta.total - 1) }
+              : old.meta,
+          };
+        },
+      );
+
+      // Remove from unpaginated list
+      queryClient.setQueriesData<Team[]>(
+        { queryKey: queryKeys.teams.list() },
+        (old) => (old ? old.filter((t) => t.id !== teamId) : old),
+      );
+
       // Side-effect invalidations for unrelated caches
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() });
       queryClient.refetchQueries({

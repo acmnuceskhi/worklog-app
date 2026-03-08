@@ -371,6 +371,15 @@
   transform: translateY(0);
 }
 
+.domainHint {
+  text-align: center;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.38);
+  line-height: 1.4;
+  margin-top: -4px;
+  letter-spacing: 0.02em;
+}
+
 .redirectContainer {
   display: flex;
   justify-content: center;

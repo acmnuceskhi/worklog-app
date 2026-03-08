@@ -366,7 +366,22 @@ export const useDeleteOrganization = () => {
       }
       return { success: true, organizationId };
     },
-    onSuccess: () => {
+    onSuccess: (_, organizationId) => {
+      // Remove from list caches immediately to prevent stale data
+      queryClient.setQueriesData<PaginatedResponse<Organization>>(
+        { queryKey: ["organizations", "list"] },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            items: old.items.filter((org) => org.id !== organizationId),
+            meta: old.meta
+              ? { ...old.meta, total: Math.max(0, old.meta.total - 1) }
+              : old.meta,
+          };
+        },
+      );
+
       queryClient.refetchQueries({
         queryKey: queryKeys.user.sidebarStats(),
       });
@@ -555,7 +570,24 @@ export const useRevokeOrganizationInvitation = (organizationId: string) => {
       }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (_, invitationId) => {
+      // Immediately remove from invitations list to prevent stale visualization
+      queryClient.setQueryData<OrganizationInvitationsResponse>(
+        queryKeys.organizations.invitations(organizationId),
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            data: old.data.filter((i) => i.id !== invitationId),
+            meta: {
+              ...old.meta,
+              total: Math.max(0, old.meta.total - 1),
+              pending: Math.max(0, old.meta.pending - 1),
+            },
+          };
+        },
+      );
+
       queryClient.invalidateQueries({
         queryKey: queryKeys.organizations.invitations(organizationId),
       });
@@ -581,7 +613,24 @@ export const useRemoveOrganizationOwner = (organizationId: string) => {
       }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (_, userId) => {
+      // Immediately remove from invitations list to prevent stale visualization
+      queryClient.setQueryData<OrganizationInvitationsResponse>(
+        queryKeys.organizations.invitations(organizationId),
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            data: old.data.filter((i) => i.user?.id !== userId),
+            meta: {
+              ...old.meta,
+              total: Math.max(0, old.meta.total - 1),
+              accepted: Math.max(0, old.meta.accepted - 1),
+            },
+          };
+        },
+      );
+
       queryClient.invalidateQueries({
         queryKey: queryKeys.organizations.invitations(organizationId),
       });

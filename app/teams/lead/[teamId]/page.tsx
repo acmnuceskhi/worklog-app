@@ -25,6 +25,7 @@ import {
 } from "@/lib/hooks";
 import { formatLocalDate, getDeadlineStatus } from "@/lib/deadline-utils";
 import type { ProgressStatus } from "@/lib/hooks/use-worklogs";
+import { Pagination } from "@/components/ui/pagination";
 
 import dynamic from "next/dynamic";
 
@@ -156,10 +157,13 @@ function TeamDetailsContent({
 }) {
   const { teamId } = use(params);
 
-  /* ── Data fetching ───────────────────────────────────────────────────── */
+  /* ── Data fetching ───────────────────────────────────────────────────── */ const [
+    worklogPage,
+    setWorklogPage,
+  ] = useState(1);
   const { data: team, isLoading, error, refetch } = useTeam(teamId);
   const { data: paginatedWorklogs, isLoading: worklogsLoading } =
-    useTeamWorklogs(teamId);
+    useTeamWorklogs(teamId, worklogPage, 25);
   const worklogs = useMemo(
     () => paginatedWorklogs?.items ?? [],
     [paginatedWorklogs?.items],
@@ -450,6 +454,12 @@ function TeamDetailsContent({
             isLoading={worklogsLoading}
             onDelete={handleDeleteWorklog}
             isDeleting={deleteWorklogMutation.isPending}
+          />
+          <Pagination
+            currentPage={worklogPage}
+            totalPages={paginatedWorklogs?.meta.totalPages ?? 1}
+            onPageChange={setWorklogPage}
+            isLoading={worklogsLoading}
           />
         </CardContent>
       </Card>

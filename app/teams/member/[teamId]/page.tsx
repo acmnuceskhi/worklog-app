@@ -56,6 +56,7 @@ const RichTextEditor = dynamic(
 import { DeadlineStatusBadge } from "@/components/worklog/deadline-status-badge";
 import { DeadlineCountdown } from "@/components/worklog/deadline-countdown";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Pagination } from "@/components/ui/pagination";
 
 import { worklogCreateSchema } from "@/lib/validations";
 import { toast } from "sonner";
@@ -64,7 +65,7 @@ import { useSharedSession } from "@/components/providers";
 import {
   useTeam,
   useTeamMembers,
-  useWorklogs,
+  useTeamWorklogs,
   useUpdateWorklogStatus,
   useCreateWorklog,
   useUpdateWorklogDeadline,
@@ -189,9 +190,12 @@ function ContributionFlashcardPageContent({
   const { data: team, isLoading, error, refetch } = useTeam(teamId);
   const { data: paginatedMembers } = useTeamMembers(teamId);
   const teamMembers = paginatedMembers?.items ?? [];
-  const { data: worklogsData = [], isLoading: worklogsLoading } = useWorklogs();
-  const teamWorklogs = worklogsData.filter(
-    (worklog) => worklog.teamId === teamId,
+  const [worklogPage, setWorklogPage] = useState(1);
+  const { data: paginatedWorklogs, isLoading: worklogsLoading } =
+    useTeamWorklogs(teamId, worklogPage, 8);
+  const teamWorklogs = useMemo(
+    () => paginatedWorklogs?.items ?? [],
+    [paginatedWorklogs?.items],
   );
   const statusUpdateMutation = useUpdateWorklogStatus();
   const createWorklogMutation = useCreateWorklog();
@@ -240,7 +244,7 @@ function ContributionFlashcardPageContent({
 
   // Compute recent worklogs with proper formatting
   const recentWorklogs = useMemo(() => {
-    return (teamWorklogs || []).slice(0, 5).map((worklog) => ({
+    return (teamWorklogs || []).map((worklog) => ({
       id: worklog.id,
       title: worklog.title,
       description: stripHtml(worklog.description || ""),
@@ -454,9 +458,9 @@ function ContributionFlashcardPageContent({
   }, [previews]);
 
   useEffect(() => {
-    if (!worklogsData) return;
+    if (!teamWorklogs.length) return;
 
-    worklogsData.forEach((worklog) => {
+    teamWorklogs.forEach((worklog) => {
       if (!worklog.deadline || deadlineNotifiedRef.current.has(worklog.id)) {
         return;
       }
@@ -483,7 +487,7 @@ function ContributionFlashcardPageContent({
         }
       }
     });
-  }, [worklogsData]);
+  }, [teamWorklogs]);
 
   // Loading state with skeleton
   if (isLoading) {
@@ -713,7 +717,7 @@ function ContributionFlashcardPageContent({
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
           <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
-            {recentWorklogs.length} recent worklogs
+            {paginatedWorklogs?.meta.total ?? 0} total worklogs
           </span>
           {canSetDeadline && (
             <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-amber-200">
@@ -1108,6 +1112,12 @@ function ContributionFlashcardPageContent({
                 Submit your first worklog to see it here.
               </p>
             )}
+            <Pagination
+              currentPage={worklogPage}
+              totalPages={paginatedWorklogs?.meta.totalPages ?? 1}
+              onPageChange={setWorklogPage}
+              isLoading={worklogsLoading}
+            />
           </CardContent>
         </Card>
       </div>

@@ -20,6 +20,7 @@ import { ErrorState } from "@/components/states/error-state";
 import { EmptyState } from "@/components/states/empty-state";
 import { EntityCard } from "@/components/entities/entity-card";
 import { EntityList } from "@/components/entities/entity-list";
+import { Pagination } from "@/components/ui/pagination";
 
 // Lazy-load team settings dialog — it's a heavy component only needed on interaction
 const TeamSettingsDialog = dynamic(
@@ -34,8 +35,14 @@ export default function LeadTeamsPage() {
   const router = useRouter();
   const [showWizard, setShowWizard] = useState(false);
   const [settingsTeam, setSettingsTeam] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
-  const { data: paginatedTeams, isLoading, error, refetch } = useOwnedTeams();
+  const {
+    data: paginatedTeams,
+    isLoading,
+    error,
+    refetch,
+  } = useOwnedTeams(page, 25);
   const teams = paginatedTeams?.items ?? [];
 
   // Search + sort
@@ -81,6 +88,7 @@ export default function LeadTeamsPage() {
     setSearchQuery("");
     setSortBy("name");
     setSortDir("asc");
+    setPage(1);
   };
 
   const handleTeamCreated = (teamId: string) => {
@@ -129,7 +137,7 @@ export default function LeadTeamsPage() {
           {teams.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2 text-xs">
               <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
-                {teams.length} teams
+                {paginatedTeams?.meta.total ?? teams.length} teams
               </span>
               <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
                 {totalMembers} members
@@ -151,6 +159,7 @@ export default function LeadTeamsPage() {
         <TeamFilters
           value={{ search: searchQuery, sortBy, sortDir }}
           onChange={(state) => {
+            setPage(1);
             setSearchQuery(state.search);
             setSortBy(state.sortBy);
             setSortDir(state.sortDir);
@@ -244,6 +253,13 @@ export default function LeadTeamsPage() {
           ))}
         </EntityList>
       )}
+
+      <Pagination
+        currentPage={page}
+        totalPages={paginatedTeams?.meta.totalPages ?? 1}
+        onPageChange={setPage}
+        isLoading={isLoading}
+      />
 
       {/* Team Creation Wizard */}
       <TeamCreationWizard

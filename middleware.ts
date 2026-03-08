@@ -1,11 +1,11 @@
 /**
  * NextAuth middleware configuration.
  *
- * The `authorized` callback in lib/auth.ts controls access:
- * - Development: always returns true (mock data pages are accessible without login)
- * - Production: requires a valid session
+ * The `authorized` callback in lib/auth.ts controls route access.
+ * All environments (development and production) require a valid session —
+ * there is no bypass. Unauthenticated requests are redirected to the sign-in page.
  *
- * Note: The middleware deprecation warning about "proxy" is not applicable here.
+ * Note: The middleware deprecation warning about "proxy" is expected with Auth.js v5.
  * Auth.js v5 requires the middleware.ts pattern for proper session validation.
  * https://authjs.dev/getting-started/deployment
  */

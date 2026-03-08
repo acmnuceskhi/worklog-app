@@ -70,6 +70,24 @@ const config = {
     authorized({ auth: session }) {
       return !!session;
     },
+    async signIn({ user, account }) {
+      // Validate email domain on OAuth sign-in
+      // This ensures users can only sign in with university email addresses
+      if (account?.provider === "google") {
+        const allowedDomains = ["@nu.edu.pk", "@isb.nu.edu.pk"];
+        const email = (user.email || "").toLowerCase();
+        const hasValidDomain = allowedDomains.some((domain) =>
+          email.endsWith(domain),
+        );
+
+        if (!hasValidDomain) {
+          // Return false to prevent sign-in and trigger error redirect
+          // Auth.js will redirect to /api/auth/signin?error=AccessDenied
+          return false;
+        }
+      }
+      return true;
+    },
     jwt: async ({ token, user }) => {
       // Attach user ID when user first signs in
       if (user) {
@@ -86,6 +104,12 @@ const config = {
     },
   },
 
+  pages: {
+    // Redirect all auth errors back to the landing page.
+    // The landing page reads ?error= from search params and shows a descriptive toast.
+    error: "/",
+  },
+
   providers: [
     // Google OAuth (primary): Enforces @nu.edu.pk university domain restriction
     // GitHub OAuth: Available as secondary provider (uncomment to enable)
@@ -99,14 +123,10 @@ const config = {
         },
       },
       // Validate domain in callback (defense in depth)
+      // Supports dual-domain: @nu.edu.pk and @isb.nu.edu.pk
       async profile(profile: Record<string, unknown>) {
-        if (
-          !profile.email ||
-          typeof profile.email !== "string" ||
-          !profile.email.endsWith("@nu.edu.pk")
-        ) {
-          throw new Error("Only @nu.edu.pk email addresses are allowed");
-        }
+        // Domain validation happens in signIn callback for better UX
+        // This callback just extracts and returns profile data
         return {
           id: profile.sub as string,
           name: profile.name as string,

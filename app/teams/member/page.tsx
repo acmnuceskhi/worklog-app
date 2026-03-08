@@ -16,6 +16,7 @@ import { LoadingState } from "@/components/states/loading-state";
 import { EntityCard } from "@/components/entities/entity-card";
 import { EntityList } from "@/components/entities/entity-list";
 import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/ui/pagination";
 
 export default function MemberTeamsPage() {
   return (
@@ -27,7 +28,13 @@ export default function MemberTeamsPage() {
 
 function MemberTeamsPageContent() {
   const router = useRouter();
-  const { data: paginatedTeams, isLoading, error, refetch } = useMemberTeams();
+  const [page, setPage] = useState(1);
+  const {
+    data: paginatedTeams,
+    isLoading,
+    error,
+    refetch,
+  } = useMemberTeams(page, 25);
   const teams = paginatedTeams?.items ?? [];
 
   // Search + sort
@@ -55,6 +62,7 @@ function MemberTeamsPageContent() {
     setSearchQuery("");
     setSortBy("name");
     setSortDir("asc");
+    setPage(1);
   };
 
   if (isLoading) {
@@ -87,7 +95,7 @@ function MemberTeamsPageContent() {
           {teams.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2 text-xs">
               <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
-                {teams.length} teams
+                {paginatedTeams?.meta.total ?? teams.length} teams
               </span>
             </div>
           )}
@@ -99,6 +107,7 @@ function MemberTeamsPageContent() {
         <TeamFilters
           value={{ search: searchQuery, sortBy, sortDir }}
           onChange={(state) => {
+            setPage(1);
             setSearchQuery(state.search);
             setSortBy(state.sortBy);
             setSortDir(state.sortDir);
@@ -161,6 +170,13 @@ function MemberTeamsPageContent() {
           ))}
         </EntityList>
       )}
+
+      <Pagination
+        currentPage={page}
+        totalPages={paginatedTeams?.meta.totalPages ?? 1}
+        onPageChange={setPage}
+        isLoading={isLoading}
+      />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Share_Tech_Mono } from "next/font/google"; // Techy font
 import { GoogleIcon } from "@/components/ui/brand-icons";
 // GitHub OAuth removed per requirements - Using Google OAuth (@nu.edu.pk only) instead
@@ -20,6 +20,7 @@ const shareTechMono = Share_Tech_Mono({
 
 export default function Home() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session, status } = useSharedSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,6 +30,55 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMounted(true);
   }, []);
+
+  // Handle OAuth errors
+  useEffect(() => {
+    const errorParam = searchParams.get("error");
+    if (errorParam && isMounted) {
+      const errorMessages: Record<
+        string,
+        { title: string; description: string }
+      > = {
+        AccessDenied: {
+          title: "Access Denied",
+          description:
+            "Only users with @nu.edu.pk or @isb.nu.edu.pk email addresses can sign in.",
+        },
+        OAuthAccountNotLinked: {
+          title: "Account Linking Error",
+          description:
+            "An account with this email already exists. Please sign in with the same method you used originally.",
+        },
+        OAuthSignin: {
+          title: "OAuth Error",
+          description: "Could not initiate authentication. Please try again.",
+        },
+        OAuthCallback: {
+          title: "OAuth Error",
+          description:
+            "Authentication failed. Please make sure you're using the correct university email.",
+        },
+        EmailSignInError: {
+          title: "Sign In Failed",
+          description: "Could not sign in with the provided credentials.",
+        },
+        CredentialsSignin: {
+          title: "Invalid Credentials",
+          description: "Email or password is incorrect.",
+        },
+        default: {
+          title: "Authentication Error",
+          description: "An error occurred during sign in. Please try again.",
+        },
+      };
+
+      const error = errorMessages[errorParam] || errorMessages.default;
+      toast.error(error.title, {
+        description: error.description,
+        duration: 5000,
+      });
+    }
+  }, [searchParams, isMounted]);
 
   // Redirect to home if already logged in
   useEffect(() => {
@@ -145,8 +195,12 @@ export default function Home() {
               <GoogleIcon size={20} />
               Google
             </Button>
-            {/* GitHub OAuth removed per requirements - Using Google OAuth (@nu.edu.pk only) instead */}
-            {/* <Button
+          </div>
+          <p className={styles.domainHint}>
+            Requires @nu.edu.pk or @isb.nu.edu.pk
+          </p>
+          {/* GitHub OAuth removed per requirements - Using Google OAuth (@nu.edu.pk only) instead */}
+          {/* <Button
               onClick={handleGithubLogin}
               className={styles.socialButton}
               aria-label="Sign in with GitHub"
@@ -154,7 +208,6 @@ export default function Home() {
               <GithubIcon size={20} />
               GitHub
             </Button> */}
-          </div>
         </div>
       </div>
     </div>

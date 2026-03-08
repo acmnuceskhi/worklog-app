@@ -45,6 +45,7 @@ import { EmptyState } from "@/components/states/empty-state";
 import { TeamCreationWizard } from "@/components/teams/team-creation-wizard";
 import { InvitationsPanel } from "@/components/invitations-panel";
 import { PageHeader } from "@/components/ui/page-header";
+import { Pagination } from "@/components/ui/pagination";
 import { UrgentAlertZone } from "@/components/alerts/UrgentAlertZone";
 import { WorklogGridCard } from "@/components/worklog/WorklogGridCard";
 import { WorklogTable } from "@/components/worklog/WorklogTable";
@@ -61,7 +62,8 @@ export default function DashboardPage() {
   const { data: session } = useSharedSession();
 
   // TanStack Query hooks for data fetching
-  const { data: dashboardData, isLoading } = useDashboard();
+  const [worklogPage, setWorklogPage] = useState(1);
+  const { data: dashboardData, isLoading } = useDashboard(worklogPage, 12);
 
   // Prefetch hooks for performance optimization
   const prefetchOwnedTeams = usePrefetchOwnedTeams();
@@ -187,6 +189,7 @@ export default function DashboardPage() {
   const handleSearchChange = (value: string) => {
     setTeamSearchQuery(value);
     setWorklogSearchQuery(value);
+    setWorklogPage(1);
   };
 
   const sidebarItems = [
@@ -770,20 +773,30 @@ export default function DashboardPage() {
 
                 {/* Table View */}
                 {worklogViewMode === "table" && (
-                  <WorklogTable worklogs={filteredWorklogs.slice(0, 12)} />
+                  <WorklogTable worklogs={filteredWorklogs} />
                 )}
 
-                {/* View All CTA */}
-                {filteredWorklogs.length >
-                  (worklogViewMode === "grid" ? 6 : 12) && (
-                  <div className="mt-4 text-center">
+                {/* Pagination */}
+                <Pagination
+                  currentPage={worklogPage}
+                  totalPages={
+                    dashboardData?.worklogsPagination?.totalPages ?? 1
+                  }
+                  onPageChange={setWorklogPage}
+                  isLoading={isLoading}
+                />
+
+                {/* View All CTA — navigates to the full worklogs page */}
+                {(dashboardData?.worklogsPagination?.total ?? 0) > 12 && (
+                  <div className="mt-2 text-center">
                     <Button
                       variant="ghost"
                       size="sm"
                       className="text-xs text-white/50 hover:text-white"
                       onClick={() => router.push("/teams/member")}
                     >
-                      View All Worklogs ({filteredWorklogs.length})
+                      View All Worklogs (
+                      {dashboardData?.worklogsPagination?.total})
                       <ChevronRight className="ml-1 h-3 w-3" />
                     </Button>
                   </div>
