@@ -1,10 +1,10 @@
 import * as React from "react";
 import { Button, Section, Text, Link } from "@react-email/components";
 
-// Design tokens (matching EmailLayout)
+// Design tokens (matching EmailLayout and app/globals.css)
 const colors = {
-  primary: "#10B981", // emerald-500
-  primaryHover: "#059669", // emerald-600
+  primary: "#3b82f6", // blue-500 — matches --color-primary in app/globals.css
+  primaryHover: "#2563eb", // blue-600 — matches --color-primary-hover
   secondary: "#EF4444", // red-500
   secondaryHover: "#DC2626", // red-600
   background: "#FFFFFF",

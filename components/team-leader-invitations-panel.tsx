@@ -142,13 +142,12 @@ export function TeamLeaderInvitationsPanel({
       setInviteEmails([""]);
       setSelectedTeamId("");
     } catch (error) {
-      console.error("Failed to send invitations:", error);
       const errorMsg =
         error instanceof Error
           ? error.message
           : "Failed to send invitations. Please try again.";
 
-      // Check if this is a domain validation error
+      // Domain validation errors (4xx) are expected — show toast only, no console.error
       if (
         errorMsg.includes("university domain") ||
         errorMsg.includes("@nu.edu.pk") ||
@@ -159,6 +158,8 @@ export function TeamLeaderInvitationsPanel({
           duration: 4500,
         });
       } else {
+        // Unexpected errors (5xx, network) — log for debugging
+        console.error("Failed to send invitations:", error);
         toast.error("Invitation Failed", {
           description: errorMsg,
           duration: 3500,

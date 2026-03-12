@@ -108,11 +108,37 @@ export const useRejectInvitation = () => {
 
       return response.json();
     },
-    onSuccess: () => {
-      // Invalidate related queries
-      queryClient.invalidateQueries({
+    onMutate: async (invitationId: string) => {
+      // Cancel in-flight fetches to prevent them overwriting the optimistic update
+      await queryClient.cancelQueries({
         queryKey: queryKeys.teams.invitations(),
       });
+
+      // Snapshot previous data for rollback on error
+      const previousInvitations = queryClient.getQueryData<TeamInvitation[]>(
+        queryKeys.teams.invitations(),
+      );
+
+      // Optimistically remove the declined invitation from cache immediately
+      queryClient.setQueryData<TeamInvitation[]>(
+        queryKeys.teams.invitations(),
+        (prev) => prev?.filter((inv) => inv.id !== invitationId) ?? [],
+      );
+
+      return { previousInvitations };
+    },
+    onError: (_error, _invitationId, context) => {
+      // Rollback optimistic update if the mutation fails
+      if (context?.previousInvitations !== undefined) {
+        queryClient.setQueryData(
+          queryKeys.teams.invitations(),
+          context.previousInvitations,
+        );
+      }
+    },
+    onSuccess: () => {
+      // Force refetch to guarantee fresh server data after successful decline
+      queryClient.refetchQueries({ queryKey: queryKeys.teams.invitations() });
       queryClient.invalidateQueries({
         queryKey: queryKeys.user.sidebarStats(),
       });

@@ -5,7 +5,7 @@
 This is a hierarchical worklog tracking system for organizations, teams, and members. Key features:
 
 - **Three-Tier Hierarchy**: Organization Owner → Team Owner → Team Member
-- **OAuth Authentication**: Google university email + GitHub login (restriction code has been implemented but commented out for the time being)
+- **OAuth Authentication**: Google university email restricted to dual domains (`@nu.edu.pk` and `@isb.nu.edu.pk`) via `hd` parameter + GitHub login (GitHub has no domain restriction; email domain validation happens at invitation level)
 - **Organization Management**: Users can create organizations, invite team owners via email to join the organization, and manage teams within them
 - **Team Management**: Team owners create teams, invite members, and set worklog deadlines
 - **Credits System**: Organizations and teams have credit management (add/subtract/set credits)
@@ -22,8 +22,8 @@ This is a hierarchical worklog tracking system for organizations, teams, and mem
 - **Framework**: Next.js 16 with App Router
 - **Database**: Prisma 7 + PostgreSQL (hosted on Prisma Cloud)
 - **Styling**: Tailwind CSS 4 with custom theme variables
-- **Auth**: ✅ Auth.js v5 with GitHub and Google OAuth (restriction code has been implemented but commented out for the time being)
-- **Email**: For team invitations
+- **Auth**: ✅ Auth.js v5 with GitHub OAuth and Google OAuth (Google enforces `@nu.edu.pk` domain restriction via OpenID Connect HDomain parameter)
+- **Email**: Resend SDK with dual domain validation for invitations
 - **Runtime**: Node.js-compatible with PrismaPg adapter
 
 ## Database Schema
@@ -253,7 +253,7 @@ enum ProgressStatus {
 
 ## Authentication Setup (Auth.js)
 
-Based on [official Prisma Auth.js guide](https://www.prisma.io/docs/guides/authjs-nextjs). Follow the guide for setup with Prisma adapter, Google/GitHub providers, and university domain restriction (e.g., `hd=nu.edu.pk` for Google).
+Based on [official Prisma Auth.js guide](https://www.prisma.io/docs/guides/authjs-nextjs). Implemented with Prisma adapter, Google OAuth (with `hd=nu.edu.pk` domain enforcement), and GitHub provider. Google OAuth restricts to dual domains: `@nu.edu.pk` and `@isb.nu.edu.pk` via OpenID Connect hd parameter AND runtime validation in `signIn` callback (defense in depth). Email domain validation for invitations enforced at API level in `lib/validations.ts`.
 
 ## Key Project Structure
 
@@ -407,11 +407,12 @@ Use Resend Node.js SDK for team and organization invitations. Follow [Resend Nex
 
 **Implementation Details:**
 
+- **Email Domain Validation**: Both OAuth and Resend enforce dual domain restriction (`@nu.edu.pk`, `@isb.nu.edu.pk`). Validated in `lib/validations.ts` and API endpoints before sending.
 - Secure token generation using `crypto.randomBytes(32).toString('hex')`
 - React Email templates with styled accept/reject buttons
 - Token validation with PENDING status requirement
 - Duplicate invitation prevention via database upsert
-- University email validation (commented out for the time being. Basic OAuth works 100% ok)
+- Invitation expiration: 7 days for team invites, 14 days for org invites (see `RESEND_EMAIL_IMPLEMENTATION_PLAN.md`)
 
 ## Development Workflow
 
@@ -452,7 +453,7 @@ Use Resend Node.js SDK for team and organization invitations. Follow [Resend Nex
 ## Current State
 
 - ✅ **Authentication Backend**: Fully implemented with Auth.js v5, GitHub OAuth, Google OAuth, and Prisma integration
-- ✅ **Email Workflow**: Complete team and organization invitation system with Resend SDK, secure tokens, and React Email templates
+- ✅ **Email Workflow**: Complete team and organization invitation system with Resend SDK, secure tokens, React Email templates, dual domain validation (@nu.edu.pk and @isb.nu.edu.pk), and invitation expiration (7/14 days)
 - ✅ **Database Schema**: Organization, Team, TeamMember, Worklog, Rating, WorklogAttachment models implemented with performance indexes and migrations applied
 - ✅ **API Endpoints**: Complete REST API implementation with 15+ endpoints for organizations, teams, worklogs, ratings, invitations, and file uploads
 - ✅ **File Upload System**: Worklog attachments support for images and documents with validation and storage
@@ -479,8 +480,9 @@ Use Resend Node.js SDK for team and organization invitations. Follow [Resend Nex
 - Progress status transitions must follow: STARTED → HALF_DONE → COMPLETED → REVIEWED → GRADED (with proper role permissions)
 - Organization owners can only access teams/worklogs within their own organizations
 - When an organization is deleted, teams/worklogs remain visible but all operations are blocked (read-only). They'll be check whether the organisation that team is tied to was prevously made but deleted. If yes then new team will have to be made
-- Google OAuth includes `hd=nu.edu.pk` parameter for university restriction (see Project Overview for implementation status)
-- Team invitations validate university email format (commented out for the time being. Basic OAuth works 100% ok)
+- **OAuth Domain Restriction**: Google OAuth enforces `@nu.edu.pk` via `hd` parameter; fallback validation in `signIn` callback extends to `@isb.nu.edu.pk`. Both domains must be validated together in API invitation endpoints.
+- **Email Domain Validation**: Invitations require valid domain emails. Dual domain restriction enforced in both OAuth layer and Resend email sending layer. See `lib/validations.ts` for domain schemas.
+- Team invitations validate email domain via Resend email service (see `RESEND_EMAIL_IMPLEMENTATION_PLAN.md` for details)
 - Always check team membership status and organizational ownership before allowing access
 - Tailwind CSS 4 requires `@import "tailwindcss"` syntax (not v3 style)
 - Auth.js middleware requires `runtime = 'nodejs'` for Prisma client compatibility

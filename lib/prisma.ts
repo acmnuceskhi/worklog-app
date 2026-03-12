@@ -17,15 +17,49 @@ const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL!,
 });
 
+function createPrismaClient() {
+  const client = new PrismaClient({
+    adapter,
+    log:
+      process.env.NODE_ENV !== "production"
+        ? [
+            { emit: "event" as const, level: "query" as const },
+            { emit: "stdout" as const, level: "warn" as const },
+            { emit: "stdout" as const, level: "error" as const },
+          ]
+        : [
+            { emit: "stdout" as const, level: "warn" as const },
+            { emit: "stdout" as const, level: "error" as const },
+          ],
+  });
+
+  // Slow query logging — must be set up on the base client BEFORE $extends()
+  // $on() is not available on the extended client object
+  if (process.env.NODE_ENV !== "production") {
+    client.$on("query", (e) => {
+      if (e.duration > 100) {
+        console.warn(
+          `[Slow Query] ${e.duration}ms — ${e.query} | params=${e.params}`,
+        );
+      }
+    });
+  }
+
+  // withOptimize is optional — only applied when OPTIMIZE_API_KEY is present
+  if (process.env.OPTIMIZE_API_KEY) {
+    return client.$extends(
+      withOptimize({ apiKey: process.env.OPTIMIZE_API_KEY }),
+    ) as unknown as PrismaClient;
+  }
+
+  return client;
+}
+
 const globalForPrisma = global as unknown as {
   prisma: PrismaClient;
 };
 
-const prisma =
-  globalForPrisma.prisma ||
-  new PrismaClient({
-    adapter,
-  }).$extends(withOptimize({ apiKey: process.env.OPTIMIZE_API_KEY! }));
+const prisma = globalForPrisma.prisma || createPrismaClient();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 

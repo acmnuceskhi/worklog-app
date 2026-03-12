@@ -178,6 +178,7 @@ model Worklog {
   @@index([userId])
   @@index([teamId])
   @@index([userId, progressStatus])
+  @@index([teamId, progressStatus]) // Optimize pending review count queries (WHERE teamId=X AND progressStatus='COMPLETED')
   @@index([userId, createdAt]) // Composite index for efficient user worklog queries with ordering
   @@index([teamId, createdAt]) // Optimize team worklogs fetching
   @@index([createdAt])

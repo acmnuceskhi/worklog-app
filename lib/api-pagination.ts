@@ -104,3 +104,80 @@ function safeInt(value: string | null | undefined, fallback: number): number {
   const parsed = Number.parseInt(value, 10);
   return Number.isNaN(parsed) ? fallback : parsed;
 }
+
+// ─── Cursor-based pagination ──────────────────────────────────────────────────
+//
+// Cursor pagination keeps constant performance at any offset unlike skip/take.
+// Use for large result sets (worklogs, team members) where skip+offset causes
+// full-table scans at high page numbers.
+//
+// Usage in an API route:
+//   const { cursor, take } = parseCursorParams(searchParams);
+//   const raw = await prisma.worklog.findMany({
+//     take: take + 1,  // fetch one extra to detect hasMore
+//     ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
+//     orderBy: { createdAt: 'desc' },
+//   });
+//   return NextResponse.json(buildCursorResponse(raw, take, (w) => w.id));
+
+export interface CursorPaginationMeta {
+  nextCursor: string | null;
+  hasMore: boolean;
+  take: number;
+}
+
+export interface CursorPaginatedResponse<T> {
+  items: T[];
+  meta: CursorPaginationMeta;
+}
+
+interface ParsedCursorPagination {
+  /** Opaque cursor ID (or null for first page) */
+  cursor: string | null;
+  /** Page size, clamped to [1, MAX_LIMIT] */
+  take: number;
+}
+
+/**
+ * Parse `cursor` and `take` from URLSearchParams for cursor-based pagination.
+ */
+export function parseCursorParams(
+  searchParams: URLSearchParams | Record<string, string | null | undefined>,
+  maxTake: number = MAX_LIMIT,
+): ParsedCursorPagination {
+  const get = (key: string): string | null | undefined =>
+    searchParams instanceof URLSearchParams
+      ? searchParams.get(key)
+      : searchParams[key];
+
+  const rawTake = get("take") ?? get("limit") ?? get("pageSize");
+  const cursor = get("cursor") ?? null;
+  const take = Math.min(maxTake, Math.max(1, safeInt(rawTake, DEFAULT_LIMIT)));
+
+  return { cursor, take };
+}
+
+/**
+ * Build a cursor-paginated response.
+ *
+ * Pass the raw `findMany` result fetched with `take + 1`. This function trims
+ * the sentinel item, computes `nextCursor`, and returns the normalised shape.
+ *
+ * @param rawItems - findMany result with take = requestedTake + 1
+ * @param requestedTake - the actual page size requested
+ * @param getCursorId - extract the ID used as the next cursor (defaults to `.id`)
+ */
+export function buildCursorResponse<T extends { id: string }>(
+  rawItems: T[],
+  requestedTake: number,
+  getCursorId: (item: T) => string = (item) => item.id,
+): CursorPaginatedResponse<T> {
+  const hasMore = rawItems.length > requestedTake;
+  const items = hasMore ? rawItems.slice(0, requestedTake) : rawItems;
+  const nextCursor = hasMore ? getCursorId(items[items.length - 1]) : null;
+
+  return {
+    items,
+    meta: { nextCursor, hasMore, take: requestedTake },
+  };
+}
