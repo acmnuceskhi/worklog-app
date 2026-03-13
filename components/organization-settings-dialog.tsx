@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -81,6 +82,7 @@ export function OrganizationSettingsDialog({
   onOpenChange,
   onSuccess,
 }: OrganizationSettingsDialogProps) {
+  const router = useRouter();
   const [isUpdating, setIsUpdating] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -221,6 +223,8 @@ export function OrganizationSettingsDialog({
         onSuccess();
         handleDialogClose(false);
         setShowDeleteDialog(false);
+        // Redirect to organizations list after successful deletion
+        router.push("/teams/organisations");
         return "Organization deleted successfully";
       },
       error: (err) => {

@@ -17,6 +17,7 @@ import { BulkEmailInput } from "@/components/forms/bulk-email-input";
 import { Info, Users, Mail, CheckCircle2 } from "lucide-react";
 import type { WizardStepProps } from "@/components/wizard/multi-step-wizard";
 import { useOrganizations } from "@/lib/hooks/use-organizations";
+import { useEmailDomainValidator } from "@/lib/hooks/use-email-validation";
 
 interface Organization {
   id: string;
@@ -248,6 +249,7 @@ export const TeamMemberInvitationStep: React.FC<WizardStepProps> = ({
   updateData,
 }) => {
   const teamData = data as TeamFormData;
+  const { validateTeamEmail, allowedDomains } = useEmailDomainValidator();
   const handleEmailsChange = (emails: string[]) => {
     updateData({ inviteEmails: emails });
   };
@@ -271,6 +273,8 @@ export const TeamMemberInvitationStep: React.FC<WizardStepProps> = ({
           onChange={handleEmailsChange}
           label="Member Email Addresses"
           placeholder="Enter email addresses to invite team members..."
+          validateEmail={validateTeamEmail}
+          allowedDomains={allowedDomains}
           maxEmails={50}
         />
 

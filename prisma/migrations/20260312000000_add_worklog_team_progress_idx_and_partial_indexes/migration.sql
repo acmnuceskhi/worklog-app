@@ -1,5 +1,5 @@
 -- CreateIndex: composite index for pending review count queries (WHERE teamId=X AND progressStatus='COMPLETED')
-CREATE INDEX "worklogs_team_id_progress_status_idx" ON "worklogs"("team_id", "progressStatus");
+CREATE INDEX "worklogs_team_id_progressStatus_idx" ON "worklogs"("team_id", "progressStatus");
 
 -- CreateIndex: partial index on team_members status (PostgreSQL native, not Prisma DSL)
 -- Speeds up invitation cleanup: WHERE status IN ('PENDING', 'ACCEPTED')

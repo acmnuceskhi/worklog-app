@@ -13,7 +13,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Check, Pencil, X, Loader2 } from "lucide-react";
+import { Check, Pencil, X } from "lucide-react";
 import { ErrorState } from "@/components/states/error-state";
 import { FormField } from "@/components/forms/form-field";
 import {
@@ -941,18 +941,14 @@ function ContributionFlashcardPageContent({
 
               <Button
                 type="submit"
-                disabled={isSubmitting || isUploading}
+                disabled={
+                  isSubmitting || isUploading || createWorklogMutation.isPending
+                }
+                isLoading={createWorklogMutation.isPending}
                 className="w-full bg-amber-400 hover:bg-amber-500 text-black font-semibold"
                 aria-label="Submit Worklog"
               >
-                {isSubmitting || isUploading ? (
-                  <>
-                    <Loader2 className="mr-2 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  "Submit Worklog"
-                )}
+                Submit Worklog
               </Button>
             </form>
           </CardContent>
@@ -1100,6 +1096,12 @@ function ContributionFlashcardPageContent({
                         onClick={() =>
                           handleDeleteWorklog(worklog.id, worklog.title)
                         }
+                        disabled={deleteWorklogMutation.isPending}
+                        isLoading={
+                          deleteWorklogMutation.isPending &&
+                          deleteWorklogMutation.variables?.worklogId ===
+                            worklog.id
+                        }
                       >
                         Delete
                       </Button>
@@ -1174,6 +1176,7 @@ function ContributionFlashcardPageContent({
                   className="border-white/20 text-white/80 hover:bg-white/10"
                   onClick={() => setEditingWorklog(null)}
                   aria-label="Cancel deadline edit"
+                  disabled={deadlineUpdateMutation.isPending}
                 >
                   <X className="mr-2" />
                   Cancel
@@ -1183,6 +1186,8 @@ function ContributionFlashcardPageContent({
                   className="bg-amber-400 hover:bg-amber-500 text-black font-semibold"
                   onClick={handleDeadlineUpdate}
                   aria-label="Save deadline"
+                  disabled={deadlineUpdateMutation.isPending}
+                  isLoading={deadlineUpdateMutation.isPending}
                 >
                   <Check className="mr-2" />
                   Save deadline

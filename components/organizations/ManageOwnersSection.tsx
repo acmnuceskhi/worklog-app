@@ -8,6 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useInviteOrganizationOwner } from "@/lib/hooks/use-organizations";
 import { toast } from "sonner";
+import {
+  validateOrganizationOwnerEmail,
+  getAllowedDomains,
+} from "@/lib/validations/email-domain-validation";
 
 interface ManageOwnersSectionProps {
   organizationId: string;
@@ -59,6 +63,19 @@ export function ManageOwnersSection({
       return;
     }
 
+    // Domain validation — only university emails allowed
+    const invalidDomainEmails = validEmails.filter(
+      (email) => !validateOrganizationOwnerEmail(email),
+    );
+    if (invalidDomainEmails.length > 0) {
+      const allowed = getAllowedDomains().join(" or ");
+      toast.error("Invalid Email Domain", {
+        description: `Only ${allowed} emails are allowed. Invalid: ${invalidDomainEmails.join(", ")}`,
+        duration: 4500,
+      });
+      return;
+    }
+
     toast.promise(inviteOwner(validEmails), {
       loading: `Sending ${validEmails.length} invitation${validEmails.length !== 1 ? "s" : ""}...`,
       success: (result) => {
@@ -92,7 +109,7 @@ export function ManageOwnersSection({
           >
             <Input
               type="email"
-              placeholder="co-owner@email.com"
+              placeholder="co-owner@nu.edu.pk"
               value={email}
               onChange={(e) => updateEmail(index, e.target.value)}
               className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50"

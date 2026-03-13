@@ -11,6 +11,10 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useOwnedTeams } from "@/lib/hooks";
+import {
+  validateTeamMemberEmail,
+  getAllowedDomains,
+} from "@/lib/validations/email-domain-validation";
 
 /* ──────────────────────────────────────────────────────────────────
  * TeamLeaderInvitationsPanel
@@ -89,6 +93,19 @@ export function TeamLeaderInvitationsPanel({
       toast.error("Invalid Email Format", {
         description: invalidEmails.join(", "),
         duration: 2500,
+      });
+      return;
+    }
+
+    // Domain validation — only university emails allowed
+    const invalidDomainEmails = validEmails.filter(
+      (email) => !validateTeamMemberEmail(email),
+    );
+    if (invalidDomainEmails.length > 0) {
+      const allowed = getAllowedDomains().join(" or ");
+      toast.error("Invalid Email Domain", {
+        description: `Only ${allowed} emails are allowed. Invalid: ${invalidDomainEmails.join(", ")}`,
+        duration: 4500,
       });
       return;
     }
@@ -276,7 +293,7 @@ export function TeamLeaderInvitationsPanel({
                     >
                       <Input
                         type="email"
-                        placeholder="member@university.edu"
+                        placeholder="member@nu.edu.pk"
                         value={email}
                         onChange={(e) => updateEmail(index, e.target.value)}
                         className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50"
@@ -315,17 +332,12 @@ export function TeamLeaderInvitationsPanel({
                 <Button
                   onClick={handleSendInvitations}
                   disabled={isSending}
+                  isLoading={isSending}
                   className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
                 >
-                  {isSending ? (
-                    "Sending..."
-                  ) : (
-                    <>
-                      <Send className="mr-2" />
-                      Send Invitations (
-                      {inviteEmails.filter((e) => e.trim()).length})
-                    </>
-                  )}
+                  <Send className="mr-2" />
+                  Send Invitations (
+                  {inviteEmails.filter((e) => e.trim()).length})
                 </Button>
               </CardContent>
             </Card>

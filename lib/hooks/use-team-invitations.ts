@@ -5,6 +5,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
+import { useIdempotencyToken } from "./use-idempotency-token";
 
 export interface TeamInvitation {
   id: string;
@@ -59,12 +60,17 @@ export const useTeamInvitations = () => {
  */
 export const useAcceptInvitation = () => {
   const queryClient = useQueryClient();
+  const { token: idempotencyToken, reset: resetIdempotencyToken } =
+    useIdempotencyToken();
 
   return useMutation({
     mutationFn: async (invitationId: string) => {
       const response = await fetch(`/api/invitations/${invitationId}/accept`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyToken,
+        },
       });
 
       if (!response.ok) {
@@ -75,6 +81,7 @@ export const useAcceptInvitation = () => {
       return response.json();
     },
     onSuccess: () => {
+      resetIdempotencyToken();
       // Invalidate related queries
       queryClient.invalidateQueries({
         queryKey: queryKeys.teams.invitations(),
@@ -93,12 +100,17 @@ export const useAcceptInvitation = () => {
  */
 export const useRejectInvitation = () => {
   const queryClient = useQueryClient();
+  const { token: idempotencyToken, reset: resetIdempotencyToken } =
+    useIdempotencyToken();
 
   return useMutation({
     mutationFn: async (invitationId: string) => {
       const response = await fetch(`/api/invitations/${invitationId}/reject`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyToken,
+        },
       });
 
       if (!response.ok) {
@@ -137,6 +149,7 @@ export const useRejectInvitation = () => {
       }
     },
     onSuccess: () => {
+      resetIdempotencyToken();
       // Force refetch to guarantee fresh server data after successful decline
       queryClient.refetchQueries({ queryKey: queryKeys.teams.invitations() });
       queryClient.invalidateQueries({

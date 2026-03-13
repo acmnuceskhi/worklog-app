@@ -12,6 +12,7 @@ import {
 } from "@/lib/api-utils";
 import { validateRequest, teamCreateSchema } from "@/lib/validations";
 import { apiLimiter } from "@/lib/rate-limit";
+import { getIdempotencyKey, withIdempotency } from "@/app/api/_idempotency";
 
 /**
  * POST /api/teams
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
     const { name, description, project, organizationId } = validation.data;
 
-    // Verify organization ownership if organizationId is provided
+    // Verify organization ownership before opening the idempotency transaction
     if (organizationId) {
       const organization = await prisma.organization.findFirst({
         where: {
@@ -49,16 +50,30 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const team = await prisma.team.create({
-      data: {
-        name,
-        description: description || undefined,
-        project: project || undefined,
-        ownerId: user.id,
-        organizationId: organizationId || undefined,
-      },
-    });
+    const teamData = {
+      name,
+      description: description || undefined,
+      project: project || undefined,
+      ownerId: user.id,
+      organizationId: organizationId || undefined,
+    };
 
+    // Atomic idempotency: check + create + record in one transaction
+    const idempotencyToken = getIdempotencyKey(request);
+    if (idempotencyToken) {
+      const result = await withIdempotency(
+        idempotencyToken,
+        user.id,
+        "CREATE_TEAM",
+        201,
+        (tx) => tx.team.create({ data: teamData }),
+      );
+      if (result.cached) return result.response;
+      return apiResponse(result.data, 201);
+    }
+
+    // No idempotency token — create directly
+    const team = await prisma.team.create({ data: teamData });
     return apiResponse(team, 201);
   } catch (error) {
     return handleApiError(error);

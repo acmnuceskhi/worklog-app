@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import type { PaginatedResponse } from "@/lib/types/pagination";
 import { DEFAULT_PAGE } from "@/lib/types/pagination";
+import { useIdempotencyToken } from "./use-idempotency-token";
 
 export interface OrganizationTeam {
   id: string;
@@ -184,12 +185,17 @@ export const useOrganizationTeams = (organizationId: string) => {
  */
 export const useCreateOrganization = () => {
   const queryClient = useQueryClient();
+  const { token: idempotencyToken, reset: resetIdempotencyToken } =
+    useIdempotencyToken();
 
   return useMutation({
     mutationFn: async (data: { name: string; description?: string }) => {
       const response = await fetch("/api/organizations", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyToken,
+        },
         body: JSON.stringify(data),
       });
       if (!response.ok) {
@@ -209,6 +215,11 @@ export const useCreateOrganization = () => {
         PaginatedResponse<Organization>
       >({ queryKey: ["organizations", "list"] });
 
+      // Track whether the default page key was empty before this mutation
+      // (needed so onError can clean up the cold-cache seed if the API fails)
+      const defaultListKey = queryKeys.organizations.list(DEFAULT_PAGE, 50);
+      const seededDefaultKey = !queryClient.getQueryData(defaultListKey);
+
       // Build a temporary placeholder so the new page sees data immediately
       const optimisticOrg: Organization = {
         id: `temp-${Date.now()}`,
@@ -222,6 +233,7 @@ export const useCreateOrganization = () => {
         _count: { teams: 0 },
       };
 
+      // Warm-cache path: update every existing ["organizations", "list", ...] entry
       queryClient.setQueriesData<PaginatedResponse<Organization>>(
         { queryKey: ["organizations", "list"] },
         (old) => {
@@ -237,7 +249,28 @@ export const useCreateOrganization = () => {
         },
       );
 
-      return { previousOrgLists };
+      // Cold-cache path: setQueriesData only touches existing entries — if the
+      // user navigated here without ever visiting the org list, no entry exists
+      // yet. Seed the exact key that useOrganizations() subscribes to so
+      // OrganisationsPage renders the new org immediately without a spinner.
+      if (seededDefaultKey) {
+        queryClient.setQueryData<PaginatedResponse<Organization>>(
+          defaultListKey,
+          {
+            items: [optimisticOrg],
+            meta: {
+              page: DEFAULT_PAGE,
+              limit: 50,
+              total: 1,
+              totalPages: 1,
+              hasNextPage: false,
+              hasPreviousPage: false,
+            },
+          },
+        );
+      }
+
+      return { previousOrgLists, seededDefaultKey };
     },
     onError: (_err, _data, context) => {
       // Restore every list variant to its pre-mutation snapshot
@@ -246,8 +279,15 @@ export const useCreateOrganization = () => {
           queryClient.setQueryData(key, value);
         }
       }
+      // Remove the cold-cache seed so a phantom optimistic org isn't left behind
+      if (context?.seededDefaultKey) {
+        queryClient.removeQueries({
+          queryKey: queryKeys.organizations.list(),
+        });
+      }
     },
     onSuccess: () => {
+      resetIdempotencyToken();
       // Eagerly refetch the org list so the new org shows immediately,
       // even if the component has already navigated away (no active subscriber).
       queryClient.refetchQueries({ queryKey: queryKeys.organizations.list() });
@@ -271,12 +311,17 @@ export const useCreateOrganization = () => {
  */
 export const useUpdateOrganization = (organizationId: string) => {
   const queryClient = useQueryClient();
+  const { token: idempotencyToken, reset: resetIdempotencyToken } =
+    useIdempotencyToken();
 
   return useMutation({
     mutationFn: async (data: Partial<Organization>) => {
       const response = await fetch(`/api/organizations/${organizationId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyToken,
+        },
         body: JSON.stringify(data),
       });
       if (!response.ok) {
@@ -332,6 +377,9 @@ export const useUpdateOrganization = (organizationId: string) => {
         }
       }
     },
+    onSuccess: () => {
+      resetIdempotencyToken();
+    },
     onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.organizations.all(),
@@ -349,6 +397,8 @@ export const useUpdateOrganization = (organizationId: string) => {
  */
 export const useDeleteOrganization = () => {
   const queryClient = useQueryClient();
+  const { token: idempotencyToken, reset: resetIdempotencyToken } =
+    useIdempotencyToken();
 
   return useMutation({
     mutationFn: async (organizationId: string) => {
@@ -359,6 +409,7 @@ export const useDeleteOrganization = () => {
 
       const response = await fetch(`/api/organizations/${organizationId}`, {
         method: "DELETE",
+        headers: { "Idempotency-Key": idempotencyToken },
       });
       if (!response.ok) {
         const errorData = await response.json();
@@ -367,6 +418,7 @@ export const useDeleteOrganization = () => {
       return { success: true, organizationId };
     },
     onSuccess: (_, organizationId) => {
+      resetIdempotencyToken();
       // Remove from list caches immediately to prevent stale data
       queryClient.setQueriesData<PaginatedResponse<Organization>>(
         { queryKey: ["organizations", "list"] },
@@ -399,6 +451,8 @@ export const useDeleteOrganization = () => {
  */
 export const useUpdateOrganizationCredits = (organizationId: string) => {
   const queryClient = useQueryClient();
+  const { token: idempotencyToken, reset: resetIdempotencyToken } =
+    useIdempotencyToken();
 
   return useMutation({
     mutationFn: async (data: {
@@ -409,7 +463,10 @@ export const useUpdateOrganizationCredits = (organizationId: string) => {
         `/api/organizations/${organizationId}/credits`,
         {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "Idempotency-Key": idempotencyToken,
+          },
           body: JSON.stringify(data),
         },
       );
@@ -454,6 +511,9 @@ export const useUpdateOrganizationCredits = (organizationId: string) => {
           context.previousOrg,
         );
       }
+    },
+    onSuccess: () => {
+      resetIdempotencyToken();
     },
     onSettled: () => {
       queryClient.invalidateQueries({
@@ -527,6 +587,8 @@ export const useOrganizationInvitations = (
  */
 export const useInviteOrganizationOwner = (organizationId: string) => {
   const queryClient = useQueryClient();
+  const { token: idempotencyToken, reset: resetIdempotencyToken } =
+    useIdempotencyToken();
 
   return useMutation({
     mutationFn: async (emails: string[]) => {
@@ -534,7 +596,10 @@ export const useInviteOrganizationOwner = (organizationId: string) => {
         `/api/organizations/${organizationId}/invite`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "Idempotency-Key": idempotencyToken,
+          },
           body: JSON.stringify({ emails }),
         },
       );
@@ -545,6 +610,7 @@ export const useInviteOrganizationOwner = (organizationId: string) => {
       return response.json();
     },
     onSuccess: () => {
+      resetIdempotencyToken();
       queryClient.invalidateQueries({
         queryKey: queryKeys.organizations.invitations(organizationId),
       });
@@ -557,12 +623,17 @@ export const useInviteOrganizationOwner = (organizationId: string) => {
  */
 export const useRevokeOrganizationInvitation = (organizationId: string) => {
   const queryClient = useQueryClient();
+  const { token: idempotencyToken, reset: resetIdempotencyToken } =
+    useIdempotencyToken();
 
   return useMutation({
     mutationFn: async (invitationId: string) => {
       const response = await fetch(
         `/api/organizations/${organizationId}/invitations/${invitationId}`,
-        { method: "DELETE" },
+        {
+          method: "DELETE",
+          headers: { "Idempotency-Key": idempotencyToken },
+        },
       );
       if (!response.ok) {
         const errorData = await response.json();
@@ -571,6 +642,7 @@ export const useRevokeOrganizationInvitation = (organizationId: string) => {
       return response.json();
     },
     onSuccess: (_, invitationId) => {
+      resetIdempotencyToken();
       // Immediately remove from invitations list to prevent stale visualization
       queryClient.setQueryData<OrganizationInvitationsResponse>(
         queryKeys.organizations.invitations(organizationId),
@@ -600,12 +672,17 @@ export const useRevokeOrganizationInvitation = (organizationId: string) => {
  */
 export const useRemoveOrganizationOwner = (organizationId: string) => {
   const queryClient = useQueryClient();
+  const { token: idempotencyToken, reset: resetIdempotencyToken } =
+    useIdempotencyToken();
 
   return useMutation({
     mutationFn: async (userId: string) => {
       const response = await fetch(
         `/api/organizations/${organizationId}/owners/${userId}`,
-        { method: "DELETE" },
+        {
+          method: "DELETE",
+          headers: { "Idempotency-Key": idempotencyToken },
+        },
       );
       if (!response.ok) {
         const errorData = await response.json();
@@ -614,6 +691,7 @@ export const useRemoveOrganizationOwner = (organizationId: string) => {
       return response.json();
     },
     onSuccess: (_, userId) => {
+      resetIdempotencyToken();
       // Immediately remove from invitations list to prevent stale visualization
       queryClient.setQueryData<OrganizationInvitationsResponse>(
         queryKeys.organizations.invitations(organizationId),

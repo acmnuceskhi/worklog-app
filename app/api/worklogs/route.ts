@@ -12,6 +12,7 @@ import {
 } from "@/lib/api-utils";
 import { validateRequest, worklogCreateSchema } from "@/lib/validations";
 import { apiLimiter } from "@/lib/rate-limit";
+import { getIdempotencyKey, withIdempotency } from "@/app/api/_idempotency";
 
 /**
  * GET /api/worklogs
@@ -156,7 +157,7 @@ export async function POST(request: NextRequest) {
 
     let targetUserId = user.id;
 
-    // Logic for assigning tasks to others (Team Owner only)
+    // All pre-checks before the idempotency transaction
     if (assignedUserId && assignedUserId !== user.id) {
       const isOwner = await prisma.team.findFirst({
         where: {
@@ -172,7 +173,6 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Verify target user is a member of the team
       const targetMember = await prisma.teamMember.findFirst({
         where: {
           teamId,
@@ -187,7 +187,6 @@ export async function POST(request: NextRequest) {
 
       targetUserId = assignedUserId;
     } else {
-      // Logic for creating own worklog (Member or Owner)
       const [teamMember, isTeamOwner] = await Promise.all([
         prisma.teamMember.findFirst({
           where: {
@@ -212,34 +211,54 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const worklog = await prisma.worklog.create({
-      data: {
-        title,
-        description,
-        githubLink: githubLink || undefined,
-        deadline: deadline ? new Date(deadline) : undefined,
-        progressStatus: progressStatus || undefined,
-        userId: targetUserId,
-        teamId,
-        attachments: attachments?.length
-          ? {
-              create: attachments.map((attachment) => ({
-                url: attachment.url,
-                fileName: attachment.name,
-                mimeType: attachment.type,
-                size: attachment.size,
-                kind: attachment.type.startsWith("image/") ? "image" : "file",
-              })),
-            }
-          : undefined,
-      },
-      include: {
-        team: {
-          select: {
-            name: true,
-          },
+    const worklogData = {
+      title,
+      description,
+      githubLink: githubLink || undefined,
+      deadline: deadline ? new Date(deadline) : undefined,
+      progressStatus: progressStatus || undefined,
+      userId: targetUserId,
+      teamId,
+      attachments: attachments?.length
+        ? {
+            create: attachments.map((attachment) => ({
+              url: attachment.url,
+              fileName: attachment.name,
+              mimeType: attachment.type,
+              size: attachment.size,
+              kind: attachment.type.startsWith("image/") ? "image" : "file",
+            })),
+          }
+        : undefined,
+    };
+
+    const worklogInclude = {
+      team: {
+        select: {
+          name: true,
         },
       },
+    };
+
+    // Atomic idempotency: check + create + record in one transaction
+    const idempotencyToken = getIdempotencyKey(request);
+    if (idempotencyToken) {
+      const result = await withIdempotency(
+        idempotencyToken,
+        user.id,
+        "CREATE_WORKLOG",
+        201,
+        (tx) =>
+          tx.worklog.create({ data: worklogData, include: worklogInclude }),
+      );
+      if (result.cached) return result.response;
+      return apiResponse(result.data, 201);
+    }
+
+    // No idempotency token — create directly
+    const worklog = await prisma.worklog.create({
+      data: worklogData,
+      include: worklogInclude,
     });
 
     return apiResponse(worklog, 201);

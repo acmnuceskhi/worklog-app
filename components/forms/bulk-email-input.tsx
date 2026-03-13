@@ -13,6 +13,8 @@ interface BulkEmailInputProps {
   label?: string;
   placeholder?: string;
   validateEmail?: (email: string) => boolean;
+  /** When provided, displays a domain requirements hint and improves error messages */
+  allowedDomains?: string[];
   className?: string;
   maxEmails?: number;
 }
@@ -28,6 +30,7 @@ export const BulkEmailInput: React.FC<BulkEmailInputProps> = ({
   label = "Email Addresses",
   placeholder = "Enter email addresses (press Enter or comma to add)",
   validateEmail = defaultEmailValidation,
+  allowedDomains,
   className = "",
   maxEmails = 50,
 }) => {
@@ -58,7 +61,11 @@ export const BulkEmailInput: React.FC<BulkEmailInputProps> = ({
 
       // Validate email format
       if (!validateEmail(trimmedEmail)) {
-        setError(`Invalid email format: ${trimmedEmail}`);
+        const domainHint =
+          allowedDomains && allowedDomains.length > 0
+            ? ` Must use: ${allowedDomains.join(" or ")}`
+            : "";
+        setError(`Invalid email: ${trimmedEmail}.${domainHint}`);
         return;
       }
 
@@ -75,7 +82,7 @@ export const BulkEmailInput: React.FC<BulkEmailInputProps> = ({
       // Announce to screen readers
       announceToScreenReader(`Added email: ${trimmedEmail}`);
     },
-    [emails, onChange, validateEmail, maxEmails],
+    [emails, onChange, validateEmail, maxEmails, allowedDomains],
   );
 
   const removeEmail = useCallback(
@@ -162,8 +169,12 @@ export const BulkEmailInput: React.FC<BulkEmailInputProps> = ({
     }
 
     if (skippedCount > 0) {
+      const domainHint =
+        allowedDomains && allowedDomains.length > 0
+          ? ` (allowed: ${allowedDomains.join(", ")})`
+          : "";
       setError(
-        `${skippedCount} email${skippedCount !== 1 ? "s" : ""} skipped (invalid format or duplicate)`,
+        `${skippedCount} email${skippedCount !== 1 ? "s" : ""} skipped (invalid format, wrong domain, or duplicate)${domainHint}`,
       );
     }
 
@@ -300,6 +311,11 @@ export const BulkEmailInput: React.FC<BulkEmailInputProps> = ({
       <p id="email-help" className="text-xs text-white/50 mt-2">
         Press Enter, comma, or semicolon to add emails. Paste multiple emails
         from clipboard.
+        {allowedDomains && allowedDomains.length > 0 && (
+          <span className="block mt-1 text-amber-400/70">
+            Only university emails allowed: {allowedDomains.join(" or ")}
+          </span>
+        )}
       </p>
 
       {/* Screen Reader Announcements */}

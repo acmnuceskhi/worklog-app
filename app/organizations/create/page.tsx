@@ -45,8 +45,8 @@ export default function CreateOrganizationPage() {
   const onSubmit = async (data: OrganizationFormData) => {
     toast.promise(createOrganization.mutateAsync(data), {
       loading: "Creating organization...",
-      success: () => {
-        router.push("/teams/organisations");
+      success: (result) => {
+        router.push(`/organizations/${result.id}`);
         return "Organization created successfully";
       },
       error: (err: unknown) =>
@@ -104,42 +104,45 @@ export default function CreateOrganizationPage() {
           </CardHeader>
 
           <form onSubmit={handleSubmit(onSubmit)}>
-            <CardContent className="space-y-6">
-              {/* Organization Name Field */}
-              <FormField
-                label="Organization Name"
-                required
-                htmlFor="name"
-                error={errors.name?.message}
-                helpText="Maximum 100 characters"
-              >
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="Enter organization name"
-                  aria-invalid={!!errors.name}
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/50 focus:border-white/30 focus:ring-white/10"
-                  {...register("name")}
-                />
-              </FormField>
+            {/* fieldset disabled locks all inputs inside during submission */}
+            <fieldset disabled={createOrganization.isPending}>
+              <CardContent className="space-y-6">
+                {/* Organization Name Field */}
+                <FormField
+                  label="Organization Name"
+                  required
+                  htmlFor="name"
+                  error={errors.name?.message}
+                  helpText="Maximum 100 characters"
+                >
+                  <Input
+                    id="name"
+                    type="text"
+                    placeholder="Enter organization name"
+                    aria-invalid={!!errors.name}
+                    className="bg-white/5 border-white/10 text-white placeholder:text-white/50 focus:border-white/30 focus:ring-white/10"
+                    {...register("name")}
+                  />
+                </FormField>
 
-              {/* Description Field */}
-              <FormField
-                label="Description"
-                htmlFor="description"
-                error={errors.description?.message}
-                helpText="Maximum 500 characters"
-              >
-                <Textarea
-                  id="description"
-                  placeholder="Describe what this organization is about..."
-                  rows={4}
-                  aria-invalid={!!errors.description}
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/50 focus:border-white/30 focus:ring-white/10 resize-none"
-                  {...register("description")}
-                />
-              </FormField>
-            </CardContent>
+                {/* Description Field */}
+                <FormField
+                  label="Description"
+                  htmlFor="description"
+                  error={errors.description?.message}
+                  helpText="Maximum 500 characters"
+                >
+                  <Textarea
+                    id="description"
+                    placeholder="Describe what this organization is about..."
+                    rows={4}
+                    aria-invalid={!!errors.description}
+                    className="bg-white/5 border-white/10 text-white placeholder:text-white/50 focus:border-white/30 focus:ring-white/10 resize-none"
+                    {...register("description")}
+                  />
+                </FormField>
+              </CardContent>
+            </fieldset>
 
             <CardFooter className="flex gap-3 pt-2">
               <Button
@@ -147,11 +150,18 @@ export default function CreateOrganizationPage() {
                 variant="outline"
                 className="flex-1 border-white/20 text-white/70 hover:bg-white/10 hover:text-white"
                 onClick={safeBack}
+                disabled={createOrganization.isPending}
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Cancel
               </Button>
-              <Button type="submit" variant="primary" className="flex-1">
+              <Button
+                type="submit"
+                variant="primary"
+                className="flex-1"
+                disabled={createOrganization.isPending}
+                isLoading={createOrganization.isPending}
+              >
                 Create Organization
               </Button>
             </CardFooter>

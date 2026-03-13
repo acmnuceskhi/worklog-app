@@ -12,6 +12,10 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useOrganizations } from "@/lib/hooks";
 import { ManageOwnersSection } from "@/components/organizations/ManageOwnersSection";
+import {
+  validateOrganizationOwnerEmail,
+  getAllowedDomains,
+} from "@/lib/validations/email-domain-validation";
 
 /* ──────────────────────────────────────────────────────────────────
  * OrganizationInvitationsPanel
@@ -90,6 +94,19 @@ export function OrganizationInvitationsPanel({
       toast.error("Invalid Email Format", {
         description: invalidEmails.join(", "),
         duration: 2500,
+      });
+      return;
+    }
+
+    // Domain validation — only university emails allowed
+    const invalidDomainEmails = validEmails.filter(
+      (email) => !validateOrganizationOwnerEmail(email),
+    );
+    if (invalidDomainEmails.length > 0) {
+      const allowed = getAllowedDomains().join(" or ");
+      toast.error("Invalid Email Domain", {
+        description: `Only ${allowed} emails are allowed. Invalid: ${invalidDomainEmails.join(", ")}`,
+        duration: 4500,
       });
       return;
     }
@@ -261,7 +278,7 @@ export function OrganizationInvitationsPanel({
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => router.push("/organizations")}
+                  onClick={() => router.push("/teams/organisations")}
                   className="text-xs"
                 >
                   Create Organization
@@ -303,7 +320,7 @@ export function OrganizationInvitationsPanel({
                     >
                       <Input
                         type="email"
-                        placeholder="leader@university.edu"
+                        placeholder="leader@nu.edu.pk"
                         value={email}
                         onChange={(e) => updateEmail(index, e.target.value)}
                         className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50"
@@ -343,17 +360,12 @@ export function OrganizationInvitationsPanel({
                   <Button
                     onClick={handleSendInvitations}
                     disabled={isSending}
+                    isLoading={isSending}
                     className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
                   >
-                    {isSending ? (
-                      "Sending..."
-                    ) : (
-                      <>
-                        <Send className="mr-2" />
-                        Send Invitations (
-                        {inviteEmails.filter((e) => e.trim()).length})
-                      </>
-                    )}
+                    <Send className="mr-2" />
+                    Send Invitations (
+                    {inviteEmails.filter((e) => e.trim()).length})
                   </Button>
                 </div>
               </CardContent>

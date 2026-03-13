@@ -54,6 +54,7 @@ model User {
   organizationInvitations OrganizationInvitation[]
   worklogs           Worklog[]
   ratings            Rating[]
+  idempotencyKeys    IdempotencyKey[]
 
   @@map("users")
 }
@@ -264,4 +265,29 @@ model EmailSuppression {
   @@map("email_suppressions")
   @@index([email])
   @@index([reason])
+}
+
+/// Server-side request deduplication.
+/// Every state-mutating HTTP request (POST/PATCH/DELETE) receives a unique
+/// Idempotency-Key header from the client.  On first receipt the key is stored
+/// here together with the response status + body.  Subsequent requests with
+/// the same key (same user + token) return the cached response immediately,
+/// preventing duplicates from rapid clicks or network retries.
+/// Cleanup: keys older than 24 h are removed by the daily cron job.
+model IdempotencyKey {
+  id            String   @id @default(cuid())
+  token         String   @unique
+  userId        String   @map("user_id")
+  operationType String   @map("operation_type") // e.g. "CREATE_TEAM", "CREATE_WORKLOG"
+  operationId   String?  @map("operation_id")  // ID of the created/affected resource (nullable)
+  responseStatus Int     @map("response_status") // HTTP status stored for replay
+  responseBody  String   @map("response_body") @db.Text // Serialised JSON response for replay
+  createdAt     DateTime @default(now()) @map("created_at")
+  expiresAt     DateTime @map("expires_at")   // createdAt + 24 h
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt]) // For efficient cleanup/expiry queries
+  @@map("idempotency_keys")
 }

@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import type { PaginatedResponse } from "@/lib/types/pagination";
 import { DEFAULT_PAGE } from "@/lib/types/pagination";
+import { useIdempotencyToken } from "./use-idempotency-token";
 
 export interface Rating {
   id: string;
@@ -94,6 +95,8 @@ export const useOrganizationRatings = (organizationId: string) => {
  */
 export const useCreateRating = () => {
   const queryClient = useQueryClient();
+  const { token: idempotencyToken, reset: resetIdempotencyToken } =
+    useIdempotencyToken();
 
   return useMutation({
     mutationFn: async (data: {
@@ -103,7 +106,10 @@ export const useCreateRating = () => {
     }) => {
       const response = await fetch(`/api/worklogs/${data.worklogId}/ratings`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyToken,
+        },
         body: JSON.stringify({
           value: data.value,
           comment: data.comment || undefined,
@@ -167,6 +173,7 @@ export const useCreateRating = () => {
       }
     },
     onSuccess: (_data, variables) => {
+      resetIdempotencyToken();
       queryClient.invalidateQueries({
         queryKey: queryKeys.ratings.byWorklog(variables.worklogId),
       });
@@ -188,12 +195,17 @@ export const useCreateRating = () => {
  */
 export const useUpdateRating = (ratingId: string) => {
   const queryClient = useQueryClient();
+  const { token: idempotencyToken, reset: resetIdempotencyToken } =
+    useIdempotencyToken();
 
   return useMutation({
     mutationFn: async (data: { value: number; comment?: string | null }) => {
       const response = await fetch(`/api/ratings/${ratingId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyToken,
+        },
         body: JSON.stringify(data),
       });
       if (!response.ok) {
@@ -204,6 +216,7 @@ export const useUpdateRating = (ratingId: string) => {
       return payload.data || payload;
     },
     onSuccess: () => {
+      resetIdempotencyToken();
       queryClient.invalidateQueries({ queryKey: queryKeys.ratings.all() });
     },
   });
@@ -214,6 +227,8 @@ export const useUpdateRating = (ratingId: string) => {
  */
 export const useDeleteRating = () => {
   const queryClient = useQueryClient();
+  const { token: idempotencyToken, reset: resetIdempotencyToken } =
+    useIdempotencyToken();
 
   return useMutation({
     mutationFn: async (ratingId: string) => {
@@ -224,6 +239,7 @@ export const useDeleteRating = () => {
 
       const response = await fetch(`/api/ratings/${ratingId}`, {
         method: "DELETE",
+        headers: { "Idempotency-Key": idempotencyToken },
       });
       if (!response.ok) {
         const errorData = await response.json();
@@ -232,6 +248,7 @@ export const useDeleteRating = () => {
       return { success: true, ratingId };
     },
     onSuccess: () => {
+      resetIdempotencyToken();
       queryClient.invalidateQueries({ queryKey: queryKeys.ratings.all() });
     },
   });

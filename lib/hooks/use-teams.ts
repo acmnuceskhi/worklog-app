@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import type { PaginatedResponse } from "@/lib/types/pagination";
 import { DEFAULT_PAGE, DEFAULT_LIMIT } from "@/lib/types/pagination";
+import { useIdempotencyToken } from "./use-idempotency-token";
 
 export interface Team {
   id: string;
@@ -200,6 +201,8 @@ export const useTeamMembers = (
 
 export const useCreateTeam = () => {
   const queryClient = useQueryClient();
+  const { token: idempotencyToken, reset: resetIdempotencyToken } =
+    useIdempotencyToken();
 
   return useMutation({
     mutationFn: async (data: {
@@ -210,7 +213,10 @@ export const useCreateTeam = () => {
     }) => {
       const response = await fetch("/api/teams", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyToken,
+        },
         body: JSON.stringify(data),
       });
       if (!response.ok) {
@@ -268,6 +274,7 @@ export const useCreateTeam = () => {
       }
     },
     onSuccess: (_result, variables) => {
+      resetIdempotencyToken();
       // Side-effect invalidations for unrelated caches
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() });
       queryClient.refetchQueries({
@@ -295,6 +302,8 @@ export const useCreateTeam = () => {
  */
 export const useInviteTeamMember = () => {
   const queryClient = useQueryClient();
+  const { token: idempotencyToken, reset: resetIdempotencyToken } =
+    useIdempotencyToken();
 
   return useMutation({
     mutationFn: async ({
@@ -306,7 +315,10 @@ export const useInviteTeamMember = () => {
     }) => {
       const response = await fetch(`/api/teams/${teamId}/invite`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyToken,
+        },
         body: JSON.stringify({ email }),
       });
       if (!response.ok) {
@@ -316,6 +328,7 @@ export const useInviteTeamMember = () => {
       return payload.data || payload;
     },
     onSuccess: (_, { teamId }) => {
+      resetIdempotencyToken();
       queryClient.invalidateQueries({
         queryKey: queryKeys.teams.members(teamId),
       });
@@ -328,12 +341,17 @@ export const useInviteTeamMember = () => {
  */
 export const useUpdateTeam = (teamId: string) => {
   const queryClient = useQueryClient();
+  const { token: idempotencyToken, reset: resetIdempotencyToken } =
+    useIdempotencyToken();
 
   return useMutation({
     mutationFn: async (data: Partial<Team>) => {
       const response = await fetch(`/api/teams/${teamId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyToken,
+        },
         body: JSON.stringify(data),
       });
       if (!response.ok) {
@@ -433,6 +451,7 @@ export const useUpdateTeam = (teamId: string) => {
       }
     },
     onSuccess: (serverTeam) => {
+      resetIdempotencyToken();
       // Write the server's response into the detail cache immediately.
       queryClient.setQueryData<Team>(queryKeys.teams.detail(teamId), (old) =>
         old ? { ...old, ...serverTeam } : serverTeam,
@@ -490,6 +509,8 @@ export const useUpdateTeam = (teamId: string) => {
  */
 export const useRemoveTeamMember = (teamId: string) => {
   const queryClient = useQueryClient();
+  const { token: idempotencyToken, reset: resetIdempotencyToken } =
+    useIdempotencyToken();
 
   return useMutation({
     mutationFn: async ({
@@ -506,7 +527,10 @@ export const useRemoveTeamMember = (teamId: string) => {
 
       const response = await fetch(`/api/teams/${teamId}/members/${memberId}`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyToken,
+        },
       });
       if (!response.ok) {
         const errorData = await response.json();
@@ -515,6 +539,7 @@ export const useRemoveTeamMember = (teamId: string) => {
       return { memberId, memberName };
     },
     onSuccess: (_, variables) => {
+      resetIdempotencyToken();
       // Immediately remove from paginated members list to prevent stale visualization
       queryClient.setQueriesData<PaginatedResponse<TeamMember>>(
         { queryKey: queryKeys.teams.members(teamId) },
@@ -545,6 +570,8 @@ export const useRemoveTeamMember = (teamId: string) => {
  */
 export const useDeleteTeam = () => {
   const queryClient = useQueryClient();
+  const { token: idempotencyToken, reset: resetIdempotencyToken } =
+    useIdempotencyToken();
 
   return useMutation({
     mutationFn: async (teamId: string) => {
@@ -555,6 +582,7 @@ export const useDeleteTeam = () => {
 
       const response = await fetch(`/api/teams/${teamId}`, {
         method: "DELETE",
+        headers: { "Idempotency-Key": idempotencyToken },
       });
       if (!response.ok) {
         const errorData = await response.json();
@@ -563,6 +591,7 @@ export const useDeleteTeam = () => {
       return { success: true, teamId };
     },
     onSuccess: (_, teamId) => {
+      resetIdempotencyToken();
       // Remove from list caches immediately to prevent stale data
       queryClient.setQueriesData<PaginatedResponse<Team>>(
         { queryKey: queryKeys.teams.owned() },
@@ -601,6 +630,8 @@ export const useDeleteTeam = () => {
  */
 export const useUpdateTeamCredits = (teamId: string) => {
   const queryClient = useQueryClient();
+  const { token: idempotencyToken, reset: resetIdempotencyToken } =
+    useIdempotencyToken();
 
   return useMutation({
     mutationFn: async (data: {
@@ -609,7 +640,10 @@ export const useUpdateTeamCredits = (teamId: string) => {
     }) => {
       const response = await fetch(`/api/teams/${teamId}/credits`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyToken,
+        },
         body: JSON.stringify(data),
       });
       if (!response.ok) {
@@ -646,6 +680,9 @@ export const useUpdateTeamCredits = (teamId: string) => {
           context.previousTeam,
         );
       }
+    },
+    onSuccess: () => {
+      resetIdempotencyToken();
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.teams.all() });

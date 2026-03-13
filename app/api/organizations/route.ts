@@ -9,6 +9,7 @@ import {
 } from "@/lib/api-pagination";
 import { getRateLimitIdentifier, checkRateLimit } from "@/lib/api-utils";
 import { apiLimiter } from "@/lib/rate-limit";
+import { getIdempotencyKey, withIdempotency } from "@/app/api/_idempotency";
 
 /**
  * GET /api/organizations
@@ -130,26 +131,45 @@ export async function POST(request: NextRequest) {
     }
     const { name, description } = validation.data;
 
-    const organization = await prisma.organization.create({
-      data: {
-        name,
-        description: description || undefined,
-        ownerId: user.id,
-      },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        credits: true,
-        createdAt: true,
-        updatedAt: true,
-        ownerId: true,
-        _count: {
-          select: {
-            teams: true,
-          },
+    const orgData = {
+      name,
+      description: description || undefined,
+      ownerId: user.id,
+    };
+
+    const orgSelect = {
+      id: true,
+      name: true,
+      description: true,
+      credits: true,
+      createdAt: true,
+      updatedAt: true,
+      ownerId: true,
+      _count: {
+        select: {
+          teams: true,
         },
       },
+    };
+
+    // Atomic idempotency: check + create + record in one transaction
+    const idempotencyToken = getIdempotencyKey(request);
+    if (idempotencyToken) {
+      const result = await withIdempotency(
+        idempotencyToken,
+        user.id,
+        "CREATE_ORGANIZATION",
+        201,
+        (tx) => tx.organization.create({ data: orgData, select: orgSelect }),
+      );
+      if (result.cached) return result.response;
+      return NextResponse.json({ data: result.data }, { status: 201 });
+    }
+
+    // No idempotency token — create directly
+    const organization = await prisma.organization.create({
+      data: orgData,
+      select: orgSelect,
     });
 
     return NextResponse.json({ data: organization }, { status: 201 });

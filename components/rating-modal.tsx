@@ -51,11 +51,15 @@ export function RatingModal({
   const [error, setError] = React.useState<string | null>(null);
   const [markAsGraded, setMarkAsGraded] = React.useState(false);
 
-  const { mutateAsync: createRating } = useCreateRating();
-  const { mutateAsync: updateRating } = useUpdateRating(
+  const { mutateAsync: createRating, isPending: isCreating } =
+    useCreateRating();
+  const { mutateAsync: updateRating, isPending: isUpdating } = useUpdateRating(
     existingRating?.id || "",
   );
-  const { mutateAsync: updateWorklogStatus } = useUpdateWorklogStatus();
+  const { mutateAsync: updateWorklogStatus, isPending: isStatusUpdating } =
+    useUpdateWorklogStatus();
+
+  const isSubmittingRating = isCreating || isUpdating || isStatusUpdating;
 
   // Reset form when modal opens/closes or existing rating changes
   React.useEffect(() => {
@@ -216,6 +220,7 @@ export function RatingModal({
               variant="ghost"
               className="flex-1"
               onClick={() => onOpenChange(false)}
+              disabled={isSubmittingRating}
             >
               <X className="mr-2 h-4 w-4" />
               Cancel
@@ -224,7 +229,8 @@ export function RatingModal({
               variant="primary"
               className="flex-1 font-medium"
               onClick={handleSubmit}
-              disabled={ratingValue === 0}
+              disabled={ratingValue === 0 || isSubmittingRating}
+              isLoading={isSubmittingRating}
             >
               <Check className="mr-2 h-4 w-4" />
               {isEditing ? "Update Rating" : "Submit Rating"}

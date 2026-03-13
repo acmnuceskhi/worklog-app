@@ -86,10 +86,11 @@ export const TeamCreationWizard: React.FC<TeamCreationWizardProps> = ({
   const { mutateAsync: inviteMember } = useInviteTeamMember();
 
   const handleComplete = async (formData: Record<string, unknown>) => {
-    const createTeamProcess = async () => {
-      const formValues = formData as unknown as TeamFormData;
+    const formValues = formData as unknown as TeamFormData;
+    const toastId = toast.loading("Creating team and sending invitations...");
 
-      // Step 1: Create the team using the hook
+    try {
+      // Step 1: Create the team — await keeps wizard isSubmitting=true
       const teamResult = await createTeam({
         name: formValues.name,
         description: formValues.description || undefined,
@@ -99,9 +100,8 @@ export const TeamCreationWizard: React.FC<TeamCreationWizardProps> = ({
 
       const teamId = teamResult.id;
 
-      // Step 2: Send invitations if there are emails
+      // Step 2: Send invitations concurrently
       if (formValues.inviteEmails && formValues.inviteEmails.length > 0) {
-        // Invite members concurrently
         const invitePromises = formValues.inviteEmails.map((email) =>
           inviteMember({ teamId, email }).catch((err) => {
             console.warn(`Failed to send invitation to ${email}:`, err);
@@ -111,23 +111,21 @@ export const TeamCreationWizard: React.FC<TeamCreationWizardProps> = ({
         await Promise.all(invitePromises);
       }
 
-      return { teamId };
-    };
+      toast.success("Team created successfully!", { id: toastId });
 
-    toast.promise(createTeamProcess(), {
-      loading: "Creating team and sending invitations...",
-      success: (data) => {
-        if (onSuccess) {
-          onSuccess(data.teamId);
-        } else {
-          router.push(`/teams/lead/${data.teamId}`);
-        }
-        onClose();
-        return "Team created successfully!";
-      },
-      error: (err) =>
+      if (onSuccess) {
+        onSuccess(teamId);
+      } else {
+        router.push(`/teams/lead/${teamId}`);
+      }
+      onClose();
+    } catch (err) {
+      toast.error(
         err instanceof Error ? err.message : "Failed to create team",
-    });
+        { id: toastId },
+      );
+      throw err; // Re-throw so wizard keeps isSubmitting=false and shows error state
+    }
   };
 
   const handleCancel = () => {

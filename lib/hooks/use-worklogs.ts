@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import type { PaginatedResponse } from "@/lib/types/pagination";
 import { DEFAULT_PAGE, DEFAULT_LIMIT } from "@/lib/types/pagination";
+import { useIdempotencyToken } from "./use-idempotency-token";
 
 export type ProgressStatus =
   | "STARTED"
@@ -132,6 +133,8 @@ export const useWorklog = (worklogId: string) => {
  */
 export const useCreateWorklog = () => {
   const queryClient = useQueryClient();
+  const { token: idempotencyToken, reset: resetIdempotencyToken } =
+    useIdempotencyToken();
 
   return useMutation({
     mutationFn: async (data: {
@@ -144,7 +147,10 @@ export const useCreateWorklog = () => {
     }) => {
       const response = await fetch("/api/worklogs", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyToken,
+        },
         body: JSON.stringify(data),
       });
       if (!response.ok) {
@@ -227,6 +233,7 @@ export const useCreateWorklog = () => {
       }
     },
     onSuccess: (data) => {
+      resetIdempotencyToken();
       // Side-effect invalidations for team-specific and dashboard caches
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() });
       if (data.teamId) {
@@ -248,6 +255,8 @@ export const useCreateWorklog = () => {
  */
 export const useUpdateWorklogStatus = () => {
   const queryClient = useQueryClient();
+  const { token: idempotencyToken, reset: resetIdempotencyToken } =
+    useIdempotencyToken();
 
   return useMutation({
     mutationFn: async ({
@@ -259,7 +268,10 @@ export const useUpdateWorklogStatus = () => {
     }) => {
       const response = await fetch(`/api/worklogs/${worklogId}/status`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyToken,
+        },
         body: JSON.stringify({ progressStatus: newStatus }),
       });
       if (!response.ok) {
@@ -329,6 +341,9 @@ export const useUpdateWorklogStatus = () => {
         }
       }
     },
+    onSuccess: () => {
+      resetIdempotencyToken();
+    },
     onSettled: () => {
       // Always refetch to ensure server state consistency
       queryClient.invalidateQueries({ queryKey: queryKeys.worklogs.list() });
@@ -342,6 +357,8 @@ export const useUpdateWorklogStatus = () => {
  */
 export const useUpdateWorklogDeadline = () => {
   const queryClient = useQueryClient();
+  const { token: idempotencyToken, reset: resetIdempotencyToken } =
+    useIdempotencyToken();
 
   return useMutation({
     mutationFn: async ({
@@ -353,7 +370,10 @@ export const useUpdateWorklogDeadline = () => {
     }) => {
       const response = await fetch(`/api/worklogs/${worklogId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyToken,
+        },
         body: JSON.stringify({ deadline }),
       });
       if (!response.ok) {
@@ -419,6 +439,9 @@ export const useUpdateWorklogDeadline = () => {
         }
       }
     },
+    onSuccess: () => {
+      resetIdempotencyToken();
+    },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.worklogs.all() });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() });
@@ -431,11 +454,14 @@ export const useUpdateWorklogDeadline = () => {
  */
 export const useDeleteWorklog = (teamId?: string) => {
   const queryClient = useQueryClient();
+  const { token: idempotencyToken, reset: resetIdempotencyToken } =
+    useIdempotencyToken();
 
   return useMutation({
     mutationFn: async ({ worklogId }: { worklogId: string; title: string }) => {
       const response = await fetch(`/api/worklogs/${worklogId}`, {
         method: "DELETE",
+        headers: { "Idempotency-Key": idempotencyToken },
       });
       if (!response.ok) {
         throw new Error("Failed to delete worklog");
@@ -496,6 +522,7 @@ export const useDeleteWorklog = (teamId?: string) => {
       }
     },
     onSuccess: () => {
+      resetIdempotencyToken();
       // General invalidation as fallback
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() });
       if (teamId) {
