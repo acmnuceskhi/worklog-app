@@ -68,7 +68,7 @@ function Calendar({
           defaults.dropdowns,
         ),
         dropdown_root: cn(
-          "relative has-focus:border-blue-400 border border-white/20 shadow-xs has-focus:ring-blue-400/50 has-focus:ring-[3px] rounded-md",
+          "relative has-focus:border-blue-400 border dark:border-white/20 border-gray-300 shadow-xs has-focus:ring-blue-400/50 has-focus:ring-[3px] rounded-md",
           defaults.dropdown_root,
         ),
         dropdown: cn(
@@ -76,13 +76,13 @@ function Calendar({
           defaults.dropdown,
         ),
         caption_label: cn(
-          "select-none font-medium text-sm",
+          "select-none font-medium text-sm dark:text-white text-gray-900",
           defaults.caption_label,
         ),
         table: "w-full border-collapse",
         weekdays: cn("flex", defaults.weekdays),
         weekday: cn(
-          "text-white/50 rounded-md flex-1 font-normal text-[0.8rem] select-none w-9",
+          "dark:text-white/50 text-gray-500 rounded-md flex-1 font-normal text-[0.8rem] select-none w-9",
           defaults.weekday,
         ),
         week: cn("flex w-full mt-2", defaults.week),
@@ -96,14 +96,17 @@ function Calendar({
         range_middle: cn("rounded-none", defaults.range_middle),
         range_end: cn("rounded-r-md bg-blue-500/30", defaults.range_end),
         today: cn(
-          "bg-blue-500/20 text-blue-300 rounded-md data-[selected=true]:rounded-none",
+          "bg-blue-500/20 dark:text-blue-300 text-blue-600 rounded-md data-[selected=true]:rounded-none",
           defaults.today,
         ),
         outside: cn(
-          "text-white/30 opacity-50 aria-selected:bg-blue-500/20 aria-selected:text-white/30",
+          "dark:text-white/30 text-gray-400 opacity-50 aria-selected:bg-blue-500/20 aria-selected:text-white/30",
           defaults.outside,
         ),
-        disabled: cn("text-white/30 opacity-50", defaults.disabled),
+        disabled: cn(
+          "dark:text-white/30 text-gray-400 opacity-50",
+          defaults.disabled,
+        ),
         hidden: cn("invisible", defaults.hidden),
         ...classNames,
       }}
@@ -187,7 +190,7 @@ function CalendarDayButton({
         "data-[range-end=true]:rounded-md data-[range-end=true]:rounded-r-md",
         "data-[range-middle=true]:rounded-none",
         "data-[range-start=true]:rounded-md data-[range-start=true]:rounded-l-md",
-        "hover:bg-white/10 hover:text-white",
+        "dark:hover:bg-white/10 hover:bg-gray-100 dark:hover:text-white hover:text-gray-900",
         "aria-selected:opacity-100",
         "h-9 w-9 p-0",
         defaults.day,

@@ -69,7 +69,7 @@ function TableSkeleton({ rows, columns }: TableSkeletonProps) {
       {Array.from({ length: rows }).map((_, rowIndex) => (
         <div
           key={rowIndex}
-          className="flex items-center gap-4 rounded-lg border border-white/5 bg-white/[0.02] p-3"
+          className="flex items-center gap-4 rounded-lg border dark:border-white/5 border-gray-100 dark:bg-white/[0.02] bg-gray-50/50 p-3"
         >
           {Array.from({ length: columns }).map((_, colIndex) => (
             <Skeleton
@@ -100,8 +100,10 @@ interface EmptyTableStateProps {
 function EmptyTableState({ message, icon }: EmptyTableStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
-      {icon && <div className="mb-3 text-white/40">{icon}</div>}
-      <p className="text-white/60 text-sm">{message}</p>
+      {icon && (
+        <div className="mb-3 dark:text-white/40 text-gray-400">{icon}</div>
+      )}
+      <p className="dark:text-white/60 text-gray-500 text-sm">{message}</p>
     </div>
   );
 }
@@ -141,19 +143,19 @@ export function BaseDataTable<TData>({
   return (
     <div
       className={cn(
-        "overflow-x-auto rounded-lg border border-white/10",
+        "overflow-x-auto rounded-lg border dark:border-white/10 border-gray-200",
         className,
       )}
     >
       <TableProvider columns={columns} data={data}>
-        <TableHeader className="bg-white/[0.03]">
+        <TableHeader className="dark:bg-white/[0.03] bg-gray-50">
           {({ headerGroup }) => (
             <TableHeaderGroup headerGroup={headerGroup} key={headerGroup.id}>
               {({ header }) => (
                 <TableHead
                   header={header}
                   key={header.id}
-                  className="text-white/60 text-xs font-semibold uppercase tracking-wider"
+                  className="dark:text-white/60 text-gray-500 text-xs font-semibold uppercase tracking-wider"
                 />
               )}
             </TableHeaderGroup>
@@ -164,7 +166,7 @@ export function BaseDataTable<TData>({
             <TableRow
               key={row.id}
               row={row}
-              className="border-b border-white/5 hover:bg-white/[0.03] transition-colors"
+              className="border-b dark:border-white/5 border-gray-100 dark:hover:bg-white/[0.03] hover:bg-gray-50 transition-colors"
             >
               {({ cell }) => (
                 <TableCell cell={cell} key={cell.id} className="py-3 text-sm" />
@@ -209,15 +211,17 @@ export function CardDataTable<TData>({
   ...tableProps
 }: CardDataTableProps<TData>) {
   return (
-    <Card className="border border-white/10 bg-white/5 backdrop-blur-sm">
+    <Card className="border dark:border-white/10 border-gray-200 dark:bg-white/5 bg-gray-50 backdrop-blur-sm">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {headerIcon}
             <div>
-              <CardTitle className="text-white">{title}</CardTitle>
+              <CardTitle className="dark:text-white text-gray-900">
+                {title}
+              </CardTitle>
               {description && (
-                <CardDescription className="text-white/60">
+                <CardDescription className="dark:text-white/60 text-gray-500">
                   {description}
                 </CardDescription>
               )}
@@ -256,7 +260,7 @@ export function TablePagination({
   onPageChange,
 }: TablePaginationProps) {
   return (
-    <div className="flex items-center justify-between pt-4 text-xs text-white/60">
+    <div className="flex items-center justify-between pt-4 text-xs dark:text-white/60 text-gray-500">
       <span>
         Page {currentPage} of {totalPages} • {totalCount} total
       </span>
@@ -264,7 +268,7 @@ export function TablePagination({
         <Button
           size="sm"
           variant="outline"
-          className="border-white/20 text-white/70 hover:bg-white/10 hover:text-white h-8 px-2"
+          className="dark:border-white/20 border-gray-300 dark:text-white/70 text-gray-600 dark:hover:bg-white/10 hover:bg-gray-200 dark:hover:text-white hover:text-gray-900 h-8 px-2"
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage <= 1}
           aria-label="Previous page"
@@ -275,7 +279,7 @@ export function TablePagination({
         <Button
           size="sm"
           variant="outline"
-          className="border-white/20 text-white/70 hover:bg-white/10 hover:text-white h-8 px-2"
+          className="dark:border-white/20 border-gray-300 dark:text-white/70 text-gray-600 dark:hover:bg-white/10 hover:bg-gray-200 dark:hover:text-white hover:text-gray-900 h-8 px-2"
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage >= totalPages}
           aria-label="Next page"

@@ -18,6 +18,8 @@ import {
   LayoutList,
   AlertTriangle,
   Clock,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useSharedSession } from "@/components/providers";
@@ -226,24 +228,13 @@ export default function DashboardPage() {
 
   const sidebarWidth = isMobile ? 260 : isSidebarCollapsed ? 72 : 220;
   const showSidebarLabels = !isSidebarCollapsed || isMobile;
-  const pageClassName = `min-h-screen w-screen p-3 flex flex-col ${
-    contentTheme === "light"
-      ? "bg-gradient-to-br from-[#fbc2eb] to-[#a6c1ee] text-[var(--color-text)]"
-      : "bg-[var(--page-bg-dark)] text-white"
-  }`;
+  const pageClassName =
+    "min-h-screen w-screen p-3 flex flex-col text-[var(--color-text)]";
   const cardBaseClassName =
     "rounded-xl border backdrop-blur-md shadow-md transition-all";
-  const cardClassName = `${cardBaseClassName} ${
-    contentTheme === "dark"
-      ? "bg-[var(--card-dark)] border-white/10"
-      : "bg-white/90 border-white/20"
-  } p-5`;
-  const teamCardClassName = `${cardBaseClassName} ${
-    contentTheme === "dark"
-      ? "bg-[var(--nav-bg)] border-white/10"
-      : "bg-white/90 border-white/20"
-  } p-3`;
-  const sidebarClassName = `p-4 rounded-xl flex flex-col gap-3 overflow-hidden relative z-100 bg-[var(--nav-bg)] text-white ${
+  const cardClassName = `${cardBaseClassName} bg-[var(--card-themed)] border-[var(--card-themed-border)] p-5`;
+  const teamCardClassName = `${cardBaseClassName} bg-[var(--card-themed)] border-[var(--card-themed-border)] p-3`;
+  const sidebarClassName = `p-4 rounded-xl flex flex-col gap-3 overflow-hidden relative z-100 bg-[var(--nav-bg)] dark:text-white text-gray-900 ${
     isMobile
       ? "fixed top-[88px] left-[12px] bottom-[12px] h-auto shadow-[0_24px_80px_rgba(2,6,23,0.4)]"
       : ""
@@ -268,7 +259,7 @@ export default function DashboardPage() {
   // Prevent hydration mismatch by waiting for client mount
   if (!mounted) {
     return (
-      <div className="min-h-screen w-screen p-3 flex flex-col bg-[var(--page-bg-dark)] text-white">
+      <div className="min-h-screen w-screen p-3 flex flex-col">
         <LoadingState text="Loading..." className="min-h-[200px]" />
       </div>
     );
@@ -291,14 +282,14 @@ export default function DashboardPage() {
             <Menu />
           </Button>
           <h1
-            className={`${lobster.className} text-2xl font-bold text-white tracking-tight`}
+            className={`${lobster.className} text-2xl font-bold dark:text-white text-gray-900 tracking-tight`}
           >
             Worklog
           </h1>
-          <div className="flex items-center gap-2 bg-white/10 px-2.5 py-1.5 rounded-lg w-70">
+          <div className="flex items-center gap-2 dark:bg-white/10 bg-gray-100 border dark:border-white/10 border-gray-300 px-2.5 py-1.5 rounded-lg w-70">
             <Search />
             <input
-              className="bg-transparent border-none outline-none text-white placeholder-white/70 w-full"
+              className="bg-transparent border-none outline-none dark:text-white text-gray-900 dark:placeholder-white/70 placeholder-gray-400 w-full"
               placeholder="Search teams & worklogs..."
               value={searchQuery}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -313,7 +304,7 @@ export default function DashboardPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="border border-white/20 relative p-0 overflow-hidden"
+            className="border dark:border-white/20 border-gray-300 relative p-0 overflow-hidden"
             onClick={() => router.push("/profile")}
             aria-label="View Profile"
           >
@@ -336,13 +327,17 @@ export default function DashboardPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="border border-white/20"
+            className="border dark:border-white/20 border-gray-300"
             onClick={() =>
               setContentTheme(contentTheme === "light" ? "dark" : "light")
             }
             aria-label={`Switch to ${contentTheme === "light" ? "dark" : "light"} mode`}
           >
-            {contentTheme === "light" ? "🌙" : "☀️"}
+            {contentTheme === "light" ? (
+              <Moon className="h-4 w-4" />
+            ) : (
+              <Sun className="h-4 w-4" />
+            )}
           </Button>
           <Button
             variant="danger"
@@ -382,14 +377,14 @@ export default function DashboardPage() {
           transition={{ type: "spring", stiffness: 260, damping: 26 }}
         >
           <div className="flex items-center justify-between font-semibold text-sm">
-            <span className="uppercase tracking-wider text-xs text-white/70">
+            <span className="uppercase tracking-wider text-xs dark:text-white/70 text-gray-600">
               {showSidebarLabels ? "Navigation" : "Nav"}
             </span>
             {!isMobile && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-white p-1.5"
+                className="dark:text-white text-gray-900 p-1.5"
                 onClick={() => setIsSidebarCollapsed((prev) => !prev)}
                 aria-label={
                   isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
@@ -412,8 +407,8 @@ export default function DashboardPage() {
                   key={item.id}
                   className={`p-2.5 rounded-xl flex gap-2 cursor-pointer mb-2 items-center transition-colors ${
                     isActive
-                      ? "bg-gradient-to-r from-blue-500 to-cyan-500"
-                      : "hover:bg-white/5"
+                      ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
+                      : "dark:hover:bg-white/5 hover:bg-gray-100"
                   }`}
                   onClick={() => handleNavigate(item.href)}
                   onKeyDown={(e) => {
@@ -493,20 +488,22 @@ export default function DashboardPage() {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white/80">
-                <div className="text-lg font-semibold text-white tabular-nums">
+              <div className="rounded-xl border dark:border-white/10 border-gray-200 dark:bg-white/5 bg-gray-50 px-3 py-2 dark:text-white/80 text-gray-700">
+                <div className="text-lg font-semibold dark:text-white text-gray-900 tabular-nums">
                   {teams.length}
                 </div>
-                <div className="text-white/60">My Teams</div>
+                <div className="dark:text-white/60 text-gray-500">My Teams</div>
               </div>
-              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white/80">
-                <div className="text-lg font-semibold text-white tabular-nums">
+              <div className="rounded-xl border dark:border-white/10 border-gray-200 dark:bg-white/5 bg-gray-50 px-3 py-2 dark:text-white/80 text-gray-700">
+                <div className="text-lg font-semibold dark:text-white text-gray-900 tabular-nums">
                   {sidebarStatsData?.pendingReviewsCount ?? 0}
                 </div>
-                <div className="text-white/60">Reviews Pending</div>
+                <div className="dark:text-white/60 text-gray-500">
+                  Reviews Pending
+                </div>
               </div>
               {urgentCounts.overdueCount > 0 && (
-                <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-300">
+                <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 dark:text-red-300 text-red-700">
                   <div className="text-lg font-semibold tabular-nums">
                     {urgentCounts.overdueCount}
                   </div>
@@ -517,7 +514,7 @@ export default function DashboardPage() {
                 </div>
               )}
               {urgentCounts.dueSoonCount > 0 && (
-                <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 px-3 py-2 text-orange-300">
+                <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 px-3 py-2 dark:text-orange-300 text-orange-700">
                   <div className="text-lg font-semibold tabular-nums">
                     {urgentCounts.dueSoonCount}
                   </div>
@@ -551,7 +548,7 @@ export default function DashboardPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-xs text-white/50 hover:text-white"
+                    className="text-xs dark:text-white/50 text-gray-400 dark:hover:text-white hover:text-gray-700"
                     onClick={() => router.push("/teams/member")}
                   >
                     View All ({filteredTeams.length})
@@ -647,7 +644,7 @@ export default function DashboardPage() {
                         />
                       ))}
                       {deadlineSegments.overdue.length > 5 && (
-                        <p className="text-xs text-white/40 text-center py-1.5">
+                        <p className="text-xs dark:text-white/40 text-gray-400 text-center py-1.5">
                           +{deadlineSegments.overdue.length - 5} more overdue
                         </p>
                       )}
@@ -674,7 +671,7 @@ export default function DashboardPage() {
                         />
                       ))}
                       {deadlineSegments.dueSoon.length > 5 && (
-                        <p className="text-xs text-white/40 text-center py-1.5">
+                        <p className="text-xs dark:text-white/40 text-gray-400 text-center py-1.5">
                           +{deadlineSegments.dueSoon.length - 5} more due soon
                         </p>
                       )}
@@ -685,7 +682,7 @@ export default function DashboardPage() {
                 {/* Later segment */}
                 {deadlineSegments.later.length > 0 && (
                   <div>
-                    <h4 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">
+                    <h4 className="text-xs font-semibold dark:text-white/50 text-gray-400 uppercase tracking-wider mb-2">
                       Later ({deadlineSegments.later.length})
                     </h4>
                     <div
@@ -697,7 +694,7 @@ export default function DashboardPage() {
                         <DeadlineRow key={dl.id} deadline={dl} priority="low" />
                       ))}
                       {deadlineSegments.later.length > 5 && (
-                        <p className="text-xs text-white/40 text-center py-1.5">
+                        <p className="text-xs dark:text-white/40 text-gray-400 text-center py-1.5">
                           +{deadlineSegments.later.length - 5} more upcoming
                         </p>
                       )}
@@ -721,12 +718,12 @@ export default function DashboardPage() {
                 )}
 
                 {/* View toggle */}
-                <div className="flex rounded-lg border border-white/10 overflow-hidden">
+                <div className="flex rounded-lg border dark:border-white/10 border-gray-200 overflow-hidden">
                   <button
                     className={`p-1.5 text-xs transition-colors ${
                       worklogViewMode === "grid"
-                        ? "bg-white/10 text-white"
-                        : "text-white/40 hover:text-white/60"
+                        ? "dark:bg-white/10 bg-gray-100 dark:text-white text-gray-900"
+                        : "dark:text-white/40 text-gray-400 dark:hover:text-white/60 hover:text-gray-600"
                     }`}
                     onClick={() => setWorklogViewMode("grid")}
                     aria-label="Grid view"
@@ -737,8 +734,8 @@ export default function DashboardPage() {
                   <button
                     className={`p-1.5 text-xs transition-colors ${
                       worklogViewMode === "table"
-                        ? "bg-white/10 text-white"
-                        : "text-white/40 hover:text-white/60"
+                        ? "dark:bg-white/10 bg-gray-100 dark:text-white text-gray-900"
+                        : "dark:text-white/40 text-gray-400 dark:hover:text-white/60 hover:text-gray-600"
                     }`}
                     onClick={() => setWorklogViewMode("table")}
                     aria-label="Table view"
@@ -792,7 +789,7 @@ export default function DashboardPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-xs text-white/50 hover:text-white"
+                      className="text-xs dark:text-white/50 text-gray-400 dark:hover:text-white hover:text-gray-700"
                       onClick={() => router.push("/teams/member")}
                     >
                       View All Worklogs (

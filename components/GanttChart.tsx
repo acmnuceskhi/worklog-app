@@ -134,7 +134,7 @@ export function GanttChart({ tasks }: GanttChartProps) {
               return (
                 <div
                   key={task.id}
-                  className="space-y-1 p-3 bg-slate-800/40 rounded border border-slate-700/50"
+                  className="space-y-1 p-3 dark:bg-slate-800/40 bg-white rounded border dark:border-slate-700/50 border-gray-200"
                 >
                   {/* Task Title & Member */}
                   <div className="flex items-start justify-between gap-2">
@@ -177,7 +177,7 @@ export function GanttChart({ tasks }: GanttChartProps) {
 
                   {/* Status & Dates */}
                   <div className="flex items-center justify-between text-xs text-gray-400 px-1">
-                    <span className="bg-slate-900 px-2 py-1 rounded text-gray-300">
+                    <span className="dark:bg-slate-900 bg-white px-2 py-1 rounded dark:text-gray-300 text-gray-600">
                       {task.status}
                     </span>
                     <span>{formatLocalDate(new Date(task.deadline))}</span>

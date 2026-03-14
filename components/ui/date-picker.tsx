@@ -93,16 +93,16 @@ export function DatePicker({
             aria-describedby={isError ? "date-picker-error" : undefined}
             className={cn(
               "w-full justify-start text-left font-normal transition-all duration-200",
-              "bg-white/5 border-white/20 text-white",
-              "hover:bg-white/10 hover:border-white/30",
+              "dark:bg-white/5 bg-white dark:border-white/20 border-gray-300 dark:text-white text-gray-900",
+              "dark:hover:bg-white/10 hover:bg-gray-50 dark:hover:border-white/30 hover:border-gray-400",
               "focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400",
-              "data-[empty=true]:text-white/40",
+              "dark:data-[empty=true]:text-white/40 data-[empty=true]:text-gray-400",
               "backdrop-blur-sm",
               isError && "border-red-500/60 focus:ring-red-500/50",
               disabled && "opacity-50 cursor-not-allowed",
             )}
           >
-            <CalendarIcon className="mr-3 h-5 w-5 text-white/50" />
+            <CalendarIcon className="mr-3 h-5 w-5 dark:text-white/50 text-gray-400" />
             <span className="truncate">
               {displayValue ?? <span>{placeholder}</span>}
             </span>
@@ -123,7 +123,6 @@ export function DatePicker({
             onSelect={handleSelect}
             disabled={disabledMatcher}
             defaultMonth={value}
-            autoFocus
             className="rounded-lg"
           />
         </PopoverContent>

@@ -22,6 +22,7 @@ import { formatTableDate } from "@/lib/tables/table-utils";
 
 export interface WorklogRow {
   id: string;
+  userId: string;
   title: string;
   description: string;
   githubLink?: string;
@@ -38,6 +39,9 @@ export interface TeamWorklogTableProps {
   isLoading?: boolean;
   onDelete?: (id: string, title: string) => void;
   isDeleting?: boolean;
+  currentUserId?: string;
+  onStatusChange?: (id: string, newStatus: ProgressStatus) => void;
+  isStatusPending?: boolean;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -55,7 +59,8 @@ function StatusBadge({ status, label }: { status: string; label: string }) {
     <span
       className={cn(
         "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
-        STATUS_STYLES[status] ?? "bg-white/10 text-white/60 border-white/20",
+        STATUS_STYLES[status] ??
+          "dark:bg-white/10 bg-gray-100 dark:text-white/60 text-gray-500 dark:border-white/20 border-gray-300",
       )}
     >
       {label}
@@ -75,30 +80,48 @@ function ProgressBar({ value }: { value: number }) {
 
   return (
     <div className="flex items-center gap-2">
-      <div className="h-2 w-20 rounded-full bg-white/10 overflow-hidden">
+      <div className="h-2 w-20 rounded-full dark:bg-white/10 bg-gray-100 overflow-hidden">
         <div
           className={cn("h-full rounded-full transition-all", barColor)}
           style={{ width: `${value}%` }}
         />
       </div>
-      <span className="text-xs tabular-nums text-white/60">{value}%</span>
+      <span className="text-xs tabular-nums dark:text-white/60 text-gray-500">
+        {value}%
+      </span>
     </div>
   );
 }
 
 // ── Expanded Detail Panel ────────────────────────────────────────────────────
 
-function WorklogDetailPanel({ worklog }: { worklog: WorklogRow }) {
+function WorklogDetailPanel({
+  worklog,
+  currentUserId,
+  onStatusChange,
+  isStatusPending,
+}: {
+  worklog: WorklogRow;
+  currentUserId?: string;
+  onStatusChange?: (id: string, newStatus: ProgressStatus) => void;
+  isStatusPending?: boolean;
+}) {
+  const isOwnWorklog = !!currentUserId && worklog.userId === currentUserId;
+  const showMarkHalfDone = isOwnWorklog && worklog.status === "STARTED";
+  const showMarkCompleted = isOwnWorklog && worklog.status === "HALF_DONE";
+  const showMarkReviewed = !!onStatusChange && worklog.status === "COMPLETED";
+  const hasActions = showMarkHalfDone || showMarkCompleted || showMarkReviewed;
+
   return (
-    <div className="border-t border-white/5 bg-white/[0.02] px-6 py-4 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
+    <div className="border-t dark:border-white/5 border-gray-100 dark:bg-white/[0.02] bg-gray-50/50 px-6 py-4 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
       {/* Description */}
       <div className="flex gap-3">
-        <FileText className="h-4 w-4 text-white/40 mt-0.5 shrink-0" />
+        <FileText className="h-4 w-4 dark:text-white/40 text-gray-400 mt-0.5 shrink-0" />
         <div className="space-y-1 min-w-0">
-          <p className="text-xs font-medium text-white/50 uppercase tracking-wider">
+          <p className="text-xs font-medium dark:text-white/50 text-gray-400 uppercase tracking-wider">
             Description
           </p>
-          <p className="text-sm text-white/80 leading-relaxed whitespace-pre-wrap">
+          <p className="text-sm dark:text-white/80 text-gray-700 leading-relaxed whitespace-pre-wrap">
             {worklog.description || "No description provided."}
           </p>
         </div>
@@ -121,25 +144,64 @@ function WorklogDetailPanel({ worklog }: { worklog: WorklogRow }) {
         )}
 
         {/* Member */}
-        <div className="inline-flex items-center gap-1.5 text-xs text-white/50">
+        <div className="inline-flex items-center gap-1.5 text-xs dark:text-white/50 text-gray-400">
           <User className="h-3.5 w-3.5" />
           <span>{worklog.memberName}</span>
         </div>
 
         {/* Created date */}
-        <div className="inline-flex items-center gap-1.5 text-xs text-white/50">
+        <div className="inline-flex items-center gap-1.5 text-xs dark:text-white/50 text-gray-400">
           <Calendar className="h-3.5 w-3.5" />
           <span>Created {formatTableDate(worklog.createdAt)}</span>
         </div>
 
         {/* Deadline detail */}
         {worklog.deadline && (
-          <div className="inline-flex items-center gap-1.5 text-xs text-white/50">
+          <div className="inline-flex items-center gap-1.5 text-xs dark:text-white/50 text-gray-400">
             <Calendar className="h-3.5 w-3.5 text-amber-400/60" />
             <span>Due {formatTableDate(worklog.deadline)}</span>
           </div>
         )}
       </div>
+
+      {/* Status action buttons */}
+      {hasActions && onStatusChange && (
+        <div className="flex flex-wrap gap-2 pt-3 border-t dark:border-white/10 border-gray-200">
+          {showMarkHalfDone && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="dark:border-blue-500/40 border-blue-400/60 dark:text-blue-400 text-blue-600 hover:bg-blue-500/10"
+              disabled={isStatusPending}
+              onClick={() => onStatusChange(worklog.id, "HALF_DONE")}
+            >
+              Mark Half Done
+            </Button>
+          )}
+          {showMarkCompleted && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="dark:border-blue-500/40 border-blue-400/60 dark:text-blue-400 text-blue-600 hover:bg-blue-500/10"
+              disabled={isStatusPending}
+              onClick={() => onStatusChange(worklog.id, "COMPLETED")}
+            >
+              Mark Completed
+            </Button>
+          )}
+          {showMarkReviewed && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="dark:border-green-500/40 border-green-400/60 dark:text-green-400 text-green-600 hover:bg-green-500/10"
+              disabled={isStatusPending}
+              onClick={() => onStatusChange(worklog.id, "REVIEWED")}
+            >
+              Mark Reviewed
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -151,6 +213,9 @@ export function TeamWorklogTable({
   isLoading,
   onDelete,
   isDeleting,
+  currentUserId,
+  onStatusChange,
+  isStatusPending,
 }: TeamWorklogTableProps) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
@@ -172,7 +237,7 @@ export function TeamWorklogTable({
         {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={i}
-            className="flex items-center gap-4 rounded-lg border border-white/5 bg-white/[0.02] p-3"
+            className="flex items-center gap-4 rounded-lg border dark:border-white/5 border-gray-100 dark:bg-white/[0.02] bg-gray-50/50 p-3"
           >
             <Skeleton className="h-4 w-6" />
             <Skeleton className="h-4 w-40 flex-1" />
@@ -190,7 +255,7 @@ export function TeamWorklogTable({
   if (worklogs.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
-        <p className="text-white/60 text-sm">
+        <p className="dark:text-white/60 text-gray-500 text-sm">
           No worklogs yet. Assign a task to get started.
         </p>
       </div>
@@ -198,7 +263,7 @@ export function TeamWorklogTable({
   }
 
   return (
-    <div className="space-y-0 rounded-lg border border-white/10 overflow-hidden">
+    <div className="space-y-0 rounded-lg border dark:border-white/10 border-gray-200 overflow-hidden">
       {worklogs.map((worklog, index) => {
         const isExpanded = expandedIds.has(worklog.id);
         const isFirst = index === 0;
@@ -207,14 +272,14 @@ export function TeamWorklogTable({
             key={worklog.id}
             className={cn(
               "transition-colors",
-              !isFirst && "border-t border-white/5",
-              isExpanded && "bg-white/[0.01]",
+              !isFirst && "border-t dark:border-white/5 border-gray-100",
+              isExpanded && "dark:bg-white/[0.01] bg-gray-50/30",
             )}
           >
             {/* Row */}
             <div
               className={cn(
-                "grid items-center gap-4 px-4 py-3 text-sm cursor-pointer hover:bg-white/[0.03] transition-colors",
+                "grid items-center gap-4 px-4 py-3 text-sm cursor-pointer dark:hover:bg-white/[0.03] hover:bg-gray-50 transition-colors",
                 onDelete
                   ? "grid-cols-[28px_1fr_110px_100px_110px_130px_36px]"
                   : "grid-cols-[28px_1fr_110px_100px_110px_130px]",
@@ -234,15 +299,15 @@ export function TeamWorklogTable({
               {/* Expand chevron */}
               <ChevronDown
                 className={cn(
-                  "h-4 w-4 text-white/40 transition-transform duration-200 mx-auto",
-                  isExpanded && "rotate-180 text-white/60",
+                  "h-4 w-4 dark:text-white/40 text-gray-400 transition-transform duration-200 mx-auto",
+                  isExpanded && "rotate-180 dark:text-white/60 text-gray-500",
                 )}
               />
 
               {/* Task title + preview */}
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-white/90 truncate">
+                  <span className="font-medium dark:text-white/90 text-gray-800 truncate">
                     {worklog.title}
                   </span>
                   {worklog.githubLink && (
@@ -250,14 +315,14 @@ export function TeamWorklogTable({
                   )}
                 </div>
                 {!isExpanded && worklog.description && (
-                  <p className="text-xs text-white/40 mt-0.5 truncate">
+                  <p className="text-xs dark:text-white/40 text-gray-400 mt-0.5 truncate">
                     {worklog.description}
                   </p>
                 )}
               </div>
 
               {/* Member */}
-              <span className="text-white/80 text-sm truncate">
+              <span className="dark:text-white/80 text-gray-700 text-sm truncate">
                 {worklog.memberName}
               </span>
 
@@ -284,7 +349,9 @@ export function TeamWorklogTable({
                     />
                   </div>
                 ) : (
-                  <span className="text-white/40 text-xs">No deadline</span>
+                  <span className="dark:text-white/40 text-gray-400 text-xs">
+                    No deadline
+                  </span>
                 )}
               </div>
 
@@ -293,7 +360,7 @@ export function TeamWorklogTable({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-white/40 hover:text-red-400 hover:bg-red-500/10"
+                  className="h-8 w-8 dark:text-white/40 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
                   onClick={(e) => {
                     e.stopPropagation();
                     onDelete(worklog.id, worklog.title);
@@ -307,7 +374,14 @@ export function TeamWorklogTable({
             </div>
 
             {/* Expanded detail */}
-            {isExpanded && <WorklogDetailPanel worklog={worklog} />}
+            {isExpanded && (
+              <WorklogDetailPanel
+                worklog={worklog}
+                currentUserId={currentUserId}
+                onStatusChange={onStatusChange}
+                isStatusPending={isStatusPending}
+              />
+            )}
           </div>
         );
       })}

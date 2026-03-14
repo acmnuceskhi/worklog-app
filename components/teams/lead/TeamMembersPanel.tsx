@@ -50,7 +50,7 @@ function MembersSkeleton() {
       {Array.from({ length: 3 }).map((_, i) => (
         <div
           key={i}
-          className="flex items-center gap-4 rounded border border-white/5 p-3"
+          className="flex items-center gap-4 rounded border dark:border-white/5 border-gray-100 p-3"
         >
           <Skeleton className="h-8 w-8 rounded-full" />
           <Skeleton className="h-4 w-28 flex-1" />
@@ -86,10 +86,10 @@ export function TeamMembersPanel({
                 {initial}
               </div>
               <div className="min-w-0">
-                <p className="truncate font-medium text-white/90">
+                <p className="truncate font-medium dark:text-white/90 text-gray-800">
                   {row.original.name}
                 </p>
-                <p className="truncate text-xs text-white/50">
+                <p className="truncate text-xs dark:text-white/50 text-gray-400">
                   {row.original.email}
                 </p>
               </div>
@@ -103,7 +103,9 @@ export function TeamMembersPanel({
           <TableColumnHeader column={column} title="Contribution" />
         ),
         cell: ({ row }) => (
-          <span className="text-white/60">{row.original.contribution}</span>
+          <span className="dark:text-white/60 text-gray-500">
+            {row.original.contribution}
+          </span>
         ),
       },
       {
@@ -112,7 +114,7 @@ export function TeamMembersPanel({
           <TableColumnHeader column={column} title="Tasks" />
         ),
         cell: ({ row }) => (
-          <span className="tabular-nums text-white/70">
+          <span className="tabular-nums dark:text-white/70 text-gray-600">
             {row.original.taskCount}
           </span>
         ),
@@ -131,7 +133,7 @@ export function TeamMembersPanel({
                 ? "text-amber-400"
                 : r > 0
                   ? "text-red-400"
-                  : "text-white/40";
+                  : "dark:text-white/40 text-gray-400";
           return (
             <span className={cn("font-semibold tabular-nums", color)}>
               {r > 0 ? `${r}/10` : "—"}
@@ -149,7 +151,7 @@ export function TeamMembersPanel({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-white/40 hover:text-red-400 hover:bg-red-500/10"
+                  className="h-8 w-8 dark:text-white/40 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
                   onClick={() => onRemove(row.original.id, row.original.name)}
                   disabled={isRemoving}
                   aria-label={`Remove ${row.original.name}`}
@@ -165,13 +167,15 @@ export function TeamMembersPanel({
   );
 
   return (
-    <Card className="border border-white/10 bg-white/5 backdrop-blur-sm">
+    <Card className="border dark:border-white/10 border-gray-200 dark:bg-white/5 bg-gray-50 backdrop-blur-sm">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
           <Users className="h-5 w-5 text-amber-400" />
-          <CardTitle className="text-white">Team Members</CardTitle>
+          <CardTitle className="dark:text-white text-gray-900">
+            Team Members
+          </CardTitle>
         </div>
-        <CardDescription className="text-white/60">
+        <CardDescription className="dark:text-white/60 text-gray-500">
           {members.length} member{members.length !== 1 ? "s" : ""} in this team
         </CardDescription>
       </CardHeader>
@@ -179,13 +183,13 @@ export function TeamMembersPanel({
         {isLoading ? (
           <MembersSkeleton />
         ) : members.length === 0 ? (
-          <p className="py-8 text-center text-sm text-white/50">
+          <p className="py-8 text-center text-sm dark:text-white/50 text-gray-400">
             No members yet. Invite someone to join the team.
           </p>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-white/10">
+          <div className="overflow-x-auto rounded-lg border dark:border-white/10 border-gray-200">
             <TableProvider columns={columns} data={members}>
-              <TableHeader className="bg-white/[0.03]">
+              <TableHeader className="dark:bg-white/[0.03] bg-gray-50">
                 {({ headerGroup }) => (
                   <TableHeaderGroup
                     headerGroup={headerGroup}
@@ -195,7 +199,7 @@ export function TeamMembersPanel({
                       <TableHead
                         header={header}
                         key={header.id}
-                        className="text-white/60 text-xs font-semibold uppercase tracking-wider"
+                        className="dark:text-white/60 text-gray-500 text-xs font-semibold uppercase tracking-wider"
                       />
                     )}
                   </TableHeaderGroup>
@@ -206,7 +210,7 @@ export function TeamMembersPanel({
                   <TableRow
                     key={row.id}
                     row={row}
-                    className="border-b border-white/5 hover:bg-white/[0.03] transition-colors"
+                    className="border-b dark:border-white/5 border-gray-100 dark:hover:bg-white/[0.03] hover:bg-gray-50 transition-colors"
                   >
                     {({ cell }) => (
                       <TableCell

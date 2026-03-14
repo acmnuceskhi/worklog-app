@@ -348,7 +348,7 @@ export default function OrganizationDashboardPage({
 
   if (isOrgLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <div className="min-h-screen">
         <LoadingState fullPage text="Loading organization..." />
       </div>
     );
@@ -358,7 +358,7 @@ export default function OrganizationDashboardPage({
     const errorMessage =
       orgError instanceof Error ? orgError.message : "An error occurred";
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
+      <div className="min-h-screen flex items-center justify-center p-4">
         <ErrorState
           title="Failed to load organization"
           message={errorMessage}
@@ -375,10 +375,11 @@ export default function OrganizationDashboardPage({
   if (!organization) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-3">
+    <div className="min-h-screen p-3">
       {/* Top Navigation */}
       <PageHeader
         title="Worklog"
+        showThemeToggle
         navItems={[
           {
             label: "My Teams",
@@ -409,11 +410,11 @@ export default function OrganizationDashboardPage({
         <div className="max-w-7xl mx-auto space-y-8">
           {/* ── Hero Header ─────────────────────────────────────── */}
           <div className="space-y-5">
-            <div className="flex items-center gap-2 text-white/40 text-sm">
+            <div className="flex items-center gap-2 dark:text-white/40 text-gray-400 text-sm">
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-white/40 hover:text-white h-7 px-2"
+                className="dark:text-white/40 text-gray-400 dark:hover:text-white hover:text-gray-900 h-7 px-2"
                 onClick={() => router.push("/teams/organisations")}
                 aria-label="Back to organizations"
               >
@@ -428,15 +429,15 @@ export default function OrganizationDashboardPage({
                   <Building2 className="h-8 w-8 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl md:text-3xl font-bold text-white">
+                  <h1 className="text-2xl md:text-3xl font-bold dark:text-white text-gray-900">
                     {organization.name}
                   </h1>
                   {organization.description && (
-                    <p className="text-white/50 mt-1 max-w-lg">
+                    <p className="dark:text-white/50 text-gray-400 mt-1 max-w-lg">
                       {organization.description}
                     </p>
                   )}
-                  <p className="text-xs text-white/30 mt-2">
+                  <p className="text-xs dark:text-white/30 text-gray-500 mt-2">
                     Owned by{" "}
                     {organization.owner?.name || organization.owner?.email} ·
                     Created {formatTableDate(organization.createdAt)}
@@ -465,42 +466,48 @@ export default function OrganizationDashboardPage({
 
           {/* ── Stats Row ───────────────────────────────────────── */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Card className="border-white/10 bg-white/5">
+            <Card className="dark:border-white/10 border-gray-200 dark:bg-white/5 bg-gray-50">
               <CardContent className="p-5 flex items-center gap-4">
                 <div className="shrink-0 p-2.5 rounded-xl bg-blue-500/10">
                   <Users className="h-5 w-5 text-blue-400" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-white tabular-nums">
+                  <p className="text-2xl font-bold dark:text-white text-gray-900 tabular-nums">
                     {organization.stats?.totalTeams ?? 0}
                   </p>
-                  <p className="text-xs text-white/40">Teams</p>
+                  <p className="text-xs dark:text-white/40 text-gray-400">
+                    Teams
+                  </p>
                 </div>
               </CardContent>
             </Card>
-            <Card className="border-white/10 bg-white/5">
+            <Card className="dark:border-white/10 border-gray-200 dark:bg-white/5 bg-gray-50">
               <CardContent className="p-5 flex items-center gap-4">
                 <div className="shrink-0 p-2.5 rounded-xl bg-green-500/10">
                   <UserCheck className="h-5 w-5 text-green-400" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-white tabular-nums">
+                  <p className="text-2xl font-bold dark:text-white text-gray-900 tabular-nums">
                     {organization.stats?.totalMembers ?? 0}
                   </p>
-                  <p className="text-xs text-white/40">Members</p>
+                  <p className="text-xs dark:text-white/40 text-gray-400">
+                    Members
+                  </p>
                 </div>
               </CardContent>
             </Card>
-            <Card className="border-white/10 bg-white/5">
+            <Card className="dark:border-white/10 border-gray-200 dark:bg-white/5 bg-gray-50">
               <CardContent className="p-5 flex items-center gap-4">
                 <div className="shrink-0 p-2.5 rounded-xl bg-purple-500/10">
                   <ClipboardList className="h-5 w-5 text-purple-400" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-white tabular-nums">
+                  <p className="text-2xl font-bold dark:text-white text-gray-900 tabular-nums">
                     {organization.stats?.totalWorklogs ?? 0}
                   </p>
-                  <p className="text-xs text-white/40">Worklogs</p>
+                  <p className="text-xs dark:text-white/40 text-gray-400">
+                    Worklogs
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -509,16 +516,16 @@ export default function OrganizationDashboardPage({
           {/* ── Owners Section ─────────────────────────────────── */}
           <section>
             <div className="mb-4">
-              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <h2 className="text-lg font-semibold dark:text-white text-gray-900 flex items-center gap-2">
                 <Crown className="h-5 w-5 text-amber-400" />
                 Owners
               </h2>
-              <p className="text-sm text-white/40 mt-0.5">
+              <p className="text-sm dark:text-white/40 text-gray-400 mt-0.5">
                 Organization owner and co-owners
               </p>
             </div>
 
-            <Card className="border-white/10 bg-white/5">
+            <Card className="dark:border-white/10 border-gray-200 dark:bg-white/5 bg-gray-50">
               <CardContent className="p-5">
                 <OwnersRosterSection
                   organizationId={organizationId}
@@ -532,11 +539,11 @@ export default function OrganizationDashboardPage({
           <section>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <h2 className="text-lg font-semibold dark:text-white text-gray-900 flex items-center gap-2">
                   <Users className="h-5 w-5 text-blue-400" />
                   Teams
                 </h2>
-                <p className="text-sm text-white/40 mt-0.5">
+                <p className="text-sm dark:text-white/40 text-gray-400 mt-0.5">
                   Manage teams within this organization
                 </p>
               </div>
@@ -583,16 +590,16 @@ export default function OrganizationDashboardPage({
           {/* ── Recent Worklogs ─────────────────────────────────── */}
           <section>
             <div className="mb-4">
-              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <h2 className="text-lg font-semibold dark:text-white text-gray-900 flex items-center gap-2">
                 <ClipboardList className="h-5 w-5 text-purple-400" />
                 Recent Worklogs
               </h2>
-              <p className="text-sm text-white/40 mt-0.5">
+              <p className="text-sm dark:text-white/40 text-gray-400 mt-0.5">
                 Filter and review worklogs across all teams
               </p>
             </div>
 
-            <Card className="border-white/10 bg-white/5">
+            <Card className="dark:border-white/10 border-gray-200 dark:bg-white/5 bg-gray-50">
               <CardContent className="p-5">
                 <div className="mb-4">
                   <WorklogFilters

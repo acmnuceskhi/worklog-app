@@ -236,15 +236,17 @@ export function TeamSettingsDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={handleDialogClose}>
-        <DialogContent className="sm:max-w-xl max-h-[85vh] overflow-y-auto bg-[var(--panel-strong)] border-white/10">
+        <DialogContent className="sm:max-w-xl max-h-[85vh] overflow-y-auto bg-[var(--panel-strong)] dark:border-white/10 border-gray-200">
           <DialogHeader>
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/20">
                 <Settings className="h-4 w-4 text-blue-400" />
               </div>
               <div>
-                <DialogTitle className="text-white">Team Settings</DialogTitle>
-                <DialogDescription className="text-white/50 text-sm">
+                <DialogTitle className="dark:text-white text-gray-900">
+                  Team Settings
+                </DialogTitle>
+                <DialogDescription className="dark:text-white/50 text-gray-500 text-sm">
                   Update team details or manage configuration
                 </DialogDescription>
               </div>
@@ -254,14 +256,17 @@ export function TeamSettingsDialog({
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Team Name */}
             <div className="space-y-2">
-              <Label htmlFor="team-name" className="text-white">
+              <Label
+                htmlFor="team-name"
+                className="dark:text-white text-gray-900"
+              >
                 Team Name <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="team-name"
                 placeholder="e.g., Frontend Development Team"
                 className={cn(
-                  "bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-white/30",
+                  "dark:bg-white/5 bg-white dark:border-white/10 border-gray-300 dark:text-white text-gray-900 dark:placeholder:text-white/40 placeholder:text-gray-400 dark:focus:border-white/30 focus:border-blue-400",
                   errors.name && "border-red-500",
                 )}
                 disabled={isBusy}
@@ -274,15 +279,20 @@ export function TeamSettingsDialog({
 
             {/* Project Name */}
             <div className="space-y-2">
-              <Label htmlFor="team-project" className="text-white">
+              <Label
+                htmlFor="team-project"
+                className="dark:text-white text-gray-900"
+              >
                 Project Name{" "}
-                <span className="text-white/40 text-xs">(Optional)</span>
+                <span className="dark:text-white/40 text-gray-400 text-xs">
+                  (Optional)
+                </span>
               </Label>
               <Input
                 id="team-project"
                 placeholder="e.g., Company Website Redesign"
                 className={cn(
-                  "bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-white/30",
+                  "dark:bg-white/5 bg-white dark:border-white/10 border-gray-300 dark:text-white text-gray-900 dark:placeholder:text-white/40 placeholder:text-gray-400 dark:focus:border-white/30 focus:border-blue-400",
                   errors.project && "border-red-500",
                 )}
                 disabled={isBusy}
@@ -295,22 +305,27 @@ export function TeamSettingsDialog({
 
             {/* Description */}
             <div className="space-y-2">
-              <Label htmlFor="team-description" className="text-white">
+              <Label
+                htmlFor="team-description"
+                className="dark:text-white text-gray-900"
+              >
                 Description{" "}
-                <span className="text-white/40 text-xs">(Optional)</span>
+                <span className="dark:text-white/40 text-gray-400 text-xs">
+                  (Optional)
+                </span>
               </Label>
               <Textarea
                 id="team-description"
                 placeholder="Describe the team's purpose, goals, or responsibilities..."
                 rows={4}
                 className={cn(
-                  "bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-white/30 resize-none",
+                  "dark:bg-white/5 bg-white dark:border-white/10 border-gray-300 dark:text-white text-gray-900 dark:placeholder:text-white/40 placeholder:text-gray-400 dark:focus:border-white/30 focus:border-blue-400 resize-none",
                   errors.description && "border-red-500",
                 )}
                 disabled={isBusy}
                 {...register("description")}
               />
-              <div className="flex justify-between text-xs text-white/50">
+              <div className="flex justify-between text-xs dark:text-white/50 text-gray-400">
                 <span>Provide details about your team</span>
                 <span>{descriptionValue.length}/500</span>
               </div>
@@ -323,9 +338,14 @@ export function TeamSettingsDialog({
 
             {/* Organization */}
             <div className="space-y-2">
-              <Label htmlFor="team-organization" className="text-white">
+              <Label
+                htmlFor="team-organization"
+                className="dark:text-white text-gray-900"
+              >
                 Organization{" "}
-                <span className="text-white/40 text-xs">(Optional)</span>
+                <span className="dark:text-white/40 text-gray-400 text-xs">
+                  (Optional)
+                </span>
               </Label>
               <Select
                 value={organizationIdValue ?? "none"}
@@ -341,7 +361,7 @@ export function TeamSettingsDialog({
               >
                 <SelectTrigger
                   id="team-organization"
-                  className="bg-white/5 border-white/10 text-white"
+                  className="dark:bg-white/5 bg-white dark:border-white/10 border-gray-300 dark:text-white text-gray-900"
                 >
                   <SelectValue placeholder="Select an organization..." />
                 </SelectTrigger>
@@ -356,19 +376,19 @@ export function TeamSettingsDialog({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-white/50">
+              <p className="text-xs dark:text-white/50 text-gray-400">
                 Associate this team with an organization you own
               </p>
             </div>
 
             {/* Save Section */}
-            <DialogFooter className="gap-2 flex-row justify-between pt-4 border-t border-white/10">
+            <DialogFooter className="gap-2 flex-row justify-between pt-4 border-t dark:border-white/10 border-gray-200">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => handleDialogClose(false)}
                 disabled={isBusy}
-                className="border-white/20"
+                className="dark:border-white/20 border-gray-300"
               >
                 Cancel
               </Button>
@@ -402,20 +422,20 @@ export function TeamSettingsDialog({
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className="bg-[var(--panel-strong)] border-white/10">
+        <AlertDialogContent className="bg-[var(--panel-strong)] dark:border-white/10 border-gray-200">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white flex items-center gap-2">
+            <AlertDialogTitle className="dark:text-white text-gray-900 flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-red-400" />
               Delete Team
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-white/70">
+            <AlertDialogDescription className="dark:text-white/70 text-gray-600">
               Are you sure you want to delete <strong>{team.name}</strong>? This
               action cannot be undone. All associated worklogs will remain but
               will be unlinked from this team.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-white/20">
+            <AlertDialogCancel className="dark:border-white/20 border-gray-300">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction

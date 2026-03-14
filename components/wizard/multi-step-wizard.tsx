@@ -172,14 +172,14 @@ export const MultiStepWizard: React.FC<MultiStepWizardProps> = ({
         {/* Mobile: Compact Progress Bar */}
         <div className="md:hidden mb-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-white/70">
+            <span className="text-sm font-medium dark:text-white/70 text-gray-600">
               Step {currentStepIndex + 1} of {steps.length}
             </span>
-            <span className="text-xs text-white/50">
+            <span className="text-xs dark:text-white/50 text-gray-400">
               {Math.round(((currentStepIndex + 1) / steps.length) * 100)}%
             </span>
           </div>
-          <div className="w-full bg-white/10 rounded-full h-2">
+          <div className="w-full dark:bg-white/10 bg-gray-200 rounded-full h-2">
             <div
               className="bg-blue-500 h-2 rounded-full transition-all duration-300"
               style={{
@@ -187,11 +187,13 @@ export const MultiStepWizard: React.FC<MultiStepWizardProps> = ({
               }}
             />
           </div>
-          <p className="text-sm font-medium text-blue-400 mt-2">
+          <p className="text-sm font-medium dark:text-blue-400 text-blue-600 mt-2">
             {currentStep.title}
           </p>
           {currentStep.description && (
-            <p className="text-xs text-white/50">{currentStep.description}</p>
+            <p className="text-xs dark:text-white/50 text-gray-400">
+              {currentStep.description}
+            </p>
           )}
         </div>
 
@@ -210,10 +212,10 @@ export const MultiStepWizard: React.FC<MultiStepWizardProps> = ({
                       transition-all duration-300 font-semibold text-sm
                       ${
                         isCompleted
-                          ? "bg-blue-600 text-white"
+                          ? "dark:bg-blue-600 dark:text-white bg-blue-200 text-blue-700"
                           : isCurrent
-                            ? "bg-blue-500 text-white ring-4 ring-blue-500/30"
-                            : "bg-white/10 text-white/50"
+                            ? "dark:bg-blue-500 dark:text-white dark:ring-4 dark:ring-blue-500/30 bg-blue-100 text-blue-700 ring-4 ring-blue-300/50"
+                            : "dark:bg-white/10 dark:text-white/50 bg-gray-200 text-gray-500"
                       }
                     `}
                     aria-current={isCurrent ? "step" : undefined}
@@ -227,13 +229,15 @@ export const MultiStepWizard: React.FC<MultiStepWizardProps> = ({
                   <div className="mt-2 text-center">
                     <p
                       className={`text-sm font-medium ${
-                        isCurrent ? "text-blue-400" : "text-white/60"
+                        isCurrent
+                          ? "dark:text-blue-400 text-blue-700"
+                          : "dark:text-white/60 text-gray-500"
                       }`}
                     >
                       {step.title}
                     </p>
                     {step.description && (
-                      <p className="text-xs text-white/50 mt-1 hidden lg:block">
+                      <p className="text-xs dark:text-white/50 text-gray-400 mt-1 hidden lg:block">
                         {step.description}
                       </p>
                     )}
@@ -244,7 +248,7 @@ export const MultiStepWizard: React.FC<MultiStepWizardProps> = ({
                     className={`
                       flex-1 h-1 mx-2 rounded
                       transition-all duration-300
-                      ${isCompleted ? "bg-blue-600" : "bg-white/10"}
+                      ${isCompleted ? "dark:bg-blue-600 bg-blue-300" : "dark:bg-white/10 bg-gray-300"}
                     `}
                     aria-hidden="true"
                   />
@@ -256,7 +260,7 @@ export const MultiStepWizard: React.FC<MultiStepWizardProps> = ({
       </div>
 
       {/* Step Content */}
-      <div className="wizard-content min-h-[300px] md:min-h-[400px] relative overflow-hidden">
+      <div className="wizard-content overflow-x-hidden">
         <AnimatePresence mode="wait" custom={direction}>
           <m.div
             key={currentStep.id}
@@ -269,7 +273,7 @@ export const MultiStepWizard: React.FC<MultiStepWizardProps> = ({
               x: { type: "spring", stiffness: 300, damping: 30 },
               opacity: { duration: 0.2 },
             }}
-            className="absolute inset-0 overflow-y-auto px-1"
+            className="relative px-1"
           >
             <currentStep.component
               data={formData}
@@ -281,7 +285,7 @@ export const MultiStepWizard: React.FC<MultiStepWizardProps> = ({
       </div>
 
       {/* Navigation Buttons */}
-      <div className="wizard-navigation flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mt-8 pt-6 border-t border-white/10">
+      <div className="wizard-navigation flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mt-8 pt-6 border-t dark:border-white/10 border-gray-200">
         <div className="order-2 sm:order-1">
           {onCancel && (
             <Button
@@ -341,7 +345,7 @@ export const MultiStepWizard: React.FC<MultiStepWizardProps> = ({
 
       {/* Keyboard shortcuts hint */}
       <div
-        className="text-xs text-white/50 mt-4 text-center hidden md:block"
+        className="text-xs dark:text-white/50 text-gray-500 mt-4 text-center hidden md:block"
         aria-live="polite"
       >
         <span>Tip: Use Ctrl + Arrow keys to navigate between steps</span>

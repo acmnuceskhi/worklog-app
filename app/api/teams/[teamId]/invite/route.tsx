@@ -83,6 +83,18 @@ export async function POST(
     // Process each email invitation
     for (const email of emails) {
       try {
+        // Prevent self-invitation
+        if (
+          session.user.email &&
+          email.toLowerCase() === session.user.email.toLowerCase()
+        ) {
+          errors.push({
+            email,
+            error: "Unable to invite yourself — you are already the team owner",
+          });
+          continue;
+        }
+
         const user = userByEmail.get(email) ?? null;
 
         // Generate secure token for invitation

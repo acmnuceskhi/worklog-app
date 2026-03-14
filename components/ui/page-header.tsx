@@ -2,8 +2,10 @@
 
 import React from "react";
 import Link from "next/link";
+import { Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useContentTheme } from "@/lib/hooks/use-content-theme";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -36,6 +38,8 @@ interface PageHeaderProps {
   rightAction?: React.ReactNode;
   /** Navigation items rendered in the center */
   navItems?: NavItem[];
+  /** Show a theme toggle button in the right section */
+  showThemeToggle?: boolean;
   /** Additional CSS classes appended to the nav element */
   className?: string;
 }
@@ -43,7 +47,7 @@ interface PageHeaderProps {
 // ─── Shared styling constant ─────────────────────────────────────────────────
 
 const HEADER_BASE_CLASSES =
-  "flex items-center justify-between rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 p-5 text-white mb-5 shadow-lg border border-white/5";
+  "flex items-center justify-between rounded-xl bg-gradient-to-r dark:from-slate-900 dark:to-slate-800 from-white to-gray-50 p-5 dark:text-white text-gray-900 mb-5 shadow-lg border dark:border-white/5 border-gray-200";
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -62,8 +66,28 @@ export function PageHeader({
   leftAction,
   rightAction,
   navItems = [],
+  showThemeToggle = false,
   className,
 }: PageHeaderProps) {
+  const [contentTheme, setContentTheme] = useContentTheme();
+
+  const themeToggle = showThemeToggle ? (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="dark:border-white/20 border-gray-300 border"
+      onClick={() =>
+        setContentTheme(contentTheme === "light" ? "dark" : "light")
+      }
+      aria-label={`Switch to ${contentTheme === "light" ? "dark" : "light"} mode`}
+    >
+      {contentTheme === "light" ? (
+        <Moon className="h-4 w-4" />
+      ) : (
+        <Sun className="h-4 w-4" />
+      )}
+    </Button>
+  ) : null;
   /* ── Children mode ─────────────────────────────────────────────────────── */
   if (children) {
     return <nav className={cn(HEADER_BASE_CLASSES, className)}>{children}</nav>;
@@ -76,9 +100,15 @@ export function PageHeader({
       <div className="flex items-center gap-4 flex-shrink-0">
         {leftAction}
         <div className="flex flex-col gap-0.5">
-          {title && <h1 className="text-xl font-bold text-white">{title}</h1>}
+          {title && (
+            <h1 className="text-xl font-bold dark:text-white text-gray-900">
+              {title}
+            </h1>
+          )}
           {description && (
-            <p className="text-sm text-white/70">{description}</p>
+            <p className="text-sm dark:text-white/70 text-gray-500">
+              {description}
+            </p>
           )}
         </div>
       </div>
@@ -102,7 +132,7 @@ export function PageHeader({
                 className={cn(
                   "flex items-center gap-1.5",
                   item.isActive &&
-                    "bg-white/15 text-white border border-white/25",
+                    "dark:bg-white/15 bg-gray-200 dark:text-white text-gray-900 border dark:border-white/25 border-gray-300",
                 )}
                 onClick={item.onClick}
                 asChild={!!item.href}
@@ -114,10 +144,11 @@ export function PageHeader({
         </div>
       )}
 
-      {/* Right Section: optional action(s) */}
-      {rightAction && (
+      {/* Right Section: optional action(s) + theme toggle */}
+      {(rightAction || themeToggle) && (
         <div className="flex items-center gap-2 flex-shrink-0">
           {rightAction}
+          {themeToggle}
         </div>
       )}
     </nav>

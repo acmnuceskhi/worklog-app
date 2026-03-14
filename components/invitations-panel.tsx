@@ -65,7 +65,7 @@ function InvitationCard({
       }}
       className="group"
     >
-      <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700/50 backdrop-blur-sm hover:border-slate-600/70 transition-all duration-300 hover:shadow-lg hover:shadow-slate-900/20">
+      <Card className="dark:bg-gradient-to-br dark:from-slate-800/50 dark:to-slate-900/50 bg-white dark:border-slate-700/50 border-gray-200 backdrop-blur-sm dark:hover:border-slate-600/70 hover:border-gray-300 transition-all duration-300 hover:shadow-lg dark:hover:shadow-slate-900/20 hover:shadow-gray-200/50">
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -73,13 +73,13 @@ function InvitationCard({
                 <UserPlus className="w-4 h-4 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <CardTitle className="text-sm font-semibold text-white truncate">
+                <CardTitle className="text-sm font-semibold dark:text-white text-gray-900 truncate">
                   {invitation.team.name}
                 </CardTitle>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge
                     variant="secondary"
-                    className="text-xs bg-slate-700/50 text-slate-300 border-slate-600/50"
+                    className="text-xs dark:bg-slate-700/50 bg-gray-100 dark:text-slate-300 text-gray-600 dark:border-slate-600/50 border-gray-200"
                   >
                     <Clock className="w-3 h-3 mr-1" />
                     {timeAgo}
@@ -93,12 +93,12 @@ function InvitationCard({
         <CardContent className="pt-0">
           <div className="space-y-3">
             {/* Team Details */}
-            <div className="text-xs text-slate-400 space-y-1">
+            <div className="text-xs dark:text-slate-400 text-gray-500 space-y-1">
               {invitation.team.description && (
                 <p className="line-clamp-2">{invitation.team.description}</p>
               )}
               {invitation.team.organization && (
-                <div className="flex items-center gap-1 text-slate-500">
+                <div className="flex items-center gap-1 dark:text-slate-500 text-gray-500">
                   <Building2 className="w-3 h-3" />
                   <span className="truncate">
                     {invitation.team.organization.name}
@@ -108,14 +108,14 @@ function InvitationCard({
             </div>
 
             {/* Inviter Info */}
-            <div className="text-xs text-slate-500">
+            <div className="text-xs dark:text-slate-500 text-gray-500">
               Invited by{" "}
-              <span className="text-slate-400 font-medium">
+              <span className="dark:text-slate-400 text-gray-700 font-medium">
                 {invitation.team.owner.name || invitation.team.owner.email}
               </span>
             </div>
 
-            <Separator className="bg-slate-700/50" />
+            <Separator className="dark:bg-slate-700/50 bg-gray-200" />
 
             {/* Action Buttons */}
             <div className="flex gap-2">
@@ -150,7 +150,7 @@ function InvitationCard({
                 variant="outline"
                 onClick={() => onReject(invitation.id)}
                 disabled={isAccepting || isRejecting}
-                className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-800/50 hover:border-slate-500 transition-all duration-200"
+                className="flex-1 dark:border-slate-600 border-gray-300 dark:text-slate-300 text-gray-700 dark:hover:bg-slate-800/50 hover:bg-gray-50 dark:hover:border-slate-500 hover:border-gray-400 transition-all duration-200"
                 aria-label={`Decline invitation to ${invitation.team.name}`}
               >
                 {isRejecting ? (
@@ -235,15 +235,15 @@ export function InvitationsPanel() {
     >
       <div className="sticky top-6 space-y-4">
         {/* Header */}
-        <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-slate-800/60 to-slate-900/60 backdrop-blur-sm border border-slate-700/50">
+        <div className="flex items-center gap-3 p-4 rounded-xl dark:bg-gradient-to-r dark:from-slate-800/60 dark:to-slate-900/60 bg-white backdrop-blur-sm border dark:border-slate-700/50 border-gray-200">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
             <UserPlus className="w-4 h-4 text-white" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-white">
+            <h3 className="text-sm font-semibold dark:text-white text-gray-900">
               Team Invitations
             </h3>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs dark:text-slate-400 text-gray-500">
               {invitations.length} pending
             </p>
           </div>
@@ -261,20 +261,23 @@ export function InvitationsPanel() {
                 className="space-y-3"
               >
                 {[...Array(2)].map((_, i) => (
-                  <Card key={i} className="bg-slate-800/30 border-slate-700/30">
+                  <Card
+                    key={i}
+                    className="dark:bg-slate-800/30 bg-gray-50 dark:border-slate-700/30 border-gray-200"
+                  >
                     <CardHeader className="pb-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-slate-700/50 animate-pulse" />
+                        <div className="w-10 h-10 rounded-full dark:bg-slate-700/50 bg-gray-200 animate-pulse" />
                         <div className="flex-1 space-y-2">
-                          <div className="h-4 bg-slate-700/50 rounded animate-pulse" />
-                          <div className="h-3 bg-slate-700/30 rounded animate-pulse w-2/3" />
+                          <div className="h-4 dark:bg-slate-700/50 bg-gray-200 rounded animate-pulse" />
+                          <div className="h-3 dark:bg-slate-700/30 bg-gray-100 rounded animate-pulse w-2/3" />
                         </div>
                       </div>
                     </CardHeader>
                     <CardContent className="pt-0">
                       <div className="flex gap-2">
-                        <div className="flex-1 h-8 bg-slate-700/50 rounded animate-pulse" />
-                        <div className="flex-1 h-8 bg-slate-700/30 rounded animate-pulse" />
+                        <div className="flex-1 h-8 dark:bg-slate-700/50 bg-gray-200 rounded animate-pulse" />
+                        <div className="flex-1 h-8 dark:bg-slate-700/30 bg-gray-100 rounded animate-pulse" />
                       </div>
                     </CardContent>
                   </Card>
@@ -287,13 +290,13 @@ export function InvitationsPanel() {
                 animate={{ opacity: 1, scale: 1 }}
                 className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-center"
               >
-                <p className="text-sm text-red-400">
+                <p className="text-sm dark:text-red-400 text-red-600">
                   Failed to load invitations
                 </p>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="mt-2 border-red-500/30 text-red-400 hover:bg-red-500/10"
+                  className="mt-2 border-red-500/30 dark:text-red-400 text-red-600 hover:bg-red-500/10"
                   onClick={() => window.location.reload()}
                 >
                   Retry

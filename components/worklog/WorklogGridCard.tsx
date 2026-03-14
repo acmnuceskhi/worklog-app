@@ -43,7 +43,7 @@ export function WorklogGridCard({
   return (
     <div
       className={cn(
-        "rounded-xl border backdrop-blur-md shadow-md transition-all cursor-pointer hover:shadow-lg hover:border-white/20",
+        "rounded-xl border backdrop-blur-md shadow-md transition-all cursor-pointer hover:shadow-lg dark:hover:border-white/20 hover:border-gray-300",
         className,
       )}
       onClick={onClick}
@@ -59,7 +59,7 @@ export function WorklogGridCard({
     >
       {/* Header: Title + Status Badge */}
       <div className="flex items-start justify-between gap-2 mb-2">
-        <h4 className="text-sm font-semibold text-white line-clamp-1 flex-1 min-w-0">
+        <h4 className="text-sm font-semibold dark:text-white text-gray-900 line-clamp-1 flex-1 min-w-0">
           {worklog.title}
         </h4>
         <span
@@ -74,7 +74,7 @@ export function WorklogGridCard({
 
       {/* Meta: Created date */}
       {worklog.createdAt && (
-        <p className="text-xs text-white/40 mb-2">
+        <p className="text-xs dark:text-white/40 text-gray-400 mb-2">
           {formatLocalDate(new Date(worklog.createdAt))}
         </p>
       )}
@@ -85,10 +85,10 @@ export function WorklogGridCard({
           className={cn(
             "flex items-center gap-1.5 text-xs rounded-lg p-2 mt-1",
             deadlineDays !== null && deadlineDays < 0
-              ? "bg-red-500/10 text-red-300"
+              ? "bg-red-500/10 dark:text-red-300 text-red-700"
               : deadlineDays !== null && deadlineDays <= 3
                 ? "bg-orange-500/10 text-orange-300"
-                : "bg-white/5 text-white/60",
+                : "dark:bg-white/5 bg-gray-50 dark:text-white/60 text-gray-500",
           )}
         >
           <Clock className="h-3 w-3 shrink-0" aria-hidden />

@@ -63,8 +63,8 @@ export const StandardizedForm = React.forwardRef<
         </fieldset>
 
         {isSubmitting && (
-          <div className="flex items-center justify-center gap-2 py-4 text-white/70">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+          <div className="flex items-center justify-center gap-2 py-4 dark:text-white/70 text-gray-600">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 dark:border-white/30 border-gray-300 dark:border-t-white border-t-gray-900" />
             <span className="text-sm">{submittingText}</span>
           </div>
         )}

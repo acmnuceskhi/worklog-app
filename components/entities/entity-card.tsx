@@ -67,7 +67,7 @@ export const EntityCard: React.FC<EntityCardProps> = ({
   <Card
     className={cn(
       "transition-colors",
-      onClick && "cursor-pointer hover:bg-white/10",
+      onClick && "cursor-pointer dark:hover:bg-white/10 hover:bg-gray-200",
       className,
     )}
     onClick={onClick}
@@ -90,9 +90,11 @@ export const EntityCard: React.FC<EntityCardProps> = ({
         <div className="flex items-center gap-3">
           {avatar}
           <div>
-            <CardTitle className="text-lg text-white">{title}</CardTitle>
+            <CardTitle className="text-lg dark:text-white text-gray-900">
+              {title}
+            </CardTitle>
             {subtitle && (
-              <CardDescription className="text-white/70">
+              <CardDescription className="dark:text-white/70 text-gray-600">
                 {subtitle}
               </CardDescription>
             )}
@@ -105,12 +107,16 @@ export const EntityCard: React.FC<EntityCardProps> = ({
     {children && <CardContent>{children}</CardContent>}
 
     {stats.length > 0 && (
-      <CardFooter className="border-t border-white/10 pt-3">
+      <CardFooter className="border-t dark:border-white/10 border-gray-200 pt-3">
         <div className="flex w-full justify-between text-sm">
           {stats.map((stat) => (
             <div key={stat.label} className="text-center">
-              <div className="font-semibold text-white">{stat.value}</div>
-              <div className="text-white/60">{stat.label}</div>
+              <div className="font-semibold dark:text-white text-gray-900">
+                {stat.value}
+              </div>
+              <div className="dark:text-white/60 text-gray-500">
+                {stat.label}
+              </div>
             </div>
           ))}
         </div>

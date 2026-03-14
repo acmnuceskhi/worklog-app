@@ -63,7 +63,7 @@ export function OwnersRosterSection({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-6">
-        <Loader2 className="h-5 w-5 animate-spin text-white/40" />
+        <Loader2 className="h-5 w-5 animate-spin dark:text-white/40 text-gray-400" />
       </div>
     );
   }
@@ -73,19 +73,19 @@ export function OwnersRosterSection({
       <div className="space-y-3">
         {/* Original Owner */}
         {originalOwner && (
-          <div className="flex items-center gap-3 rounded-lg bg-white/5 border border-white/5 px-3 py-2.5">
+          <div className="flex items-center gap-3 rounded-lg dark:bg-white/5 bg-gray-50 border dark:border-white/5 border-gray-100 px-3 py-2.5">
             <div className="p-1.5 rounded-full bg-amber-500/20 shrink-0">
               <Crown className="h-3.5 w-3.5 text-amber-400" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm text-white truncate">
+              <p className="text-sm dark:text-white text-gray-900 truncate">
                 {originalOwner.name || "Unknown"}
               </p>
-              <p className="text-xs text-white/40 truncate">
+              <p className="text-xs dark:text-white/40 text-gray-400 truncate">
                 {originalOwner.email}
               </p>
             </div>
-            <span className="text-[10px] text-amber-400/70 font-medium uppercase tracking-wider shrink-0">
+            <span className="text-[10px] dark:text-amber-400/70 text-amber-600 font-medium uppercase tracking-wider shrink-0">
               Owner
             </span>
           </div>
@@ -94,23 +94,23 @@ export function OwnersRosterSection({
         {/* Accepted Co-Owners */}
         {acceptedOwners.length > 0 && (
           <div className="space-y-2">
-            <p className="text-xs font-medium text-white/50 uppercase tracking-wider">
+            <p className="text-xs font-medium dark:text-white/50 text-gray-400 uppercase tracking-wider">
               Co-Owners ({acceptedOwners.length})
             </p>
             <div className="space-y-1.5">
               {acceptedOwners.map((inv) => (
                 <div
                   key={inv.id}
-                  className="flex items-center gap-3 rounded-lg bg-white/5 border border-white/5 px-3 py-2.5"
+                  className="flex items-center gap-3 rounded-lg dark:bg-white/5 bg-gray-50 border dark:border-white/5 border-gray-100 px-3 py-2.5"
                 >
                   <div className="p-1.5 rounded-full bg-green-500/20 shrink-0">
                     <Check className="h-3.5 w-3.5 text-green-400" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm text-white truncate">
+                    <p className="text-sm dark:text-white text-gray-900 truncate">
                       {inv.user?.name || inv.email}
                     </p>
-                    <p className="text-xs text-white/40 truncate">
+                    <p className="text-xs dark:text-white/40 text-gray-400 truncate">
                       {inv.user?.email || inv.email}
                       {inv.joinedAt && (
                         <span className="ml-1">
@@ -164,7 +164,7 @@ export function OwnersRosterSection({
 
         {/* Empty State */}
         {!isLoading && acceptedOwners.length === 0 && (
-          <p className="text-xs text-white/40 text-center py-3">
+          <p className="text-xs dark:text-white/40 text-gray-400 text-center py-3">
             No co-owners yet. Invite co-owners from the sidebar panel.
           </p>
         )}
@@ -181,15 +181,17 @@ export function OwnersRosterSection({
               <AlertTriangle className="h-5 w-5" />
               Remove Co-Owner
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-white/70">
+            <AlertDialogDescription className="dark:text-white/70 text-gray-600">
               Are you sure you want to remove{" "}
-              <strong className="text-white">{removeTarget?.name}</strong> as a
-              co-owner? They will lose all management access to this
+              <strong className="dark:text-white text-gray-900">
+                {removeTarget?.name}
+              </strong>{" "}
+              as a co-owner? They will lose all management access to this
               organization.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-white/10 text-white/60 hover:bg-white/5 hover:text-white">
+            <AlertDialogCancel className="dark:border-white/10 border-gray-200 dark:text-white/60 text-gray-500 dark:hover:bg-white/5 hover:bg-gray-100 dark:hover:text-white hover:text-gray-900">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction

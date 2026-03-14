@@ -47,9 +47,11 @@ export const EntityList: React.FC<EntityListProps> = ({
     {/* Header row */}
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2">
-        <h2 className="text-xl font-semibold text-white">{title}</h2>
+        <h2 className="text-xl font-semibold dark:text-white text-gray-900">
+          {title}
+        </h2>
         {count !== undefined && (
-          <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-medium text-white/80">
+          <span className="rounded-full dark:bg-white/10 bg-gray-100 px-2.5 py-0.5 text-xs font-medium dark:text-white/80 text-gray-700">
             {count}
           </span>
         )}

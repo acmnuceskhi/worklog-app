@@ -85,7 +85,7 @@ function MemberTeamsPageContent() {
       {/* Header — matches lead/page.tsx pattern */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+          <h1 className="text-3xl font-bold dark:text-white text-gray-900 flex items-center gap-3">
             <Users className="text-blue-400" />
             My Teams
           </h1>
@@ -94,7 +94,7 @@ function MemberTeamsPageContent() {
           </p>
           {teams.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2 text-xs">
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
+              <span className="rounded-full border dark:border-white/10 border-gray-200 dark:bg-white/5 bg-gray-50 px-3 py-1 dark:text-white/70 text-gray-600">
                 {paginatedTeams?.meta.total ?? teams.length} teams
               </span>
             </div>
@@ -146,7 +146,7 @@ function MemberTeamsPageContent() {
                 { label: "My Worklogs", value: team.myWorklogCount ?? 0 },
               ]}
               onClick={() => router.push(`/teams/member/${team.id}`)}
-              className="border border-white/10 bg-white/5 backdrop-blur-md shadow-lg shadow-black/20 hover:-translate-y-1 hover:shadow-xl"
+              className="border dark:border-white/10 border-gray-200 dark:bg-white/5 bg-gray-50 backdrop-blur-md shadow-lg dark:shadow-black/20 shadow-gray-200/50 hover:-translate-y-1 hover:shadow-xl"
             >
               {team.organization && (
                 <p className="text-sm text-muted line-clamp-1">
@@ -157,7 +157,7 @@ function MemberTeamsPageContent() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full border-white/20 text-white/80 hover:text-white hover:border-white/40"
+                  className="w-full dark:border-white/20 border-gray-300 dark:text-white/80 text-gray-700 dark:hover:text-white hover:text-gray-900 dark:hover:border-white/40 hover:border-gray-400"
                   onClick={(e) => {
                     e.stopPropagation();
                     router.push(`/teams/member/${team.id}`);

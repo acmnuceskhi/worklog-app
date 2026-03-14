@@ -32,7 +32,7 @@ const variantStyles = {
     border: "border-red-500/40",
     bg: "bg-red-500/10",
     iconColor: "text-red-400",
-    titleColor: "text-red-300",
+    titleColor: "dark:text-red-300 text-red-700",
     itemColor: "text-red-300/80",
   },
   warning: {
@@ -82,7 +82,9 @@ function AlertBanner({
               key={item.id}
               className="flex items-center justify-between text-sm"
             >
-              <span className="truncate text-white/80">{item.title}</span>
+              <span className="truncate dark:text-white/80 text-gray-700">
+                {item.title}
+              </span>
               <span
                 className={`text-xs shrink-0 ml-3 tabular-nums ${styles.itemColor}`}
               >
@@ -96,7 +98,9 @@ function AlertBanner({
           );
         })}
         {remaining > 0 && (
-          <li className="text-xs text-white/40">+{remaining} more</li>
+          <li className="text-xs dark:text-white/40 text-gray-400">
+            +{remaining} more
+          </li>
         )}
       </ul>
 
@@ -106,7 +110,7 @@ function AlertBanner({
           variant="ghost"
           size="sm"
           onClick={onViewAll}
-          className={`mt-2.5 ${styles.titleColor} hover:bg-white/5`}
+          className={`mt-2.5 ${styles.titleColor} dark:hover:bg-white/5 hover:bg-gray-100`}
         >
           View all
           <ChevronRight className="ml-1 h-3.5 w-3.5" />

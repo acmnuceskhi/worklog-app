@@ -56,7 +56,10 @@ export function TeamFilters({
   return (
     <div className="flex flex-wrap gap-3">
       <div className="min-w-[220px] flex-1">
-        <Label htmlFor="team-search" className="text-slate-300">
+        <Label
+          htmlFor="team-search"
+          className="dark:text-slate-300 text-slate-600"
+        >
           Search
         </Label>
         <Input
@@ -64,11 +67,14 @@ export function TeamFilters({
           value={value.search}
           onChange={(event) => update({ search: event.target.value })}
           placeholder={searchPlaceholder}
-          className="bg-slate-800/60 border-slate-700 text-white"
+          className="dark:bg-slate-800/60 bg-white dark:border-slate-700 border-gray-200 dark:text-white text-gray-900"
         />
       </div>
       <div className="min-w-[160px]">
-        <Label htmlFor="team-sort" className="text-slate-300">
+        <Label
+          htmlFor="team-sort"
+          className="dark:text-slate-300 text-slate-600"
+        >
           Sort by
         </Label>
         <Select
@@ -77,11 +83,11 @@ export function TeamFilters({
         >
           <SelectTrigger
             id="team-sort"
-            className="bg-slate-800/60 border-slate-700 text-white"
+            className="dark:bg-slate-800/60 bg-white dark:border-slate-700 border-gray-200 dark:text-white text-gray-900"
           >
             <SelectValue placeholder="Sort" />
           </SelectTrigger>
-          <SelectContent className="bg-slate-900 border-slate-700">
+          <SelectContent className="dark:bg-slate-900 bg-white dark:border-slate-700 border-gray-200">
             {sortOptions.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
                 {opt.label}
@@ -91,7 +97,10 @@ export function TeamFilters({
         </Select>
       </div>
       <div className="min-w-[140px]">
-        <Label htmlFor="team-direction" className="text-slate-300">
+        <Label
+          htmlFor="team-direction"
+          className="dark:text-slate-300 text-slate-600"
+        >
           Direction
         </Label>
         <Select
@@ -100,11 +109,11 @@ export function TeamFilters({
         >
           <SelectTrigger
             id="team-direction"
-            className="bg-slate-800/60 border-slate-700 text-white"
+            className="dark:bg-slate-800/60 bg-white dark:border-slate-700 border-gray-200 dark:text-white text-gray-900"
           >
             <SelectValue placeholder="Direction" />
           </SelectTrigger>
-          <SelectContent className="bg-slate-900 border-slate-700">
+          <SelectContent className="dark:bg-slate-900 bg-white dark:border-slate-700 border-gray-200">
             <SelectItem value="asc">Ascending</SelectItem>
             <SelectItem value="desc">Descending</SelectItem>
           </SelectContent>
@@ -114,7 +123,7 @@ export function TeamFilters({
         <Button
           type="button"
           variant="outline"
-          className="border-slate-600 text-slate-200"
+          className="dark:border-slate-600 border-gray-300 dark:text-slate-200 text-slate-700"
           onClick={onReset}
         >
           Clear

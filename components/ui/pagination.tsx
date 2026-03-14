@@ -95,7 +95,7 @@ export function Pagination({
             return (
               <span
                 key={`ellipsis-${idx}`}
-                className="flex h-9 w-9 items-center justify-center text-white/40"
+                className="flex h-9 w-9 items-center justify-center dark:text-white/40 text-gray-400"
                 aria-hidden
               >
                 <MoreHorizontal className="h-4 w-4" />
@@ -138,7 +138,7 @@ export function Pagination({
       </Button>
 
       {/* Page indicator */}
-      <span className="ml-2 text-xs text-white/40 hidden sm:inline">
+      <span className="ml-2 text-xs dark:text-white/40 text-gray-400 hidden sm:inline">
         Page {currentPage} of {totalPages}
       </span>
     </nav>

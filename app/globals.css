@@ -1,10 +1,12 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* ==========================================================================
    CSS Custom Properties (Design Tokens)
    ========================================================================== */
 
 :root {
+  color-scheme: light;
   /* Color Palette */
   --color-primary: #3b82f6;
   --color-primary-hover: #2563eb;
@@ -23,15 +25,15 @@
   --bg-gradient-end: #e6f0ff;
 
   /* Navigation */
-  --nav-bg: #04243f;
-  --panel-bg: rgba(15, 23, 42, 0.9);
+  --nav-bg: #ffffff;
+  --panel-bg: rgba(248, 250, 252, 0.95);
   --card-bg: rgba(255, 255, 255, 0.95);
   --card-contrast: #e6f0ff;
-  --glass: rgba(255, 255, 255, 0.08);
-  --page-bg-dark: #021629;
-  --page-bg-deep: #0a173b;
-  --panel-strong: #111c2b;
-  --card-dark: #03243a;
+  --glass: rgba(0, 0, 0, 0.04);
+  --page-bg-dark: #f1f5f9;
+  --page-bg-deep: #e2e8f0;
+  --panel-strong: #f1f5f9;
+  --card-dark: #ffffff;
 
   /* Spacing scale */
   --space-1: 4px;
@@ -51,27 +53,38 @@
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+
+  /* Theme-responsive tokens (switch with data-theme attribute) */
+  --page-bg: linear-gradient(
+    160deg,
+    var(--bg-gradient-start),
+    var(--bg-gradient-end)
+  );
+  --card-themed: rgba(255, 255, 255, 0.9);
+  --card-themed-border: rgba(0, 0, 0, 0.08);
+  --text-on-page: var(--color-text);
 }
 
-/* Dark Mode Overrides */
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --bg-gradient-start: #071032;
-    --bg-gradient-end: #071830;
-    --nav-bg: #04243f;
-    --panel-bg: rgba(2, 6, 23, 0.9);
-    --card-bg: rgba(12, 18, 45, 0.8);
-    --card-contrast: rgba(59, 130, 246, 0.08);
-    --color-text: #e6eef8;
-    --color-text-secondary: #cbd5f5;
-    --color-muted: #94a3b8;
-    --glass: rgba(255, 255, 255, 0.04);
-    --page-bg-dark: #021629;
-    --page-bg-deep: #0a173b;
-    --panel-strong: #111c2b;
-    --card-dark: #03243a;
-  }
+/* next-themes adds class="dark" to <html> in dark mode */
+.dark {
+  color-scheme: dark;
+  --bg-gradient-start: #071032;
+  --bg-gradient-end: #071830;
+  --nav-bg: #04243f;
+  --panel-bg: rgba(2, 6, 23, 0.9);
+  --card-bg: rgba(12, 18, 45, 0.8);
+  --card-contrast: rgba(59, 130, 246, 0.08);
+  --color-text: #e6eef8;
+  --color-text-secondary: #cbd5f5;
+  --color-muted: #94a3b8;
+  --glass: rgba(255, 255, 255, 0.04);
+  --page-bg-dark: #021629;
+  --page-bg-deep: #0a173b;
+  --panel-strong: #111c2b;
+  --card-dark: #03243a;
+  --card-themed: var(--card-dark);
+  --card-themed-border: rgba(255, 255, 255, 0.1);
+  --text-on-page: #ffffff;
 }
 
 /* ==========================================================================
@@ -106,7 +119,7 @@ body {
     var(--bg-gradient-start),
     var(--bg-gradient-end)
   );
-  color: var(--color-text);
+  color: var(--text-on-page);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

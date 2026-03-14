@@ -44,14 +44,19 @@ export const FormField: React.FC<FormFieldProps> = ({
   children,
 }) => (
   <div className={cn("space-y-2", className)}>
-    <Label htmlFor={htmlFor} className="text-sm font-medium text-white/90">
+    <Label
+      htmlFor={htmlFor}
+      className="text-sm font-medium dark:text-white/90 text-gray-800"
+    >
       {label}
       {required && <span className="ml-1 text-red-400">*</span>}
     </Label>
 
     {children}
 
-    {helpText && !error && <p className="text-xs text-white/60">{helpText}</p>}
+    {helpText && !error && (
+      <p className="text-xs dark:text-white/60 text-gray-500">{helpText}</p>
+    )}
 
     {error && (
       <p

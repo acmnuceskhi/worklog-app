@@ -50,7 +50,9 @@ export async function GET(request: NextRequest) {
           },
           _count: {
             select: {
-              members: true,
+              members: {
+                where: { status: "ACCEPTED" },
+              },
               worklogs: true,
             },
           },

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useOrganizations } from "@/lib/hooks";
+import { useSession } from "next-auth/react";
 import { ManageOwnersSection } from "@/components/organizations/ManageOwnersSection";
 import {
   validateOrganizationOwnerEmail,
@@ -43,6 +44,7 @@ export function OrganizationInvitationsPanel({
   className = "",
 }: OrganizationInvitationsPanelProps) {
   const router = useRouter();
+  const { data: session } = useSession();
   const [inviteEmails, setInviteEmails] = useState<string[]>([""]);
   const [selectedOrgId, setSelectedOrgId] = useState<string>("");
   const [isSending, setIsSending] = useState(false);
@@ -109,6 +111,21 @@ export function OrganizationInvitationsPanel({
         duration: 4500,
       });
       return;
+    }
+
+    // Check for self-invitation
+    if (session?.user.email) {
+      const selfInvites = validEmails.filter(
+        (email) => email.toLowerCase() === session.user.email?.toLowerCase(),
+      );
+      if (selfInvites.length > 0) {
+        toast.error("Cannot Invite Yourself", {
+          description:
+            "You are already the organization owner. No need to invite yourself.",
+          duration: 3000,
+        });
+        return;
+      }
     }
 
     setIsSending(true);
@@ -214,22 +231,22 @@ export function OrganizationInvitationsPanel({
 
   return (
     <m.aside
-      className={`w-[300px] p-4 rounded-xl flex-shrink-0 bg-[var(--nav-bg)] text-yellow-300 max-[960px]:w-full ${className}`}
+      className={`w-[300px] p-4 rounded-xl flex-shrink-0 bg-[var(--nav-bg)] dark:text-yellow-300 text-yellow-600 max-[960px]:w-full ${className}`}
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.3 }}
       aria-label="Organization invitations panel"
     >
       <div className="flex items-center gap-2 mb-4">
-        <Crown className="text-purple-400" />
-        <h3 className="font-semibold text-sm uppercase tracking-wide text-white/70">
+        <Crown className="dark:text-purple-400 text-purple-600" />
+        <h3 className="font-semibold text-sm uppercase tracking-wide dark:text-white/70 text-gray-600">
           Invite Org Members
         </h3>
       </div>
 
       <div className="space-y-4">
         {/* Organization Selection */}
-        <Card className="bg-white/5 border-white/10">
+        <Card className="dark:bg-white/5 bg-gray-50 dark:border-white/10 border-gray-200">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
               <Building2 className="text-purple-400" />
@@ -238,7 +255,7 @@ export function OrganizationInvitationsPanel({
           </CardHeader>
           <CardContent className="pt-0">
             {orgsLoading ? (
-              <div className="text-xs text-white/60">
+              <div className="text-xs dark:text-white/60 text-gray-500">
                 Loading organizations...
               </div>
             ) : ownedOrganizations && ownedOrganizations.length > 0 ? (
@@ -250,14 +267,14 @@ export function OrganizationInvitationsPanel({
                     className={`w-full text-left p-2 rounded-lg transition-colors ${
                       selectedOrgId === org.id
                         ? "bg-purple-500/20 border border-purple-500/30"
-                        : "hover:bg-white/5"
+                        : "dark:hover:bg-white/5 hover:bg-gray-100"
                     }`}
                   >
-                    <div className="font-medium text-sm text-white">
+                    <div className="font-medium text-sm dark:text-white text-gray-900">
                       {org.name}
                     </div>
                     {org.description && (
-                      <div className="text-xs text-white/60 mt-1">
+                      <div className="text-xs dark:text-white/60 text-gray-500 mt-1">
                         {org.description}
                       </div>
                     )}
@@ -272,7 +289,7 @@ export function OrganizationInvitationsPanel({
               </div>
             ) : (
               <div className="text-center py-4">
-                <div className="text-xs text-white/60 mb-2">
+                <div className="text-xs dark:text-white/60 text-gray-500 mb-2">
                   No organizations found
                 </div>
                 <Button
@@ -296,7 +313,7 @@ export function OrganizationInvitationsPanel({
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.2 }}
           >
-            <Card className="bg-white/5 border-white/10">
+            <Card className="dark:bg-white/5 bg-gray-50 dark:border-white/10 border-gray-200">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm flex items-center gap-2">
                   <Send className="text-green-400" />
@@ -304,7 +321,7 @@ export function OrganizationInvitationsPanel({
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0 space-y-3">
-                <div className="text-xs text-white/60">
+                <div className="text-xs dark:text-white/60 text-gray-500">
                   Enter email addresses of potential team leaders:
                 </div>
 
@@ -323,7 +340,7 @@ export function OrganizationInvitationsPanel({
                         placeholder="leader@nu.edu.pk"
                         value={email}
                         onChange={(e) => updateEmail(index, e.target.value)}
-                        className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                        className="flex-1 dark:bg-white/10 bg-gray-100 dark:border-white/20 border-gray-300 dark:text-white text-gray-900 dark:placeholder:text-white/50 placeholder:text-gray-400"
                         aria-label={`Team leader email ${index + 1}`}
                         autoComplete="email"
                       />
@@ -332,7 +349,7 @@ export function OrganizationInvitationsPanel({
                           size="sm"
                           variant="ghost"
                           onClick={() => removeEmailField(index)}
-                          className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                          className="dark:text-red-400 text-red-600 dark:hover:text-red-300 hover:text-red-500 hover:bg-red-500/20"
                           aria-label={`Remove email field ${index + 1}`}
                         >
                           <X aria-hidden="true" />
@@ -354,14 +371,14 @@ export function OrganizationInvitationsPanel({
                   </Button>
                 </div>
 
-                <Separator className="bg-white/10" />
+                <Separator className="dark:bg-white/10 bg-gray-100" />
 
                 <div className="space-y-2">
                   <Button
                     onClick={handleSendInvitations}
                     disabled={isSending}
                     isLoading={isSending}
-                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
                   >
                     <Send className="mr-2" />
                     Send Invitations (
@@ -381,7 +398,7 @@ export function OrganizationInvitationsPanel({
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.2, delay: 0.1 }}
           >
-            <Card className="bg-white/5 border-white/10">
+            <Card className="dark:bg-white/5 bg-gray-50 dark:border-white/10 border-gray-200">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm flex items-center gap-2">
                   <Crown className="text-amber-400" />

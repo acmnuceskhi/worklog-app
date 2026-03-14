@@ -6,8 +6,7 @@
  */
 
 /** Standard dark gradient background for main page containers */
-export const PAGE_BG_GRADIENT =
-  "min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900";
+export const PAGE_BG_GRADIENT = "min-h-screen";
 
 /** Standard page padding */
 export const PAGE_PADDING = "p-6";
@@ -17,4 +16,4 @@ export const PAGE_CONTAINER = `${PAGE_BG_GRADIENT} ${PAGE_PADDING}`;
 
 /** Header gradient (reference constant — used internally by PageHeader) */
 export const PAGE_HEADER_GRADIENT =
-  "bg-gradient-to-r from-slate-900 to-slate-800";
+  "bg-gradient-to-r dark:from-slate-900 dark:to-slate-800 from-white to-gray-50";

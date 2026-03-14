@@ -10,6 +10,8 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -102,12 +104,9 @@ export default function TeamsLayout({
 
   const sidebarWidth = isMobile ? 260 : isSidebarCollapsed ? 72 : 220;
   const showSidebarLabels = !isSidebarCollapsed || isMobile;
-  const pageClassName = `min-h-screen w-screen p-3 flex flex-col ${
-    contentTheme === "light"
-      ? "bg-gradient-to-br from-[#fbc2eb] to-[#a6c1ee] text-[var(--color-text)]"
-      : "bg-[var(--page-bg-dark)] text-white"
-  }`;
-  const sidebarClassName = `p-4 rounded-xl flex flex-col gap-3 overflow-hidden relative z-100 bg-[var(--nav-bg)] text-white ${
+  const pageClassName =
+    "min-h-screen w-screen p-3 flex flex-col text-[var(--color-text)]";
+  const sidebarClassName = `p-4 rounded-xl flex flex-col gap-3 overflow-hidden relative z-100 bg-[var(--nav-bg)] dark:text-white text-gray-900 ${
     isMobile
       ? "fixed top-[88px] left-[12px] bottom-[12px] h-auto shadow-[0_24px_80px_rgba(2,6,23,0.4)]"
       : ""
@@ -125,7 +124,7 @@ export default function TeamsLayout({
   // Prevent hydration mismatch by waiting for client mount
   if (!mounted) {
     return (
-      <div className="min-h-screen w-screen p-3 flex flex-col bg-[var(--page-bg-dark)] text-white">
+      <div className="min-h-screen w-screen p-3 flex flex-col text-[var(--color-text)]">
         <LoadingState text="Loading..." className="py-8" />
       </div>
     );
@@ -148,7 +147,7 @@ export default function TeamsLayout({
             <Menu />
           </Button>
           <h1
-            className={`${lobsterTwo.className} text-2xl font-bold text-white tracking-tight`}
+            className={`${lobsterTwo.className} text-2xl font-bold dark:text-white text-gray-900 tracking-tight`}
           >
             Worklog
           </h1>
@@ -158,13 +157,17 @@ export default function TeamsLayout({
           <Button
             variant="ghost"
             size="sm"
-            className="border border-white/20"
+            className="border dark:border-white/20 border-gray-300"
             onClick={() =>
               setContentTheme(contentTheme === "light" ? "dark" : "light")
             }
             aria-label={`Switch to ${contentTheme === "light" ? "dark" : "light"} mode`}
           >
-            {contentTheme === "light" ? "🌙" : "☀️"}
+            {contentTheme === "light" ? (
+              <Moon className="h-4 w-4" />
+            ) : (
+              <Sun className="h-4 w-4" />
+            )}
           </Button>
           <Button
             variant="danger"
@@ -204,14 +207,14 @@ export default function TeamsLayout({
           transition={{ type: "spring", stiffness: 260, damping: 26 }}
         >
           <div className="flex items-center justify-between font-semibold text-sm">
-            <span className="uppercase tracking-wide text-xs text-white/70">
+            <span className="uppercase tracking-wide text-xs dark:text-white/70 text-gray-600">
               {showSidebarLabels ? "Navigation" : "Nav"}
             </span>
             {!isMobile && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="bg-white/8 hover:bg-white/12"
+                className="dark:bg-white/8 bg-gray-100 dark:hover:bg-white/12 hover:bg-gray-200"
                 onClick={() => setIsSidebarCollapsed((prev) => !prev)}
                 aria-label={
                   isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
@@ -235,7 +238,7 @@ export default function TeamsLayout({
                   className={`p-2.5 rounded-xl flex gap-2 cursor-pointer mb-2 items-center transition-colors ${
                     isActive
                       ? "bg-gradient-to-r from-blue-500 to-cyan-500"
-                      : "hover:bg-white/5"
+                      : "dark:hover:bg-white/5 hover:bg-gray-100"
                   }`}
                   onClick={() => handleNavigate(item.href)}
                   onKeyDown={(e) => {

@@ -43,13 +43,20 @@ export interface TeamRatingsTableProps {
 
 function CommentCell({ comment }: { comment: string | null }) {
   if (!comment) {
-    return <span className="text-white/40 text-xs">No comment</span>;
+    return (
+      <span className="dark:text-white/40 text-gray-400 text-xs">
+        No comment
+      </span>
+    );
   }
 
   return (
     <div className="flex items-center gap-1.5 max-w-[200px]">
-      <MessageSquare className="h-3.5 w-3.5 text-white/40 shrink-0" />
-      <span className="text-white/70 text-sm truncate" title={comment}>
+      <MessageSquare className="h-3.5 w-3.5 dark:text-white/40 text-gray-400 shrink-0" />
+      <span
+        className="dark:text-white/70 text-gray-600 text-sm truncate"
+        title={comment}
+      >
         {truncateText(comment, 40)}
       </span>
     </div>
@@ -74,7 +81,7 @@ export function TeamRatingsTable({
         ),
         cell: ({ row }) => (
           <span
-            className="font-medium text-white truncate block max-w-[180px]"
+            className="font-medium dark:text-white text-gray-900 truncate block max-w-[180px]"
             title={row.original.worklogTitle}
           >
             {row.original.worklogTitle}
@@ -89,7 +96,9 @@ export function TeamRatingsTable({
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
             <UserAvatar name={row.original.memberName} />
-            <span className="text-white/90">{row.original.memberName}</span>
+            <span className="dark:text-white/90 text-gray-800">
+              {row.original.memberName}
+            </span>
           </div>
         ),
       },
@@ -99,7 +108,9 @@ export function TeamRatingsTable({
           <TableColumnHeader column={column} title="Team" />
         ),
         cell: ({ row }) => (
-          <span className="text-white/70">{row.original.teamName}</span>
+          <span className="dark:text-white/70 text-gray-600">
+            {row.original.teamName}
+          </span>
         ),
       },
       {
@@ -123,7 +134,7 @@ export function TeamRatingsTable({
           <TableColumnHeader column={column} title="Date" />
         ),
         cell: ({ row }) => (
-          <span className="text-white/60 text-sm">
+          <span className="dark:text-white/60 text-gray-500 text-sm">
             {formatTableDate(row.original.ratedAt)}
           </span>
         ),
@@ -140,7 +151,7 @@ export function TeamRatingsTable({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-white/40 hover:text-amber-400 hover:bg-amber-500/10"
+                      className="h-8 w-8 dark:text-white/40 text-gray-400 hover:text-amber-400 hover:bg-amber-500/10"
                       onClick={() => onEdit(row.original)}
                       aria-label={`Edit rating for ${row.original.worklogTitle}`}
                     >
@@ -151,7 +162,7 @@ export function TeamRatingsTable({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-white/40 hover:text-red-400 hover:bg-red-500/10"
+                      className="h-8 w-8 dark:text-white/40 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
                       onClick={() =>
                         onDelete(row.original.id, row.original.worklogTitle)
                       }

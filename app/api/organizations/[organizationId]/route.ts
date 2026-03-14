@@ -83,7 +83,9 @@ export async function GET(
             updatedAt: true,
             _count: {
               select: {
-                members: true,
+                members: {
+                  where: { status: "ACCEPTED" },
+                },
                 worklogs: true,
               },
             },

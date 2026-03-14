@@ -52,7 +52,10 @@ export function WorklogFilters({
     <div className="space-y-3">
       <div className="flex flex-wrap gap-3">
         <div className="min-w-[220px] flex-1">
-          <Label htmlFor="worklog-search" className="text-slate-300">
+          <Label
+            htmlFor="worklog-search"
+            className="dark:text-slate-300 text-slate-600"
+          >
             Search
           </Label>
           <Input
@@ -60,11 +63,14 @@ export function WorklogFilters({
             value={value.search}
             onChange={(event) => update({ search: event.target.value })}
             placeholder="Title or description"
-            className="bg-slate-800/60 border-slate-700 text-white"
+            className="dark:bg-slate-800/60 bg-white dark:border-slate-700 border-gray-200 dark:text-white text-gray-900"
           />
         </div>
         <div className="min-w-[180px]">
-          <Label htmlFor="worklog-team" className="text-slate-300">
+          <Label
+            htmlFor="worklog-team"
+            className="dark:text-slate-300 text-slate-600"
+          >
             Team
           </Label>
           <Select
@@ -75,11 +81,11 @@ export function WorklogFilters({
           >
             <SelectTrigger
               id="worklog-team"
-              className="bg-slate-800/60 border-slate-700 text-white"
+              className="dark:bg-slate-800/60 bg-white dark:border-slate-700 border-gray-200 dark:text-white text-gray-900"
             >
               <SelectValue placeholder="All teams" />
             </SelectTrigger>
-            <SelectContent className="bg-slate-900 border-slate-700">
+            <SelectContent className="dark:bg-slate-900 bg-white dark:border-slate-700 border-gray-200">
               <SelectItem value="all">All teams</SelectItem>
               {teamOptions.map((team) => (
                 <SelectItem key={team.id} value={team.id}>
@@ -90,7 +96,10 @@ export function WorklogFilters({
           </Select>
         </div>
         <div className="min-w-[160px]">
-          <Label htmlFor="worklog-status" className="text-slate-300">
+          <Label
+            htmlFor="worklog-status"
+            className="dark:text-slate-300 text-slate-600"
+          >
             Status
           </Label>
           <Select
@@ -101,11 +110,11 @@ export function WorklogFilters({
           >
             <SelectTrigger
               id="worklog-status"
-              className="bg-slate-800/60 border-slate-700 text-white"
+              className="dark:bg-slate-800/60 bg-white dark:border-slate-700 border-gray-200 dark:text-white text-gray-900"
             >
               <SelectValue placeholder="All statuses" />
             </SelectTrigger>
-            <SelectContent className="bg-slate-900 border-slate-700">
+            <SelectContent className="dark:bg-slate-900 bg-white dark:border-slate-700 border-gray-200">
               <SelectItem value="all">All statuses</SelectItem>
               <SelectItem value="STARTED">Started</SelectItem>
               <SelectItem value="HALF_DONE">Halfway Done</SelectItem>
@@ -119,7 +128,10 @@ export function WorklogFilters({
 
       <div className="flex flex-wrap gap-3">
         <div className="min-w-[160px]">
-          <Label htmlFor="worklog-date-from" className="text-slate-300">
+          <Label
+            htmlFor="worklog-date-from"
+            className="dark:text-slate-300 text-slate-600"
+          >
             From
           </Label>
           <DatePicker
@@ -133,7 +145,10 @@ export function WorklogFilters({
           />
         </div>
         <div className="min-w-[160px]">
-          <Label htmlFor="worklog-date-to" className="text-slate-300">
+          <Label
+            htmlFor="worklog-date-to"
+            className="dark:text-slate-300 text-slate-600"
+          >
             To
           </Label>
           <DatePicker
@@ -147,7 +162,10 @@ export function WorklogFilters({
           />
         </div>
         <div className="min-w-[160px]">
-          <Label htmlFor="worklog-sort" className="text-slate-300">
+          <Label
+            htmlFor="worklog-sort"
+            className="dark:text-slate-300 text-slate-600"
+          >
             Sort by
           </Label>
           <Select
@@ -156,18 +174,21 @@ export function WorklogFilters({
           >
             <SelectTrigger
               id="worklog-sort"
-              className="bg-slate-800/60 border-slate-700 text-white"
+              className="dark:bg-slate-800/60 bg-white dark:border-slate-700 border-gray-200 dark:text-white text-gray-900"
             >
               <SelectValue placeholder="Sort" />
             </SelectTrigger>
-            <SelectContent className="bg-slate-900 border-slate-700">
+            <SelectContent className="dark:bg-slate-900 bg-white dark:border-slate-700 border-gray-200">
               <SelectItem value="date">Date</SelectItem>
               <SelectItem value="status">Status</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div className="min-w-[140px]">
-          <Label htmlFor="worklog-direction" className="text-slate-300">
+          <Label
+            htmlFor="worklog-direction"
+            className="dark:text-slate-300 text-slate-600"
+          >
             Direction
           </Label>
           <Select
@@ -178,11 +199,11 @@ export function WorklogFilters({
           >
             <SelectTrigger
               id="worklog-direction"
-              className="bg-slate-800/60 border-slate-700 text-white"
+              className="dark:bg-slate-800/60 bg-white dark:border-slate-700 border-gray-200 dark:text-white text-gray-900"
             >
               <SelectValue placeholder="Direction" />
             </SelectTrigger>
-            <SelectContent className="bg-slate-900 border-slate-700">
+            <SelectContent className="dark:bg-slate-900 bg-white dark:border-slate-700 border-gray-200">
               <SelectItem value="desc">Descending</SelectItem>
               <SelectItem value="asc">Ascending</SelectItem>
             </SelectContent>
@@ -192,7 +213,7 @@ export function WorklogFilters({
           <Button
             type="button"
             variant="outline"
-            className="border-slate-600 text-slate-200"
+            className="dark:border-slate-600 border-gray-300 dark:text-slate-200 text-slate-700"
             onClick={onReset}
           >
             Clear

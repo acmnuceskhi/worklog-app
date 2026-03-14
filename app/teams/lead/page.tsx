@@ -127,7 +127,7 @@ export default function LeadTeamsPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+          <h1 className="text-3xl font-bold dark:text-white text-gray-900 flex items-center gap-3">
             <Users className="text-blue-400" />
             Teams I Lead
           </h1>
@@ -136,13 +136,13 @@ export default function LeadTeamsPage() {
           </p>
           {teams.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2 text-xs">
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
+              <span className="rounded-full border dark:border-white/10 border-gray-200 dark:bg-white/5 bg-gray-50 px-3 py-1 dark:text-white/70 text-gray-600">
                 {paginatedTeams?.meta.total ?? teams.length} teams
               </span>
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
+              <span className="rounded-full border dark:border-white/10 border-gray-200 dark:bg-white/5 bg-gray-50 px-3 py-1 dark:text-white/70 text-gray-600">
                 {totalMembers} members
               </span>
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
+              <span className="rounded-full border dark:border-white/10 border-gray-200 dark:bg-white/5 bg-gray-50 px-3 py-1 dark:text-white/70 text-gray-600">
                 {totalWorklogs} worklogs
               </span>
             </div>
@@ -199,24 +199,26 @@ export default function LeadTeamsPage() {
                 { label: "Worklogs", value: team._count?.worklogs || 0 },
               ]}
               onClick={() => router.push(`/teams/lead/${team.id}`)}
-              className={`backdrop-blur-md shadow-lg shadow-black/20 hover:-translate-y-1 hover:shadow-xl ${
+              className={`backdrop-blur-md shadow-lg dark:shadow-black/20 shadow-gray-200/50 hover:-translate-y-1 hover:shadow-xl ${
                 team.organization
                   ? "border border-blue-500/30 bg-blue-500/5"
-                  : "border border-white/10 bg-white/5"
+                  : "border dark:border-white/10 border-gray-200 dark:bg-white/5 bg-gray-50"
               }`}
             >
               {/* Organization badge — only rendered when team is linked to an org */}
               {team.organization && (
                 <div className="flex items-center gap-1.5 mb-2">
                   <Building2 className="h-3 w-3 text-blue-400 shrink-0" />
-                  <span className="text-xs text-blue-300 font-medium truncate">
+                  <span className="text-xs dark:text-blue-300 text-blue-700 font-medium truncate">
                     {team.organization.name}
                   </span>
                 </div>
               )}
               {!team.organization && (
                 <div className="flex items-center gap-1.5 mb-2">
-                  <span className="text-xs text-white/35">Standalone team</span>
+                  <span className="text-xs dark:text-white/35 text-gray-400">
+                    Standalone team
+                  </span>
                 </div>
               )}
               {team.description && (
@@ -228,7 +230,7 @@ export default function LeadTeamsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex-1 border-white/20 text-white/80 hover:text-white hover:border-white/40"
+                  className="flex-1 dark:border-white/20 border-gray-300 dark:text-white/80 text-gray-700 dark:hover:text-white hover:text-gray-900 dark:hover:border-white/40 hover:border-gray-400"
                   onClick={(e) => {
                     e.stopPropagation();
                     router.push(`/teams/lead/${team.id}`);
@@ -239,7 +241,7 @@ export default function LeadTeamsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-white/20 text-white/80 hover:text-white hover:border-white/40"
+                  className="dark:border-white/20 border-gray-300 dark:text-white/80 text-gray-700 dark:hover:text-white hover:text-gray-900 dark:hover:border-white/40 hover:border-gray-400"
                   onClick={(e) => {
                     e.stopPropagation();
                     setSettingsTeam(team.id);

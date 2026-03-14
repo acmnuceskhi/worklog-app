@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -83,10 +84,10 @@ export const TeamBasicInfoStep: React.FC<WizardStepProps> = ({
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-3 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-        <Info className="text-blue-400 mt-1 flex-shrink-0" />
-        <div className="text-sm text-blue-300">
+        <Info className="dark:text-blue-400 text-blue-600 mt-1 flex-shrink-0" />
+        <div className="text-sm dark:text-blue-300 text-blue-600">
           <p className="font-medium mb-1">Let&apos;s create your team</p>
-          <p className="text-blue-300/80">
+          <p className="dark:text-blue-300/80 text-blue-500">
             Start by providing basic information about your team. You can always
             update these details later.
           </p>
@@ -143,7 +144,7 @@ export const TeamBasicInfoStep: React.FC<WizardStepProps> = ({
             className={errors.description ? "border-red-500" : ""}
             aria-invalid={!!errors.description}
           />
-          <div className="flex justify-between text-xs text-white/50 mt-1">
+          <div className="flex justify-between text-xs dark:text-white/50 text-gray-400 mt-1">
             <span>Provide details about your team</span>
             <span>{teamData.description?.length || 0}/500</span>
           </div>
@@ -183,10 +184,10 @@ export const TeamOrganizationStep: React.FC<WizardStepProps> = ({
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-        <Info className="text-amber-400 mt-1 flex-shrink-0" />
-        <div className="text-sm text-amber-300">
+        <Info className="dark:text-amber-400 text-amber-600 mt-1 flex-shrink-0" />
+        <div className="text-sm dark:text-amber-300 text-amber-700">
           <p className="font-medium mb-1">Organization (Optional)</p>
-          <p className="text-amber-300/80">
+          <p className="dark:text-amber-300/80 text-amber-600">
             You can associate this team with an organization you own. This is
             completely optional - teams can exist independently.
           </p>
@@ -197,7 +198,7 @@ export const TeamOrganizationStep: React.FC<WizardStepProps> = ({
         {loading ? (
           <LoadingState text="Loading organizations..." />
         ) : error ? (
-          <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-sm text-yellow-400">
+          <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-sm dark:text-yellow-400 text-yellow-600">
             {error}
           </div>
         ) : (
@@ -221,7 +222,7 @@ export const TeamOrganizationStep: React.FC<WizardStepProps> = ({
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-white/50 mt-1">
+            <p className="text-xs dark:text-white/50 text-gray-400 mt-1">
               {organizations.length === 0
                 ? "You don't own any organizations yet. You can create one later."
                 : `Choose from ${organizations.length} organization${organizations.length !== 1 ? "s" : ""}`}
@@ -231,7 +232,7 @@ export const TeamOrganizationStep: React.FC<WizardStepProps> = ({
 
         {teamData.organizationId && organizations.length > 0 && (
           <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
-            <p className="text-sm text-green-400">
+            <p className="text-sm dark:text-green-400 text-green-700">
               <strong>Selected:</strong>{" "}
               {organizations.find((org) => org.id === teamData.organizationId)
                 ?.name || "Unknown"}
@@ -248,8 +249,10 @@ export const TeamMemberInvitationStep: React.FC<WizardStepProps> = ({
   data,
   updateData,
 }) => {
+  const { data: session } = useSession();
   const teamData = data as TeamFormData;
   const { validateTeamEmail, allowedDomains } = useEmailDomainValidator();
+
   const handleEmailsChange = (emails: string[]) => {
     updateData({ inviteEmails: emails });
   };
@@ -257,10 +260,10 @@ export const TeamMemberInvitationStep: React.FC<WizardStepProps> = ({
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-3 p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
-        <Mail className="text-purple-400 mt-1 flex-shrink-0" />
-        <div className="text-sm text-purple-300">
+        <Mail className="dark:text-purple-400 text-purple-700 mt-1 flex-shrink-0" />
+        <div className="text-sm dark:text-purple-300 text-purple-700">
           <p className="font-medium mb-1">Invite Team Members</p>
-          <p className="text-purple-300/80">
+          <p className="dark:text-purple-300/80 text-purple-600">
             Add email addresses of people you want to invite to your team. They
             will receive an invitation email. You can also invite members later.
           </p>
@@ -275,15 +278,18 @@ export const TeamMemberInvitationStep: React.FC<WizardStepProps> = ({
           placeholder="Enter email addresses to invite team members..."
           validateEmail={validateTeamEmail}
           allowedDomains={allowedDomains}
+          blockedEmails={
+            session?.user.email ? [session.user.email.toLowerCase()] : []
+          }
           maxEmails={50}
         />
 
-        <div className="p-4 bg-white/5 border border-white/10 rounded-lg">
-          <h4 className="text-sm font-medium text-white mb-2 flex items-center gap-2">
-            <Users className="text-white/60" />
+        <div className="p-4 dark:bg-white/5 bg-gray-50 border dark:border-white/10 border-gray-200 rounded-lg">
+          <h4 className="text-sm font-medium dark:text-white text-gray-900 mb-2 flex items-center gap-2">
+            <Users className="dark:text-white/60 text-gray-500" />
             What happens next?
           </h4>
-          <ul className="text-sm text-white/70 space-y-1 list-disc list-inside">
+          <ul className="text-sm dark:text-white/70 text-gray-600 space-y-1 list-disc list-inside">
             <li>
               Invited members will receive an email with an invitation link
             </li>
@@ -315,10 +321,10 @@ export const TeamReviewStep: React.FC<WizardStepProps> = ({ data }) => {
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-3 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
-        <CheckCircle2 className="text-green-400 mt-1 flex-shrink-0" />
-        <div className="text-sm text-green-300">
+        <CheckCircle2 className="dark:text-green-400 text-green-700 mt-1 flex-shrink-0" />
+        <div className="text-sm dark:text-green-300 text-green-700">
           <p className="font-medium mb-1">Review Your Team</p>
-          <p className="text-green-300/80">
+          <p className="dark:text-green-300/80 text-green-600">
             Please review the information below. You can go back to make changes
             or click &quot;Complete&quot; to create your team.
           </p>
@@ -327,52 +333,58 @@ export const TeamReviewStep: React.FC<WizardStepProps> = ({ data }) => {
 
       <div className="space-y-4">
         {/* Team Information */}
-        <div className="p-5 bg-white/5 border border-white/10 rounded-lg shadow-sm">
-          <h3 className="text-lg font-semibold text-white mb-4">
+        <div className="p-5 dark:bg-white/5 bg-gray-50 border dark:border-white/10 border-gray-200 rounded-lg shadow-sm">
+          <h3 className="text-lg font-semibold dark:text-white text-gray-900 mb-4">
             Team Information
           </h3>
           <dl className="space-y-3">
             <div>
-              <dt className="text-sm font-medium text-white/60">Team Name</dt>
-              <dd className="text-base text-white mt-1">
+              <dt className="text-sm font-medium dark:text-white/60 text-gray-500">
+                Team Name
+              </dt>
+              <dd className="text-base dark:text-white text-gray-900 mt-1">
                 {teamData.name || "Not provided"}
               </dd>
             </div>
             {teamData.project && (
               <div>
-                <dt className="text-sm font-medium text-white/60">Project</dt>
-                <dd className="text-base text-white mt-1">
+                <dt className="text-sm font-medium dark:text-white/60 text-gray-500">
+                  Project
+                </dt>
+                <dd className="text-base dark:text-white text-gray-900 mt-1">
                   {teamData.project}
                 </dd>
               </div>
             )}
             {teamData.description && (
               <div>
-                <dt className="text-sm font-medium text-white/60">
+                <dt className="text-sm font-medium dark:text-white/60 text-gray-500">
                   Description
                 </dt>
-                <dd className="text-base text-white mt-1 whitespace-pre-wrap">
+                <dd className="text-base dark:text-white text-gray-900 mt-1 whitespace-pre-wrap">
                   {teamData.description}
                 </dd>
               </div>
             )}
             <div>
-              <dt className="text-sm font-medium text-white/60">
+              <dt className="text-sm font-medium dark:text-white/60 text-gray-500">
                 Organization
               </dt>
-              <dd className="text-base text-white mt-1">
+              <dd className="text-base dark:text-white text-gray-900 mt-1">
                 {selectedOrg ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium bg-blue-500/20 dark:text-blue-300 text-blue-700 border border-blue-500/30">
                     <span aria-hidden="true">🏢</span>
                     {selectedOrg.name}
                   </span>
                 ) : teamData.organizationId ? (
                   // organizationId set but orgs not yet loaded — show a safe fallback
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 dark:text-blue-300 text-blue-700">
                     Assigned to organization
                   </span>
                 ) : (
-                  <span className="text-white/50">Standalone team</span>
+                  <span className="dark:text-white/50 text-gray-400">
+                    Standalone team
+                  </span>
                 )}
               </dd>
             </div>
@@ -381,15 +393,15 @@ export const TeamReviewStep: React.FC<WizardStepProps> = ({ data }) => {
 
         {/* Member Invitations */}
         {teamData.inviteEmails && teamData.inviteEmails.length > 0 && (
-          <div className="p-5 bg-white/5 border border-white/10 rounded-lg shadow-sm">
-            <h3 className="text-lg font-semibold text-white mb-4">
+          <div className="p-5 dark:bg-white/5 bg-gray-50 border dark:border-white/10 border-gray-200 rounded-lg shadow-sm">
+            <h3 className="text-lg font-semibold dark:text-white text-gray-900 mb-4">
               Member Invitations ({teamData.inviteEmails.length})
             </h3>
             <div className="flex flex-wrap gap-2">
               {teamData.inviteEmails.map((email: string, index: number) => (
                 <span
                   key={index}
-                  className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-purple-500/20 text-purple-300 border border-purple-500/30"
+                  className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-purple-500/20 dark:text-purple-300 text-purple-700 border border-purple-500/30"
                 >
                   {email}
                 </span>
@@ -399,7 +411,7 @@ export const TeamReviewStep: React.FC<WizardStepProps> = ({ data }) => {
         )}
 
         {(!teamData.inviteEmails || teamData.inviteEmails.length === 0) && (
-          <div className="p-4 bg-white/5 border border-white/10 rounded-lg text-sm text-white/60">
+          <div className="p-4 dark:bg-white/5 bg-gray-50 border dark:border-white/10 border-gray-200 rounded-lg text-sm dark:text-white/60 text-gray-500">
             No member invitations. You can invite members after creating the
             team.
           </div>

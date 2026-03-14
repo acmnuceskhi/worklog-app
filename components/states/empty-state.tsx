@@ -50,15 +50,19 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     )}
   >
     {icon && (
-      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10 text-white/60">
+      <div className="flex h-14 w-14 items-center justify-center rounded-full dark:bg-white/10 bg-gray-100 dark:text-white/60 text-gray-500">
         {icon}
       </div>
     )}
 
-    <h3 className="text-lg font-semibold text-white/80">{title}</h3>
+    <h3 className="text-lg font-semibold dark:text-white/80 text-gray-700">
+      {title}
+    </h3>
 
     {description && (
-      <p className="max-w-sm text-sm text-white/60">{description}</p>
+      <p className="max-w-sm text-sm dark:text-white/60 text-gray-500">
+        {description}
+      </p>
     )}
 
     {action && (

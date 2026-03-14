@@ -31,7 +31,7 @@ interface DeadlineRowProps {
 const priorityTextColor: Record<DeadlinePriority, string> = {
   high: "text-red-400",
   medium: "text-orange-400",
-  low: "text-white/50",
+  low: "dark:text-white/50 text-gray-400",
 };
 
 const priorityBorder: Record<DeadlinePriority, string> = {
@@ -49,7 +49,7 @@ export function DeadlineRow({ deadline, priority, onClick }: DeadlineRowProps) {
     <div
       className={cn(
         "flex items-center gap-3 px-3 py-2.5 rounded-lg border-l-2",
-        "hover:bg-white/5 cursor-pointer transition-colors",
+        "dark:hover:bg-white/5 hover:bg-gray-100 cursor-pointer transition-colors",
         priorityBorder[priority],
       )}
       onClick={onClick}
@@ -77,14 +77,14 @@ export function DeadlineRow({ deadline, priority, onClick }: DeadlineRowProps) {
               ? "Today"
               : `${days}d left`}
         </div>
-        <div className="text-[10px] text-white/40">
+        <div className="text-[10px] dark:text-white/40 text-gray-400">
           {formatLocalDate(new Date(deadline.deadline))}
         </div>
       </div>
 
       {/* Center: Title */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-white truncate">
+        <p className="text-sm font-medium dark:text-white text-gray-900 truncate">
           {deadline.title}
         </p>
       </div>
@@ -98,7 +98,10 @@ export function DeadlineRow({ deadline, priority, onClick }: DeadlineRowProps) {
       >
         {statusLabel}
       </span>
-      <ChevronRight className="h-4 w-4 text-white/30 shrink-0" aria-hidden />
+      <ChevronRight
+        className="h-4 w-4 dark:text-white/30 text-gray-300 shrink-0"
+        aria-hidden
+      />
     </div>
   );
 }

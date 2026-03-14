@@ -84,10 +84,12 @@ export function AssignTaskModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[var(--panel-strong)] border-white/10 sm:max-w-[500px]">
+      <DialogContent className="bg-[var(--panel-strong)] dark:border-white/10 border-gray-200 sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="text-white">Assign Task</DialogTitle>
-          <DialogDescription className="text-white/60">
+          <DialogTitle className="dark:text-white text-gray-900">
+            Assign Task
+          </DialogTitle>
+          <DialogDescription className="dark:text-white/60 text-gray-500">
             Create a new worklog and assign it to a team member.
           </DialogDescription>
         </DialogHeader>
@@ -99,7 +101,7 @@ export function AssignTaskModal({
               placeholder="Enter task title"
               value={form.title}
               onChange={(e) => update({ title: e.target.value })}
-              className="bg-white/5 border-white/20 text-white placeholder:text-white/40"
+              className="dark:bg-white/5 bg-gray-50 dark:border-white/20 border-gray-300 dark:text-white text-gray-900 dark:placeholder:text-white/40 placeholder:text-gray-400"
             />
           </FormField>
 
@@ -109,7 +111,7 @@ export function AssignTaskModal({
               placeholder="Enter task description"
               value={form.description}
               onChange={(e) => update({ description: e.target.value })}
-              className="bg-white/5 border-white/20 text-white placeholder:text-white/40 min-h-[100px]"
+              className="dark:bg-white/5 bg-gray-50 dark:border-white/20 border-gray-300 dark:text-white text-gray-900 dark:placeholder:text-white/40 placeholder:text-gray-400 min-h-[100px]"
             />
           </FormField>
 
@@ -120,16 +122,16 @@ export function AssignTaskModal({
             >
               <SelectTrigger
                 id="assign-to"
-                className="bg-white/5 border-white/20 text-white"
+                className="dark:bg-white/5 bg-gray-50 dark:border-white/20 border-gray-300 dark:text-white text-gray-900"
               >
                 <SelectValue placeholder="Select member…" />
               </SelectTrigger>
-              <SelectContent className="bg-[var(--panel-strong)] border-white/10">
+              <SelectContent className="bg-[var(--panel-strong)] dark:border-white/10 border-gray-200">
                 {members.map((m) => (
                   <SelectItem
                     key={m.memberId}
                     value={m.userId}
-                    className="text-white/80"
+                    className="dark:text-white/80 text-gray-700"
                     disabled={!m.userId}
                   >
                     {m.displayName}
@@ -155,7 +157,7 @@ export function AssignTaskModal({
         <DialogFooter>
           <Button
             variant="outline"
-            className="border-white/20 text-white/70"
+            className="dark:border-white/20 border-gray-300 dark:text-white/70 text-gray-600"
             onClick={() => onOpenChange(false)}
           >
             Cancel

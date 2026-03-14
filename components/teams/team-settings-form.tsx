@@ -202,7 +202,7 @@ export const TeamSettingsForm: React.FC<TeamSettingsFormProps> = ({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
-            <Settings className="text-white/60" />
+            <Settings className="dark:text-white/60 text-gray-500" />
             Team Settings
           </DialogTitle>
         </DialogHeader>
@@ -289,7 +289,7 @@ export const TeamSettingsForm: React.FC<TeamSettingsFormProps> = ({
               aria-invalid={!!errors.description}
               disabled={loading}
             />
-            <div className="flex justify-end text-xs text-white/50 mt-1">
+            <div className="flex justify-end text-xs dark:text-white/50 text-gray-400 mt-1">
               <span>{formData.description.length}/500</span>
             </div>
           </FormField>
@@ -320,7 +320,7 @@ export const TeamSettingsForm: React.FC<TeamSettingsFormProps> = ({
                 </SelectContent>
               </Select>
             )}
-            <p className="text-xs text-white/50 mt-1">
+            <p className="text-xs dark:text-white/50 text-gray-400 mt-1">
               Note: Changing organization may require additional permissions
             </p>
           </div>

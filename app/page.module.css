@@ -385,7 +385,18 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-color: var(--page-bg-deep);
+  background:
+    radial-gradient(
+      ellipse at top,
+      rgba(0, 255, 240, 0.15) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse at bottom,
+      rgba(255, 110, 207, 0.15) 0%,
+      transparent 50%
+    ),
+    linear-gradient(135deg, #0a173b 0%, #1a1a2e 50%, #16213e 100%);
 }
 
 .redirectText {

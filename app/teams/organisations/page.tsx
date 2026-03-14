@@ -100,12 +100,12 @@ export default function OrganisationsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
+    <div className="min-h-screen p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">
+            <h1 className="text-3xl font-bold dark:text-white text-gray-900 mb-2">
               My Organizations
             </h1>
             <p className="text-muted">
@@ -113,10 +113,10 @@ export default function OrganisationsPage() {
             </p>
             {organizations.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
+                <span className="rounded-full border dark:border-white/10 border-gray-200 dark:bg-white/5 bg-gray-50 px-3 py-1 dark:text-white/70 text-gray-600">
                   {organizations.length} organizations
                 </span>
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
+                <span className="rounded-full border dark:border-white/10 border-gray-200 dark:bg-white/5 bg-gray-50 px-3 py-1 dark:text-white/70 text-gray-600">
                   {totalTeams} teams
                 </span>
               </div>
@@ -132,22 +132,22 @@ export default function OrganisationsPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10 shadow-lg shadow-black/20">
+          <div className="dark:bg-white/5 bg-gray-50 backdrop-blur-md rounded-2xl p-6 border dark:border-white/10 border-gray-200 shadow-lg dark:shadow-black/20 shadow-gray-200/50">
             <div className="flex items-center gap-3">
               <Building2 className="h-8 w-8 text-blue-400" />
               <div>
-                <p className="text-2xl font-bold text-white">
+                <p className="text-2xl font-bold dark:text-white text-gray-900">
                   {organizations.length}
                 </p>
                 <p className="text-muted">Organizations</p>
               </div>
             </div>
           </div>
-          <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10 shadow-lg shadow-black/20">
+          <div className="dark:bg-white/5 bg-gray-50 backdrop-blur-md rounded-2xl p-6 border dark:border-white/10 border-gray-200 shadow-lg dark:shadow-black/20 shadow-gray-200/50">
             <div className="flex items-center gap-3">
               <Users className="h-8 w-8 text-green-400" />
               <div>
-                <p className="text-2xl font-bold text-white">
+                <p className="text-2xl font-bold dark:text-white text-gray-900">
                   {organizations.reduce(
                     (sum, org) => sum + (org._count?.teams || 0),
                     0,
@@ -157,7 +157,7 @@ export default function OrganisationsPage() {
               </div>
             </div>
           </div>
-          <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10 shadow-lg shadow-black/20 flex items-center justify-center text-muted italic text-sm">
+          <div className="dark:bg-white/5 bg-gray-50 backdrop-blur-md rounded-2xl p-6 border dark:border-white/10 border-gray-200 shadow-lg dark:shadow-black/20 shadow-gray-200/50 flex items-center justify-center text-muted italic text-sm">
             More stats coming soon...
           </div>
         </div>
@@ -214,10 +214,10 @@ export default function OrganisationsPage() {
                     </div>
                   }
                   actions={
-                    <ArrowRight className="h-5 w-5 text-muted group-hover:text-white transition-colors" />
+                    <ArrowRight className="h-5 w-5 text-muted dark:group-hover:text-white group-hover:text-gray-900 transition-colors" />
                   }
                   stats={[{ label: "Teams", value: org._count?.teams || 0 }]}
-                  className="backdrop-blur-md shadow-lg shadow-black/20 hover:-translate-y-1 group"
+                  className="backdrop-blur-md shadow-lg dark:shadow-black/20 shadow-gray-200/50 hover:-translate-y-1 group"
                 />
               </Link>
             ))}

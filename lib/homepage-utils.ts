@@ -40,17 +40,17 @@ export interface SegmentedDeadlines {
 export function getStatusColor(status: string | null): string {
   switch (status) {
     case "STARTED":
-      return "bg-slate-500/20 text-slate-300 border-slate-500/40";
+      return "bg-slate-500/20 dark:text-slate-300 text-slate-700 border-slate-500/40";
     case "HALF_DONE":
-      return "bg-blue-500/20 text-blue-300 border-blue-500/40";
+      return "bg-blue-500/20 dark:text-blue-300 text-blue-700 border-blue-500/40";
     case "COMPLETED":
-      return "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
+      return "bg-emerald-500/20 dark:text-emerald-300 text-emerald-700 border-emerald-500/40";
     case "REVIEWED":
-      return "bg-purple-500/20 text-purple-300 border-purple-500/40";
+      return "bg-purple-500/20 dark:text-purple-300 text-purple-700 border-purple-500/40";
     case "GRADED":
-      return "bg-amber-500/20 text-amber-300 border-amber-500/40";
+      return "bg-amber-500/20 dark:text-amber-300 text-amber-700 border-amber-500/40";
     default:
-      return "bg-white/10 text-white/60 border-white/20";
+      return "dark:bg-white/10 bg-gray-100 dark:text-white/60 text-gray-500 dark:border-white/20 border-gray-300";
   }
 }
 

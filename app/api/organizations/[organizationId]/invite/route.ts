@@ -104,6 +104,20 @@ export async function POST(
     const results = [];
     for (const email of emails) {
       try {
+        // Prevent self-invitation — owner cannot invite themselves
+        if (
+          session.user.email &&
+          email.toLowerCase() === session.user.email.toLowerCase()
+        ) {
+          results.push({
+            email,
+            status: "skipped",
+            reason:
+              "Unable to invite yourself — you are already the organization owner",
+          });
+          continue;
+        }
+
         const existingUser = userByEmail.get(email) ?? null;
 
         // Check if user is already the organization owner

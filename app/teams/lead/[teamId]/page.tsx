@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useMemo, useRef, useState } from "react";
+import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,6 +15,7 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { PageHeader } from "@/components/ui/page-header";
 import { toast } from "sonner";
 import { Plus, ClipboardList, BarChart3 } from "lucide-react";
+import { useSharedSession } from "@/components/providers";
 
 import {
   useTeam,
@@ -22,6 +23,7 @@ import {
   useRemoveTeamMember,
   useDeleteWorklog,
   useCreateWorklog,
+  useUpdateWorklogStatus,
 } from "@/lib/hooks";
 import { formatLocalDate, getDeadlineStatus } from "@/lib/deadline-utils";
 import type { ProgressStatus } from "@/lib/hooks/use-worklogs";
@@ -161,6 +163,7 @@ function TeamDetailsContent({
     worklogPage,
     setWorklogPage,
   ] = useState(1);
+  const { data: session } = useSharedSession();
   const { data: team, isLoading, error, refetch } = useTeam(teamId);
   const { data: paginatedWorklogs, isLoading: worklogsLoading } =
     useTeamWorklogs(teamId, worklogPage, 25);
@@ -173,6 +176,7 @@ function TeamDetailsContent({
   const removeMemberMutation = useRemoveTeamMember(teamId);
   const deleteWorklogMutation = useDeleteWorklog(teamId);
   const createWorklogMutation = useCreateWorklog();
+  const updateStatusMutation = useUpdateWorklogStatus();
 
   /* ── UI state ────────────────────────────────────────────────────────── */
   const [showAssign, setShowAssign] = useState(false);
@@ -183,6 +187,7 @@ function TeamDetailsContent({
     () =>
       worklogs.map((w) => ({
         id: w.id,
+        userId: w.user?.id ?? "",
         title: w.title,
         description: w.description ?? "",
         githubLink: w.githubLink || undefined,
@@ -263,13 +268,24 @@ function TeamDetailsContent({
   /* ── Derived: modal member options ───────────────────────────────────── */
   const memberOptions = useMemo<MemberOption[]>(() => {
     if (!team) return [];
-    return (team as TeamData).members
+    const teamData = team as TeamData;
+
+    // Always include the team owner first (they are not a TeamMember record)
+    const ownerOption: MemberOption = {
+      memberId: `owner-${teamData.ownerId}`,
+      userId: teamData.ownerId,
+      displayName: `${teamData.owner?.name || teamData.owner?.email || "Team Leader"} (You)`,
+    };
+
+    const memberEntries = teamData.members
       .filter((m) => !!m.user?.id)
       .map((m) => ({
         memberId: m.id,
         userId: m.user!.id,
         displayName: m.user?.name || m.email,
       }));
+
+    return [ownerOption, ...memberEntries];
   }, [team]);
 
   /* ── Deadline warnings → toasts ──────────────────────────────────────── */
@@ -359,6 +375,21 @@ function TeamDetailsContent({
     });
   };
 
+  const handleStatusChange = useCallback(
+    async (worklogId: string, newStatus: ProgressStatus) => {
+      toast.promise(
+        updateStatusMutation.mutateAsync({ worklogId, newStatus }),
+        {
+          loading: "Updating status…",
+          success: "Status updated",
+          error: (err) =>
+            err instanceof Error ? err.message : "Failed to update status",
+        },
+      );
+    },
+    [updateStatusMutation],
+  );
+
   /* ── Early returns ───────────────────────────────────────────────────── */
 
   if (isLoading || worklogsLoading) return <TeamLoadingSkeleton />;
@@ -376,10 +407,10 @@ function TeamDetailsContent({
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-white mb-2">
+          <h2 className="text-xl font-semibold dark:text-white text-gray-900 mb-2">
             Team Not Found
           </h2>
-          <p className="text-white/60">
+          <p className="dark:text-white/60 text-gray-500">
             The requested team could not be found.
           </p>
         </div>
@@ -402,10 +433,10 @@ function TeamDetailsContent({
         }
         rightAction={
           <div className="flex items-center gap-2">
-            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
+            <span className="rounded-full border dark:border-white/10 border-gray-200 dark:bg-white/5 bg-gray-50 px-3 py-1 text-xs dark:text-white/70 text-gray-600">
               {typedTeam.members.length} members
             </span>
-            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
+            <span className="rounded-full border dark:border-white/10 border-gray-200 dark:bg-white/5 bg-gray-50 px-3 py-1 text-xs dark:text-white/70 text-gray-600">
               {typedTeam._count?.worklogs ?? 0} worklogs
             </span>
             {deadlineWarnings.length > 0 && (
@@ -428,12 +459,14 @@ function TeamDetailsContent({
       />
 
       {/* Worklog Table */}
-      <Card className="border border-white/10 bg-white/5 backdrop-blur-sm">
+      <Card className="border dark:border-white/10 border-gray-200 dark:bg-white/5 bg-gray-50 backdrop-blur-sm">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <ClipboardList className="h-5 w-5 text-amber-400" />
-              <CardTitle className="text-white">Team Worklogs</CardTitle>
+              <CardTitle className="dark:text-white text-gray-900">
+                Team Worklogs
+              </CardTitle>
             </div>
             <Button
               onClick={() => setShowAssign(true)}
@@ -444,7 +477,7 @@ function TeamDetailsContent({
               Assign Task
             </Button>
           </div>
-          <CardDescription className="text-white/60">
+          <CardDescription className="dark:text-white/60 text-gray-500">
             Manage and review all worklogs submitted by team members
           </CardDescription>
         </CardHeader>
@@ -454,6 +487,9 @@ function TeamDetailsContent({
             isLoading={worklogsLoading}
             onDelete={handleDeleteWorklog}
             isDeleting={deleteWorklogMutation.isPending}
+            currentUserId={session?.user?.id}
+            onStatusChange={handleStatusChange}
+            isStatusPending={updateStatusMutation.isPending}
           />
           <Pagination
             currentPage={worklogPage}
@@ -474,18 +510,20 @@ function TeamDetailsContent({
 
       {/* Rankings — only when at least one member has a rating */}
       {memberRows.some((m) => m.rating > 0) && (
-        <Card className="border border-white/10 bg-white/5 backdrop-blur-sm">
+        <Card className="border dark:border-white/10 border-gray-200 dark:bg-white/5 bg-gray-50 backdrop-blur-sm">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-amber-400" />
-              <CardTitle className="text-white">Member Rankings</CardTitle>
+              <CardTitle className="dark:text-white text-gray-900">
+                Member Rankings
+              </CardTitle>
             </div>
-            <CardDescription className="text-white/60">
+            <CardDescription className="dark:text-white/60 text-gray-500">
               Ranked by average worklog rating
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="divide-y divide-white/5">
+            <div className="divide-y dark:divide-white/5 divide-gray-100">
               {[...memberRows]
                 .sort((a, b) => b.rating - a.rating)
                 .map((member, i) => {
@@ -504,11 +542,11 @@ function TeamDetailsContent({
                     >
                       <div className="flex items-center gap-3">
                         <span className="w-8 text-center text-sm">{medal}</span>
-                        <span className="text-white/90 font-medium">
+                        <span className="dark:text-white/90 text-gray-800 font-medium">
                           {member.name}
                         </span>
                       </div>
-                      <span className="font-semibold tabular-nums text-amber-300">
+                      <span className="font-semibold tabular-nums dark:text-amber-300 text-amber-700">
                         {member.rating > 0 ? `${member.rating}/10` : "—"}
                       </span>
                     </div>

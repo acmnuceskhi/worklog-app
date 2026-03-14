@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import { m, AnimatePresence } from "framer-motion";
 import { UserPlus, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ interface ManageOwnersSectionProps {
 export function ManageOwnersSection({
   organizationId,
 }: ManageOwnersSectionProps) {
+  const { data: session } = useSession();
   const [inviteEmails, setInviteEmails] = useState<string[]>([""]);
 
   const { mutateAsync: inviteOwner, isPending: isSending } =
@@ -76,6 +78,21 @@ export function ManageOwnersSection({
       return;
     }
 
+    // Prevent self-invitation
+    if (session?.user.email) {
+      const selfInvites = validEmails.filter(
+        (email) => email.toLowerCase() === session.user.email?.toLowerCase(),
+      );
+      if (selfInvites.length > 0) {
+        toast.error("Cannot Invite Yourself", {
+          description:
+            "You are already the organization owner. No need to invite yourself.",
+          duration: 3000,
+        });
+        return;
+      }
+    }
+
     toast.promise(inviteOwner(validEmails), {
       loading: `Sending ${validEmails.length} invitation${validEmails.length !== 1 ? "s" : ""}...`,
       success: (result) => {
@@ -88,12 +105,12 @@ export function ManageOwnersSection({
       error: (err) =>
         err instanceof Error ? err.message : "Failed to send invitations",
     });
-  }, [inviteEmails, inviteOwner]);
+  }, [inviteEmails, inviteOwner, session]);
 
   return (
     <div className="space-y-3">
       {/* Email Inputs — matches team-leader invite pattern */}
-      <div className="text-xs text-white/60">
+      <div className="text-xs dark:text-white/60 text-gray-500">
         Enter email addresses to invite as co-owners:
       </div>
 
@@ -112,7 +129,7 @@ export function ManageOwnersSection({
               placeholder="co-owner@nu.edu.pk"
               value={email}
               onChange={(e) => updateEmail(index, e.target.value)}
-              className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50"
+              className="flex-1 dark:bg-white/10 bg-gray-100 dark:border-white/20 border-gray-300 dark:text-white text-gray-900 dark:placeholder:text-white/50 placeholder:text-gray-400"
               aria-label={`Co-owner email ${index + 1}`}
               autoComplete="email"
             />
@@ -143,7 +160,7 @@ export function ManageOwnersSection({
         </Button>
       </div>
 
-      <Separator className="bg-white/10" />
+      <Separator className="dark:bg-white/10 bg-gray-100" />
 
       <Button
         onClick={handleSendInvitations}

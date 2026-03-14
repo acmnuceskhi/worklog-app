@@ -62,7 +62,11 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       </svg>
     </div>
 
-    {title && <h3 className="text-base font-semibold text-red-300">{title}</h3>}
+    {title && (
+      <h3 className="text-base font-semibold dark:text-red-300 text-red-700">
+        {title}
+      </h3>
+    )}
 
     <p className="max-w-sm text-sm text-red-400">{message}</p>
 

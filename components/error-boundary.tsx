@@ -52,10 +52,12 @@ export class ErrorBoundary extends React.Component<
             <div className="p-3 rounded-full bg-red-500/20 mb-4 inline-block">
               <span className="text-2xl">⚠️</span>
             </div>
-            <h2 className="text-xl font-semibold text-white mb-2">
+            <h2 className="text-xl font-semibold dark:text-white text-gray-900 mb-2">
               Something went wrong
             </h2>
-            <p className="text-white/60 mb-4">{this.state.error.message}</p>
+            <p className="dark:text-white/60 text-gray-500 mb-4">
+              {this.state.error.message}
+            </p>
             <Button onClick={this.resetError} variant="primary">
               Try Again
             </Button>

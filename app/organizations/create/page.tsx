@@ -55,10 +55,11 @@ export default function CreateOrganizationPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-3">
+    <div className="min-h-screen p-3">
       {/* Top Navigation */}
       <PageHeader
         title="Worklog"
+        showThemeToggle
         navItems={[
           {
             label: "My Teams",
@@ -86,14 +87,14 @@ export default function CreateOrganizationPage() {
 
       {/* Main Content */}
       <div className="flex items-center justify-center p-4 min-h-[calc(100vh-80px)]">
-        <Card className="w-full max-w-lg border-white/10 bg-white/5 backdrop-blur-sm shadow-2xl">
+        <Card className="w-full max-w-lg dark:border-white/10 border-gray-200 dark:bg-white/5 bg-gray-50 backdrop-blur-sm shadow-2xl">
           <CardHeader className="space-y-1">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500">
                 <Building2 className="h-6 w-6 text-white" />
               </div>
               <div>
-                <CardTitle className="text-2xl text-white">
+                <CardTitle className="text-2xl dark:text-white text-gray-900">
                   Create Organization
                 </CardTitle>
                 <CardDescription className="text-muted">
@@ -120,7 +121,7 @@ export default function CreateOrganizationPage() {
                     type="text"
                     placeholder="Enter organization name"
                     aria-invalid={!!errors.name}
-                    className="bg-white/5 border-white/10 text-white placeholder:text-white/50 focus:border-white/30 focus:ring-white/10"
+                    className="dark:bg-white/5 bg-gray-50 dark:border-white/10 border-gray-200 dark:text-white text-gray-900 dark:placeholder:text-white/50 placeholder:text-gray-400 dark:focus:border-white/30 focus:border-gray-400 dark:focus:ring-white/10 focus:ring-gray-200"
                     {...register("name")}
                   />
                 </FormField>
@@ -137,7 +138,7 @@ export default function CreateOrganizationPage() {
                     placeholder="Describe what this organization is about..."
                     rows={4}
                     aria-invalid={!!errors.description}
-                    className="bg-white/5 border-white/10 text-white placeholder:text-white/50 focus:border-white/30 focus:ring-white/10 resize-none"
+                    className="dark:bg-white/5 bg-gray-50 dark:border-white/10 border-gray-200 dark:text-white text-gray-900 dark:placeholder:text-white/50 placeholder:text-gray-400 dark:focus:border-white/30 focus:border-gray-400 dark:focus:ring-white/10 focus:ring-gray-200 resize-none"
                     {...register("description")}
                   />
                 </FormField>
@@ -148,7 +149,7 @@ export default function CreateOrganizationPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="flex-1 border-white/20 text-white/70 hover:bg-white/10 hover:text-white"
+                className="flex-1 dark:border-white/20 border-gray-300 dark:text-white/70 text-gray-600 dark:hover:bg-white/10 hover:bg-gray-200 dark:hover:text-white hover:text-gray-900"
                 onClick={safeBack}
                 disabled={createOrganization.isPending}
               >

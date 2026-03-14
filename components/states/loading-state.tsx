@@ -39,7 +39,7 @@ export interface LoadingStateProps {
 /* ── Spinner sub-component ────────────────────────────────────── */
 const Spinner: React.FC = () => (
   <div
-    className="h-8 w-8 animate-spin rounded-full border-4 border-white/20 border-t-cyan-400"
+    className="h-8 w-8 animate-spin rounded-full border-4 dark:border-white/20 border-gray-300 border-t-cyan-400"
     role="status"
     aria-label="Loading"
   />
@@ -65,7 +65,7 @@ const SkeletonLines: React.FC<{ count: number }> = ({ count }) => (
       <div
         key={i}
         className={cn(
-          "h-4 animate-pulse rounded bg-white/10",
+          "h-4 animate-pulse rounded dark:bg-white/10 bg-gray-100",
           i === count - 1 && "w-2/3", // last line shorter for realism
         )}
       />
@@ -91,7 +91,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
     {variant === "spinner" && <Spinner />}
     {variant === "pulse" && <Pulse />}
     {variant === "skeleton" && <SkeletonLines count={lines} />}
-    {text && <p className="text-sm text-white/60">{text}</p>}
+    {text && <p className="text-sm dark:text-white/60 text-gray-500">{text}</p>}
   </div>
 );
 LoadingState.displayName = "LoadingState";

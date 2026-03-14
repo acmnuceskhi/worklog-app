@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { auth } from "@/lib/auth";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/react";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,14 +34,20 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <main>
-          <Providers session={session}>
-            <Toaster />
-            {children}
-          </Providers>
-        </main>
-        <SpeedInsights />
-        <Analytics />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          disableTransitionOnChange
+        >
+          <main>
+            <Providers session={session}>
+              <Toaster />
+              {children}
+            </Providers>
+          </main>
+          <SpeedInsights />
+          <Analytics />
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -17,6 +17,8 @@ interface BulkEmailInputProps {
   allowedDomains?: string[];
   className?: string;
   maxEmails?: number;
+  /** Emails that cannot be added (e.g. the current user's own address). */
+  blockedEmails?: string[];
 }
 
 const defaultEmailValidation = (email: string): boolean => {
@@ -33,6 +35,7 @@ export const BulkEmailInput: React.FC<BulkEmailInputProps> = ({
   allowedDomains,
   className = "",
   maxEmails = 50,
+  blockedEmails = [],
 }) => {
   const [inputValue, setInputValue] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +78,12 @@ export const BulkEmailInput: React.FC<BulkEmailInputProps> = ({
         return;
       }
 
+      // Check blocked emails (e.g. self-invitation prevention)
+      if (blockedEmails.includes(trimmedEmail)) {
+        setError(`Cannot invite yourself (${trimmedEmail})`);
+        return;
+      }
+
       // Add email
       onChange([...emails, trimmedEmail]);
       setInputValue("");
@@ -82,7 +91,7 @@ export const BulkEmailInput: React.FC<BulkEmailInputProps> = ({
       // Announce to screen readers
       announceToScreenReader(`Added email: ${trimmedEmail}`);
     },
-    [emails, onChange, validateEmail, maxEmails, allowedDomains],
+    [emails, onChange, validateEmail, maxEmails, allowedDomains, blockedEmails],
   );
 
   const removeEmail = useCallback(
@@ -159,6 +168,7 @@ export const BulkEmailInput: React.FC<BulkEmailInputProps> = ({
       .filter((email) => validateEmail(email))
       .map((email) => email.toLowerCase())
       .filter((email) => !emails.includes(email))
+      .filter((email) => !blockedEmails.includes(email))
       .slice(0, maxEmails - emails.length);
 
     if (validEmails.length > 0) {
@@ -209,7 +219,7 @@ export const BulkEmailInput: React.FC<BulkEmailInputProps> = ({
         className="text-sm font-medium mb-2 block"
       >
         {label}
-        <span className="text-white/50 ml-2 text-xs font-normal">
+        <span className="dark:text-white/50 text-gray-400 ml-2 text-xs font-normal">
           ({emails.length}/{maxEmails})
         </span>
       </Label>
@@ -217,9 +227,9 @@ export const BulkEmailInput: React.FC<BulkEmailInputProps> = ({
       {/* Email Tags Display */}
       <div
         className={`
-          min-h-[100px] p-3 border rounded-md bg-white/5
+          min-h-[100px] p-3 border rounded-md dark:bg-white/5 bg-gray-50
           transition-all duration-200
-          ${focused ? "ring-2 ring-blue-500 border-blue-500" : "border-white/20"}
+          ${focused ? "ring-2 ring-blue-500 border-blue-500" : "dark:border-white/20 border-gray-300"}
           ${error ? "border-red-500" : ""}
           touch-manipulation
         `}
@@ -308,7 +318,10 @@ export const BulkEmailInput: React.FC<BulkEmailInputProps> = ({
       </AnimatePresence>
 
       {/* Help Text */}
-      <p id="email-help" className="text-xs text-white/50 mt-2">
+      <p
+        id="email-help"
+        className="text-xs dark:text-white/50 text-gray-400 mt-2"
+      >
         Press Enter, comma, or semicolon to add emails. Paste multiple emails
         from clipboard.
         {allowedDomains && allowedDomains.length > 0 && (

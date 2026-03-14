@@ -40,17 +40,17 @@ export function WorklogTable({
     <div className={cn("overflow-x-auto", className)}>
       <table className="w-full text-sm" aria-label="Recent worklogs">
         <thead>
-          <tr className="border-b border-white/10 text-left">
-            <th className="py-2.5 px-3 text-xs font-medium text-white/50 uppercase tracking-wider">
+          <tr className="border-b dark:border-white/10 border-gray-200 text-left">
+            <th className="py-2.5 px-3 text-xs font-medium dark:text-white/50 text-gray-400 uppercase tracking-wider">
               Title
             </th>
-            <th className="py-2.5 px-3 text-xs font-medium text-white/50 uppercase tracking-wider">
+            <th className="py-2.5 px-3 text-xs font-medium dark:text-white/50 text-gray-400 uppercase tracking-wider">
               Status
             </th>
-            <th className="py-2.5 px-3 text-xs font-medium text-white/50 uppercase tracking-wider hidden md:table-cell">
+            <th className="py-2.5 px-3 text-xs font-medium dark:text-white/50 text-gray-400 uppercase tracking-wider hidden md:table-cell">
               Deadline
             </th>
-            <th className="py-2.5 px-3 text-xs font-medium text-white/50 uppercase tracking-wider hidden sm:table-cell">
+            <th className="py-2.5 px-3 text-xs font-medium dark:text-white/50 text-gray-400 uppercase tracking-wider hidden sm:table-cell">
               Created
             </th>
           </tr>
@@ -68,8 +68,9 @@ export function WorklogTable({
               <tr
                 key={w.id}
                 className={cn(
-                  "border-b border-white/5 transition-colors",
-                  onRowClick && "hover:bg-white/5 cursor-pointer",
+                  "border-b dark:border-white/5 border-gray-100 transition-colors",
+                  onRowClick &&
+                    "dark:hover:bg-white/5 hover:bg-gray-100 cursor-pointer",
                 )}
                 onClick={() => onRowClick?.(w)}
                 tabIndex={onRowClick ? 0 : undefined}
@@ -84,7 +85,7 @@ export function WorklogTable({
               >
                 {/* Title */}
                 <td className="py-2.5 px-3">
-                  <span className="font-medium text-white truncate block max-w-[200px] lg:max-w-[300px]">
+                  <span className="font-medium dark:text-white text-gray-900 truncate block max-w-[200px] lg:max-w-[300px]">
                     {w.title}
                   </span>
                 </td>
@@ -112,11 +113,11 @@ export function WorklogTable({
                             ? "text-red-400"
                             : days !== null && days <= 3
                               ? "text-orange-400"
-                              : "text-white/40",
+                              : "dark:text-white/40 text-gray-400",
                         )}
                         aria-hidden
                       />
-                      <span className="text-white/60">
+                      <span className="dark:text-white/60 text-gray-500">
                         {formatLocalDate(new Date(w.deadline as string))}
                       </span>
                       {days !== null && (
@@ -127,7 +128,7 @@ export function WorklogTable({
                               ? "text-red-400"
                               : days <= 3
                                 ? "text-orange-400"
-                                : "text-white/40",
+                                : "dark:text-white/40 text-gray-400",
                           )}
                         >
                           (
@@ -141,18 +142,18 @@ export function WorklogTable({
                       )}
                     </div>
                   ) : (
-                    <span className="text-white/30">—</span>
+                    <span className="dark:text-white/30 text-gray-300">—</span>
                   )}
                 </td>
 
                 {/* Created */}
                 <td className="py-2.5 px-3 hidden sm:table-cell">
                   {w.createdAt ? (
-                    <span className="text-xs text-white/40">
+                    <span className="text-xs dark:text-white/40 text-gray-400">
                       {formatLocalDate(new Date(w.createdAt as string))}
                     </span>
                   ) : (
-                    <span className="text-white/30">—</span>
+                    <span className="dark:text-white/30 text-gray-300">—</span>
                   )}
                 </td>
               </tr>

@@ -14,10 +14,11 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline:
-          "border border-white/20 bg-white/10 hover:bg-white/20 text-white",
+          "border dark:border-white/20 border-gray-300 dark:bg-white/10 bg-transparent dark:hover:bg-white/20 hover:bg-gray-100 dark:text-white text-gray-700",
         secondary:
-          "bg-white/5 hover:bg-white/10 text-white border border-white/10",
-        ghost: "text-white/70 hover:text-white hover:bg-white/10",
+          "dark:bg-white/5 bg-gray-100 dark:hover:bg-white/10 hover:bg-gray-200 dark:text-white text-gray-700 border dark:border-white/10 border-gray-200",
+        ghost:
+          "dark:text-white/70 text-gray-600 dark:hover:text-white hover:text-gray-900 dark:hover:bg-white/10 hover:bg-gray-100",
         link: "text-primary underline-offset-4 hover:underline",
         // ── Gradient Variants (standardised from inline usage) ──
         primary:

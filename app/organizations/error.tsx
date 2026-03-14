@@ -36,10 +36,10 @@ export default function OrganizationsError({
             />
           </svg>
         </div>
-        <h1 className="text-2xl font-bold text-white mb-2">
+        <h1 className="text-2xl font-bold dark:text-white text-gray-900 mb-2">
           Failed to Load Organization
         </h1>
-        <p className="text-white/60 mb-6 text-sm">
+        <p className="dark:text-white/60 text-gray-500 mb-6 text-sm">
           {error.message ||
             "An unexpected error occurred while loading this organization."}
         </p>
@@ -47,7 +47,7 @@ export default function OrganizationsError({
           <Button
             onClick={reset}
             variant="outline"
-            className="border-white/20 text-white/80"
+            className="dark:border-white/20 border-gray-300 dark:text-white/80 text-gray-700"
           >
             Try Again
           </Button>
