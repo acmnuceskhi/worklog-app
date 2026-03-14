@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
           // the client can initialise TeamSettingsDialog and invalidate the
           // correct org cache when the link is added/changed/removed.
           organizationId: true,
+          organizationWasDeleted: true,
           createdAt: true,
           updatedAt: true,
           organization: {

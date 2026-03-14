@@ -56,6 +56,8 @@ interface TeamSettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  /** When true, the team is read-only (org was deleted); only org re-linking is allowed */
+  isOrgDeleted?: boolean;
 }
 
 export function TeamSettingsDialog({
@@ -63,6 +65,7 @@ export function TeamSettingsDialog({
   open,
   onOpenChange,
   onSuccess,
+  isOrgDeleted,
 }: TeamSettingsDialogProps) {
   const router = useRouter();
   const [isUpdating, setIsUpdating] = useState(false);
@@ -140,6 +143,15 @@ export function TeamSettingsDialog({
         setIsUpdating(true);
         clearErrors();
 
+        // Org-deleted teams: only the org re-link is permitted.
+        // Sending name/description/project would trigger a 403 on the server,
+        // so strip the payload down to just organizationId.
+        if (isOrgDeleted) {
+          return await updateTeam({
+            organizationId: data.organizationId ?? null,
+          });
+        }
+
         const cleanedData = {
           name: data.name.trim(),
           description: data.description?.trim() || undefined,
@@ -178,6 +190,7 @@ export function TeamSettingsDialog({
     [
       isUpdating,
       isSubmitting,
+      isOrgDeleted,
       clearErrors,
       setError,
       updateTeam,
@@ -254,6 +267,22 @@ export function TeamSettingsDialog({
           </DialogHeader>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* Org-deleted read-only banner */}
+            {isOrgDeleted && (
+              <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
+                    Read-only team
+                  </p>
+                  <p className="text-xs dark:text-amber-400/70 text-amber-700/80 mt-0.5">
+                    This team&apos;s organization was deleted. Link it to a new
+                    organization below to restore full access.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Team Name */}
             <div className="space-y-2">
               <Label
@@ -269,7 +298,7 @@ export function TeamSettingsDialog({
                   "dark:bg-white/5 bg-white dark:border-white/10 border-gray-300 dark:text-white text-gray-900 dark:placeholder:text-white/40 placeholder:text-gray-400 dark:focus:border-white/30 focus:border-blue-400",
                   errors.name && "border-red-500",
                 )}
-                disabled={isBusy}
+                disabled={isBusy || !!isOrgDeleted}
                 {...register("name")}
               />
               {errors.name && (
@@ -295,7 +324,7 @@ export function TeamSettingsDialog({
                   "dark:bg-white/5 bg-white dark:border-white/10 border-gray-300 dark:text-white text-gray-900 dark:placeholder:text-white/40 placeholder:text-gray-400 dark:focus:border-white/30 focus:border-blue-400",
                   errors.project && "border-red-500",
                 )}
-                disabled={isBusy}
+                disabled={isBusy || !!isOrgDeleted}
                 {...register("project")}
               />
               {errors.project && (
@@ -322,7 +351,7 @@ export function TeamSettingsDialog({
                   "dark:bg-white/5 bg-white dark:border-white/10 border-gray-300 dark:text-white text-gray-900 dark:placeholder:text-white/40 placeholder:text-gray-400 dark:focus:border-white/30 focus:border-blue-400 resize-none",
                   errors.description && "border-red-500",
                 )}
-                disabled={isBusy}
+                disabled={isBusy || !!isOrgDeleted}
                 {...register("description")}
               />
               <div className="flex justify-between text-xs dark:text-white/50 text-gray-400">
@@ -397,7 +426,7 @@ export function TeamSettingsDialog({
                   type="button"
                   variant="destructive"
                   onClick={() => setShowDeleteDialog(true)}
-                  disabled={isBusy}
+                  disabled={isBusy || !!isOrgDeleted}
                   className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/30"
                 >
                   <Trash2 className="h-4 w-4 mr-2" />

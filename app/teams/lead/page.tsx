@@ -2,9 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import dynamic from "next/dynamic";
-import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 const TeamCreationWizard = dynamic(
   () =>
@@ -15,7 +13,6 @@ const TeamCreationWizard = dynamic(
 );
 import { Plus, Users, Settings, Search, Building2 } from "lucide-react";
 import { useOwnedTeams, useTeamSearch } from "@/lib/hooks";
-import { queryKeys } from "@/lib/query-keys";
 import {
   TeamFilters,
   type TeamSortBy,
@@ -58,22 +55,6 @@ export default function LeadTeamsPage() {
   const { searchQuery, setSearchQuery, filteredTeams } = useTeamSearch({
     teams,
   });
-
-  // Refetch critical data when page regains focus
-  const queryClient = useQueryClient();
-  useEffect(() => {
-    const handleFocus = () => {
-      queryClient.refetchQueries({
-        queryKey: queryKeys.teams.owned(),
-      });
-      queryClient.refetchQueries({
-        queryKey: queryKeys.user.sidebarStats(),
-      });
-    };
-
-    window.addEventListener("focus", handleFocus);
-    return () => window.removeEventListener("focus", handleFocus);
-  }, [queryClient]);
 
   // Sort the filtered results
   const sortedTeams = useMemo(() => {
@@ -213,7 +194,9 @@ export default function LeadTeamsPage() {
               className={`backdrop-blur-md shadow-lg dark:shadow-black/20 shadow-gray-200/50 hover:-translate-y-1 hover:shadow-xl ${
                 team.organization
                   ? "border border-blue-500/30 bg-blue-500/5"
-                  : "border dark:border-white/10 border-gray-200 dark:bg-white/5 bg-gray-50"
+                  : team.organizationWasDeleted
+                    ? "border border-amber-500/30 bg-amber-500/5"
+                    : "border dark:border-white/10 border-gray-200 dark:bg-white/5 bg-gray-50"
               }`}
             >
               {/* Organization badge — only rendered when team is linked to an org */}
@@ -225,7 +208,14 @@ export default function LeadTeamsPage() {
                   </span>
                 </div>
               )}
-              {!team.organization && (
+              {!team.organization && team.organizationWasDeleted && (
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                    Organization deleted · Read-only
+                  </span>
+                </div>
+              )}
+              {!team.organization && !team.organizationWasDeleted && (
                 <div className="flex items-center gap-1.5 mb-2">
                   <span className="text-xs dark:text-white/35 text-gray-400">
                     Standalone team
@@ -290,9 +280,11 @@ export default function LeadTeamsPage() {
             if (!open) setSettingsTeam(null);
           }}
           onSuccess={() => {
-            refetch();
             setSettingsTeam(null);
           }}
+          isOrgDeleted={
+            !!teams.find((t) => t.id === settingsTeam)?.organizationWasDeleted
+          }
         />
       )}
     </div>

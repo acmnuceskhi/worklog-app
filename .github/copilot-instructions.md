@@ -113,19 +113,20 @@ model Organization {
 }
 
 model Team {
-  id              String       @id @default(cuid())
-  name            String
-  description     String?
-  project         String?      // What project the team is working on
-  credits         Int          @default(0)
-  organizationId  String?      @map("organization_id") // Optional - teams can exist without organizations
-  organization    Organization? @relation(fields: [organizationId], references: [id])
-  ownerId         String       @map("owner_id")
-  owner           User         @relation("TeamOwner", fields: [ownerId], references: [id])
-  members         TeamMember[]
-  worklogs        Worklog[]
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  id                     String        @id @default(cuid())
+  name                   String
+  description            String?
+  project                String?      // What project the team is working on
+  credits                Int          @default(0)
+  organizationId         String?      @map("organization_id") // Optional - teams can exist without organizations
+  organization           Organization? @relation(fields: [organizationId], references: [id])
+  organizationWasDeleted Boolean       @default(false) @map("organization_was_deleted") // Set to true when parent org is deleted; makes team read-only until re-linked
+  ownerId                String       @map("owner_id")
+  owner                  User         @relation("TeamOwner", fields: [ownerId], references: [id])
+  members                TeamMember[]
+  worklogs               Worklog[]
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
 
   @@map("teams")
   @@index([organizationId])
@@ -473,13 +474,14 @@ Use Resend Node.js SDK for team and organization invitations. Follow [Resend Nex
 
 ## Common Pitfalls
 
+- **TanStack Query + HTTP Cache Collision**: NEVER add `Cache-Control: max-age > 0` headers to API routes in `next.config.ts` — it causes `refetchQueries`/`invalidateQueries` to receive stale HTTP-cached responses after mutations (shows correct data briefly then reverts). All `/api/:path*` routes must use `Cache-Control: no-store` (enforced in `next.config.ts` and `apiResponse()` helper in `lib/api-utils.ts`). In mutation `onSettled`, prefer `refetchQueries(specificKey)` over `invalidateQueries(broadPrefix)` for the primary data list.
 - Don't import Prisma client from `@prisma/client` - use the custom generated path `../app/generated/prisma`
 - Ensure `dotenv/config` is imported before Prisma operations in config files
 - Use PostgreSQL connection string format for `DATABASE_URL`
 - Ratings must be hidden from team members and team owners (security requirement)
 - Progress status transitions must follow: STARTED → HALF_DONE → COMPLETED → REVIEWED → GRADED (with proper role permissions)
 - Organization owners can only access teams/worklogs within their own organizations
-- When an organization is deleted, teams/worklogs remain visible but all operations are blocked (read-only). They'll be check whether the organisation that team is tied to was prevously made but deleted. If yes then new team will have to be made
+- When an organization is deleted, teams remain in the database but the `organizationWasDeleted` boolean field is set to `true` atomically before deletion. After `SetNull` cascades `organizationId` to `null`, this flag is the only way to distinguish org-deleted teams from standalone teams. Read-only enforcement (403 on invites/credits/worklog creation/settings updates) is at both API and UI level. Exception: `PATCH /api/teams/[teamId]` with only `organizationId` is allowed for re-linking (migration path).
 - **OAuth Domain Restriction**: Google OAuth enforces `@nu.edu.pk` via `hd` parameter; fallback validation in `signIn` callback extends to `@isb.nu.edu.pk`. Both domains must be validated together in API invitation endpoints.
 - **Email Domain Validation**: Invitations require valid domain emails. Dual domain restriction enforced in both OAuth layer and Resend email sending layer. See `lib/validations.ts` for domain schemas.
 - Team invitations validate email domain via Resend email service (see `RESEND_EMAIL_IMPLEMENTATION_PLAN.md` for details)

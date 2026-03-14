@@ -160,6 +160,13 @@ export default function OrganizationDashboardPage({
 
   const debouncedWorklogFilters = useDebouncedValue(worklogFilters, 300);
 
+  // Ensure fresh data when user navigates to this page
+  useEffect(() => {
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.organizations.detail(organizationId),
+    });
+  }, [organizationId, queryClient]);
+
   // Refetch critical data when page regains focus
   useEffect(() => {
     const handleFocus = () => {

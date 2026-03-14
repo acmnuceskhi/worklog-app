@@ -211,6 +211,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Block worklog creation for org-deleted (read-only) teams
+    const teamForOrgCheck = await prisma.team.findUnique({
+      where: { id: teamId },
+      select: { organizationWasDeleted: true },
+    });
+    if (teamForOrgCheck?.organizationWasDeleted) {
+      return NextResponse.json(
+        {
+          error:
+            "This team is read-only because its organization was deleted. Link it to a new organization first.",
+        },
+        { status: 403 },
+      );
+    }
+
     const worklogData = {
       title,
       description,

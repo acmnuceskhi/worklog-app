@@ -67,6 +67,16 @@ export async function POST(
       );
     }
 
+    if (team.organizationWasDeleted) {
+      return NextResponse.json(
+        {
+          error:
+            "This team is read-only because its organization was deleted. Link it to a new organization first.",
+        },
+        { status: 403 },
+      );
+    }
+
     const results = [];
     const errors = [];
 

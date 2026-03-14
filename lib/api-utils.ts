@@ -73,7 +73,13 @@ export function withCacheHeaders(
 import { ZodError } from "zod";
 
 export function apiResponse<T>(data: T, status: number = 200) {
-  return NextResponse.json({ data }, { status });
+  return NextResponse.json(
+    { data },
+    {
+      status,
+      headers: { "Cache-Control": "no-store" },
+    },
+  );
 }
 
 export function apiError(

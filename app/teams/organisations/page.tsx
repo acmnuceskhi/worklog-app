@@ -76,31 +76,17 @@ export default function OrganisationsPage() {
     setSortDir("asc");
   };
 
-  // Refetch critical data when component mounts (user navigated here)
+  // Ensure fresh data when user navigates to this page.
+  // invalidateQueries marks the cache stale so the active useOrganizations()
+  // observer immediately refetches from the server.
   const queryClient = useQueryClient();
   useEffect(() => {
-    // Ensure fresh data when user navigates to this page
-    queryClient.refetchQueries({
+    queryClient.invalidateQueries({
       queryKey: queryKeys.organizations.list(),
     });
     queryClient.refetchQueries({
       queryKey: queryKeys.user.sidebarStats(),
     });
-  }, [queryClient]);
-
-  // Also refetch when browser window regains focus (tab switcher)
-  useEffect(() => {
-    const handleFocus = () => {
-      queryClient.refetchQueries({
-        queryKey: queryKeys.organizations.list(),
-      });
-      queryClient.refetchQueries({
-        queryKey: queryKeys.user.sidebarStats(),
-      });
-    };
-
-    window.addEventListener("focus", handleFocus);
-    return () => window.removeEventListener("focus", handleFocus);
   }, [queryClient]);
 
   if (isLoading) {

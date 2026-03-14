@@ -294,10 +294,17 @@ export async function DELETE(
       return forbidden("You are not the owner of this organization.");
     }
 
-    // Prisma's default behavior for optional relations is SetNull.
-    // Deleting the organization will set `organizationId` to null on all associated teams.
-    await prisma.organization.delete({
-      where: { id: organizationId },
+    // Mark linked teams as org-deleted BEFORE Prisma's SetNull cascade clears
+    // organizationId — otherwise org-deleted teams are indistinguishable from standalone teams.
+    // Interactive transaction form guarantees strict sequential execution within one transaction.
+    await prisma.$transaction(async (tx) => {
+      await tx.team.updateMany({
+        where: { organizationId },
+        data: { organizationWasDeleted: true },
+      });
+      await tx.organization.delete({
+        where: { id: organizationId },
+      });
     });
 
     return success({

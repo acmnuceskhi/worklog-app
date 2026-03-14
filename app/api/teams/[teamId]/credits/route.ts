@@ -89,6 +89,7 @@ export async function PATCH(
           id: true,
           name: true,
           credits: true,
+          organizationWasDeleted: true,
         },
       }),
     ]);
@@ -99,6 +100,12 @@ export async function PATCH(
 
     if (!team) {
       return notFound("Team not found");
+    }
+
+    if (team.organizationWasDeleted) {
+      return forbidden(
+        "This team is read-only because its organization was deleted. Link it to a new organization first.",
+      );
     }
 
     let newCredits: number;

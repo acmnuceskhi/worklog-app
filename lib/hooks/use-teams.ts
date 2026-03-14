@@ -34,6 +34,8 @@ export interface Team {
   };
   /** Personal worklog count — only populated for member teams */
   myWorklogCount?: number;
+  /** true when the team's organization was deleted; team is read-only until re-linked */
+  organizationWasDeleted?: boolean;
 }
 
 export interface TeamMember {
@@ -281,18 +283,26 @@ export const useCreateTeam = () => {
         queryKey: queryKeys.user.sidebarStats(),
       });
       if (variables.organizationId) {
+        // Use type: "all" so org caches update even without active observers
+        // (user may not be on /teams/organisations or /organizations/[id])
         queryClient.refetchQueries({
           queryKey: queryKeys.organizations.detail(variables.organizationId),
+          type: "all",
         });
         queryClient.refetchQueries({
           queryKey: queryKeys.organizations.list(),
+          type: "all",
         });
       }
     },
-    onSettled: () => {
-      // Invalidate ALL team queries — marks active ones for immediate refetch
-      // and inactive ones for refetch on next mount.
-      queryClient.invalidateQueries({ queryKey: queryKeys.teams.all() });
+    onSettled: async () => {
+      // Refetch owned teams list so the new team card appears immediately.
+      await queryClient.refetchQueries({ queryKey: queryKeys.teams.owned() });
+      // Mark remaining team queries stale without immediate refetch.
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.teams.all(),
+        refetchType: "none",
+      });
     },
   });
 };
@@ -355,7 +365,8 @@ export const useUpdateTeam = (teamId: string) => {
         body: JSON.stringify(data),
       });
       if (!response.ok) {
-        throw new Error("Failed to update team");
+        const errorBody = await response.json().catch(() => null);
+        throw new Error(errorBody?.error ?? "Failed to update team");
       }
       const payload = await response.json();
       return payload.data || payload;
@@ -450,56 +461,71 @@ export const useUpdateTeam = (teamId: string) => {
         }
       }
     },
-    onSuccess: (serverTeam) => {
+    onSuccess: () => {
       resetIdempotencyToken();
-      // Write the server's response into the detail cache immediately.
-      queryClient.setQueryData<Team>(queryKeys.teams.detail(teamId), (old) =>
-        old ? { ...old, ...serverTeam } : serverTeam,
-      );
-
-      // Write the server's response into every owned-teams list page.
-      // This ensures team cards show the exact data the server committed,
-      // eliminating any gap between the optimistic update and the refetch.
-      queryClient.setQueriesData<PaginatedResponse<Team>>(
-        { queryKey: queryKeys.teams.owned() },
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            items: old.items.map((t) =>
-              t.id === teamId ? { ...t, ...serverTeam } : t,
-            ),
-          };
-        },
-      );
     },
-    onSettled: async (_data, _error, variables, context) => {
-      // Keep sidebar counts in sync — sidebar is always mounted so refetch works.
+    onSettled: async (_data, error, variables, context) => {
+      // On error, onError already rolled back. Just mark stale and return.
+      if (error) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.teams.all() });
+        return;
+      }
+
+      // Step 1: Refetch owned teams list — deterministic fetch for /teams/lead
+      // cards. Uses refetchQueries (not invalidateQueries) because it directly
+      // triggers a network fetch rather than relying on observer-level triggers.
+      await queryClient.refetchQueries({
+        queryKey: queryKeys.teams.owned(),
+      });
+
+      // Step 2: Refetch org caches in parallel for both affected orgs.
+      // type: "all" ensures caches update even without active observers,
+      // so navigating to org pages after mutation shows fresh data.
+      const newOrgId = variables.organizationId ?? null;
+      const prevOrgId = context?.previousOrgId ?? null;
+      const orgRefetches: Promise<void>[] = [];
+
+      if (newOrgId) {
+        orgRefetches.push(
+          queryClient.refetchQueries({
+            queryKey: queryKeys.organizations.detail(newOrgId),
+            type: "all",
+          }),
+          queryClient.refetchQueries({
+            queryKey: queryKeys.organizations.list(),
+            type: "all",
+          }),
+        );
+      }
+      if (prevOrgId && prevOrgId !== newOrgId) {
+        orgRefetches.push(
+          queryClient.refetchQueries({
+            queryKey: queryKeys.organizations.detail(prevOrgId),
+            type: "all",
+          }),
+        );
+        if (!newOrgId) {
+          orgRefetches.push(
+            queryClient.refetchQueries({
+              queryKey: queryKeys.organizations.list(),
+              type: "all",
+            }),
+          );
+        }
+      }
+      await Promise.all(orgRefetches);
+
+      // Step 3: Sidebar stats (fire-and-forget)
       queryClient.refetchQueries({
         queryKey: queryKeys.user.sidebarStats(),
       });
 
-      const newOrgId = variables.organizationId ?? null;
-      const prevOrgId = context?.previousOrgId ?? null;
-
-      // Force immediate refetch regardless of observer status to ensure caches
-      // are fresh before any subsequent navigation to organization list/detail pages.
-      if (newOrgId) {
-        await queryClient.refetchQueries({
-          queryKey: queryKeys.organizations.detail(newOrgId),
-        });
-        await queryClient.refetchQueries({
-          queryKey: queryKeys.organizations.list(),
-        });
-      }
-      if (prevOrgId && prevOrgId !== newOrgId) {
-        await queryClient.refetchQueries({
-          queryKey: queryKeys.organizations.detail(prevOrgId),
-        });
-        await queryClient.refetchQueries({
-          queryKey: queryKeys.organizations.list(),
-        });
-      }
+      // Step 4: Mark remaining team queries (detail, members, worklogs) stale
+      // without triggering immediate refetches — they will refetch on next access.
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.teams.all(),
+        refetchType: "none",
+      });
     },
   });
 };
@@ -611,6 +637,13 @@ export const useDeleteTeam = () => {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.teams.all() });
+      // Org caches may have stale team counts after deletion — invalidate with
+      // type: "all" so they update even without active observers.
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.organizations.all(),
+        type: "all",
+        refetchType: "all",
+      });
     },
   });
 };

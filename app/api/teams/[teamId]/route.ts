@@ -35,6 +35,7 @@ export async function GET(
         project: true,
         ownerId: true,
         organizationId: true,
+        organizationWasDeleted: true,
         createdAt: true,
         updatedAt: true,
         _count: {
@@ -122,7 +123,7 @@ export async function PATCH(
     // Check if user is team owner
     const team = await prisma.team.findUnique({
       where: { id: teamId },
-      select: { id: true, ownerId: true },
+      select: { id: true, ownerId: true, organizationWasDeleted: true },
     });
 
     if (!team) {
@@ -131,6 +132,43 @@ export async function PATCH(
 
     if (team.ownerId !== session.user.id) {
       return forbidden("Only team owner can update team settings");
+    }
+
+    // Org-deleted teams are read-only — only the organizationId re-link is allowed.
+    // Take an early-return path that applies ONLY the org change so that any
+    // extra fields sent by the client (e.g., name from a full-form submit) are
+    // silently discarded instead of triggering a 403.
+    if (team.organizationWasDeleted) {
+      const { organizationId } = validation.data;
+
+      // If a new org is being linked, verify the caller owns it
+      if (organizationId) {
+        const org = await prisma.organization.findFirst({
+          where: { id: organizationId, ownerId: session.user.id },
+          select: { id: true },
+        });
+        if (!org) {
+          return forbidden("Organization not found or you do not own it");
+        }
+      }
+
+      const relinkedTeam = await prisma.team.update({
+        where: { id: teamId },
+        data: {
+          ...(organizationId !== undefined && { organizationId }),
+          // Linking to an org restores full access — clear the read-only flag
+          ...(organizationId ? { organizationWasDeleted: false } : {}),
+        },
+        include: {
+          owner: {
+            select: { id: true, name: true, email: true, image: true },
+          },
+          organization: {
+            select: { id: true, name: true },
+          },
+        },
+      });
+      return apiResponse(relinkedTeam);
     }
 
     const { name, description, project, organizationId } = validation.data;
@@ -190,7 +228,12 @@ export async function DELETE(
     // Check if user is team owner
     const team = await prisma.team.findUnique({
       where: { id: teamId },
-      select: { id: true, ownerId: true, name: true },
+      select: {
+        id: true,
+        ownerId: true,
+        name: true,
+        organizationWasDeleted: true,
+      },
     });
 
     if (!team) {
@@ -199,6 +242,12 @@ export async function DELETE(
 
     if (team.ownerId !== session.user.id) {
       return forbidden("Only team owner can delete team");
+    }
+
+    if (team.organizationWasDeleted) {
+      return forbidden(
+        "This team is read-only because its organization was deleted. Re-link it to an organization before deleting.",
+      );
     }
 
     // Delete team (cascade delete will handle members and worklogs)

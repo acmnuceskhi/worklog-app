@@ -76,19 +76,20 @@ model Organization {
 }
 
 model Team {
-  id             String        @id @default(cuid())
-  name           String
-  description    String?
-  project        String?
-  credits        Int           @default(0)  // Credits system for team
-  organizationId String?       @map("organization_id")
-  organization   Organization? @relation(fields: [organizationId], references: [id])
-  ownerId        String        @map("owner_id")
-  owner          User          @relation("TeamOwner", fields: [ownerId], references: [id])
-  members        TeamMember[]
-  worklogs       Worklog[]
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  id                     String        @id @default(cuid())
+  name                   String
+  description            String?
+  project                String?
+  credits                Int           @default(0)  // Credits system for team
+  organizationId         String?       @map("organization_id")
+  organization           Organization? @relation(fields: [organizationId], references: [id])
+  organizationWasDeleted Boolean       @default(false) @map("organization_was_deleted")
+  ownerId                String        @map("owner_id")
+  owner                  User          @relation("TeamOwner", fields: [ownerId], references: [id])
+  members                TeamMember[]
+  worklogs               Worklog[]
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
 
   @@map("teams")
   @@index([organizationId])

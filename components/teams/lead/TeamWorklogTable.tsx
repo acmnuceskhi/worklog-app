@@ -42,6 +42,8 @@ export interface TeamWorklogTableProps {
   currentUserId?: string;
   onStatusChange?: (id: string, newStatus: ProgressStatus) => void;
   isStatusPending?: boolean;
+  /** When true, all mutation actions (delete, status change) are hidden */
+  isReadOnly?: boolean;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -100,17 +102,20 @@ function WorklogDetailPanel({
   currentUserId,
   onStatusChange,
   isStatusPending,
+  isReadOnly,
 }: {
   worklog: WorklogRow;
   currentUserId?: string;
   onStatusChange?: (id: string, newStatus: ProgressStatus) => void;
   isStatusPending?: boolean;
+  isReadOnly?: boolean;
 }) {
   const isOwnWorklog = !!currentUserId && worklog.userId === currentUserId;
   const showMarkHalfDone = isOwnWorklog && worklog.status === "STARTED";
   const showMarkCompleted = isOwnWorklog && worklog.status === "HALF_DONE";
   const showMarkReviewed = !!onStatusChange && worklog.status === "COMPLETED";
-  const hasActions = showMarkHalfDone || showMarkCompleted || showMarkReviewed;
+  const hasActions =
+    !isReadOnly && (showMarkHalfDone || showMarkCompleted || showMarkReviewed);
 
   return (
     <div className="border-t dark:border-white/5 border-gray-100 dark:bg-white/[0.02] bg-gray-50/50 px-6 py-4 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
@@ -216,6 +221,7 @@ export function TeamWorklogTable({
   currentUserId,
   onStatusChange,
   isStatusPending,
+  isReadOnly,
 }: TeamWorklogTableProps) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
@@ -330,7 +336,7 @@ export function TeamWorklogTable({
                   />
                 </div>
               )}
-              {onDelete && (
+              {!isReadOnly && onDelete && (
                 <div className="flex justify-end mt-1.5">
                   <Button
                     variant="ghost"
@@ -353,7 +359,7 @@ export function TeamWorklogTable({
             <div
               className={cn(
                 "hidden md:grid items-center gap-4 px-4 py-3 text-sm cursor-pointer dark:hover:bg-white/[0.03] hover:bg-gray-50 transition-colors",
-                onDelete
+                !isReadOnly && onDelete
                   ? "grid-cols-[28px_1fr_110px_100px_110px_130px_36px]"
                   : "grid-cols-[28px_1fr_110px_100px_110px_130px]",
               )}
@@ -429,7 +435,7 @@ export function TeamWorklogTable({
               </div>
 
               {/* Delete */}
-              {onDelete && (
+              {!isReadOnly && onDelete && (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -453,6 +459,7 @@ export function TeamWorklogTable({
                 currentUserId={currentUserId}
                 onStatusChange={onStatusChange}
                 isStatusPending={isStatusPending}
+                isReadOnly={isReadOnly}
               />
             )}
           </div>

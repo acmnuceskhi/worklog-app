@@ -15,7 +15,7 @@ import { LoadingState } from "@/components/states/loading-state";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { PageHeader } from "@/components/ui/page-header";
 import { toast } from "sonner";
-import { Plus, ClipboardList, BarChart3 } from "lucide-react";
+import { Plus, ClipboardList, BarChart3, AlertTriangle } from "lucide-react";
 import { useSharedSession } from "@/components/providers";
 import {
   AlertDialog,
@@ -103,6 +103,7 @@ interface TeamData {
   name: string;
   description?: string;
   ownerId: string;
+  organizationWasDeleted?: boolean;
   owner: {
     id: string;
     name: string | null;
@@ -425,6 +426,7 @@ function TeamDetailsContent({
   }
 
   const typedTeam = team as TeamData;
+  const isOrgDeleted = !!typedTeam.organizationWasDeleted;
 
   /* ── Render ──────────────────────────────────────────────────────────── */
 
@@ -454,6 +456,23 @@ function TeamDetailsContent({
         }
       />
 
+      {/* Read-only banner for org-deleted teams */}
+      {isOrgDeleted && (
+        <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
+          <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
+          <div>
+            <p className="font-medium text-amber-600 dark:text-amber-400">
+              Read-only team
+            </p>
+            <p className="text-sm dark:text-amber-400/70 text-amber-700/80 mt-0.5">
+              This team&apos;s organization was deleted. New worklogs,
+              invitations, and credits updates are disabled. Open Team Settings
+              to re-link this team to an organization and restore full access.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Stats */}
       <TeamStatsCards
         totalProgress={stats.avg}
@@ -478,6 +497,7 @@ function TeamDetailsContent({
               onClick={() => setShowAssign(true)}
               className="bg-amber-400 hover:bg-amber-500 text-black font-semibold"
               size="sm"
+              disabled={isOrgDeleted}
             >
               <Plus className="mr-1.5 h-4 w-4" />
               Assign Task
@@ -496,6 +516,7 @@ function TeamDetailsContent({
             currentUserId={session?.user?.id}
             onStatusChange={handleStatusChange}
             isStatusPending={updateStatusMutation.isPending}
+            isReadOnly={isOrgDeleted}
           />
           <Pagination
             currentPage={worklogPage}
