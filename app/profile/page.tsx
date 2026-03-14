@@ -16,8 +16,6 @@ import {
   Users,
   UserCog,
   Menu,
-  ChevronLeft,
-  ChevronRight,
   Moon,
   Sun,
 } from "lucide-react";
@@ -41,9 +39,19 @@ export default function ProfilePage() {
   const { data: sidebarStatsData, isLoading: sidebarLoading } =
     useSidebarStats();
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    if (typeof window !== "undefined") {
+      return !window.matchMedia("(max-width: 960px)").matches;
+    }
+    return false;
+  });
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.matchMedia("(max-width: 960px)").matches;
+    }
+    return false;
+  });
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -51,18 +59,21 @@ export default function ProfilePage() {
     }
   }, [status, router]);
 
-  // Hydrate client-only state after mount to prevent hydration mismatch
+  // Detect mobile breakpoint changes
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 960px)");
     const update = () => {
       const mobile = mediaQuery.matches;
       setIsMobile(mobile);
       setIsSidebarOpen(!mobile);
-      if (mobile) setIsSidebarCollapsed(false);
     };
-    update();
     mediaQuery.addEventListener("change", update);
     return () => mediaQuery.removeEventListener("change", update);
+  }, []);
+
+  const handleSignOut = useCallback(async () => {
+    setIsSigningOut(true);
+    await signOut({ callbackUrl: "/" });
   }, []);
 
   const sidebarItems = [
@@ -97,15 +108,11 @@ export default function ProfilePage() {
     },
   ];
 
-  const sidebarWidth = isMobile ? 260 : isSidebarCollapsed ? 72 : 220;
-  const showSidebarLabels = !isSidebarCollapsed || isMobile;
+  const sidebarWidth = isMobile ? 260 : 220;
   const pageClassName =
-    "min-h-screen w-screen p-3 flex flex-col text-[var(--color-text)]";
-  const sidebarClassName = `p-4 rounded-xl flex flex-col gap-3 overflow-hidden relative z-100 bg-[var(--nav-bg)] dark:text-white text-gray-900 ${
-    isMobile
-      ? "fixed top-[88px] left-[12px] bottom-[12px] h-auto shadow-[0_24px_80px_rgba(2,6,23,0.4)]"
-      : ""
-  }`;
+    "min-h-screen w-full p-3 flex flex-col text-[var(--color-text)]";
+  const sidebarClassName =
+    "p-4 rounded-xl flex flex-col gap-3 overflow-hidden z-100 bg-[var(--nav-bg)] dark:text-white text-gray-900 max-[960px]:fixed max-[960px]:top-[64px] max-[960px]:left-[12px] max-[960px]:bottom-[12px] max-[960px]:h-auto max-[960px]:shadow-[0_24px_80px_rgba(2,6,23,0.4)] min-[961px]:relative";
   const handleNavigate = useCallback(
     (href: string) => {
       router.push(href);
@@ -137,9 +144,7 @@ export default function ProfilePage() {
           <Button
             variant="ghost"
             size="sm"
-            className={`border border-white/20 items-center gap-1.5 ${
-              isMobile ? "inline-flex" : "hidden"
-            }`}
+            className="border dark:border-white/20 border-gray-300 items-center gap-1.5 inline-flex min-[961px]:hidden"
             onClick={() => setIsSidebarOpen((prev) => !prev)}
             aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
             aria-expanded={isSidebarOpen}
@@ -172,11 +177,13 @@ export default function ProfilePage() {
           <Button
             variant="danger"
             size="sm"
-            onClick={() => signOut({ callbackUrl: "/" })}
+            onClick={handleSignOut}
+            disabled={isSigningOut}
+            isLoading={isSigningOut}
             aria-label="Sign out of account"
           >
-            <LogOut className="mr-2" />
-            Sign Out
+            <LogOut className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Sign Out</span>
           </Button>
         </div>
       </PageHeader>
@@ -206,23 +213,10 @@ export default function ProfilePage() {
           }}
           transition={{ type: "spring", stiffness: 260, damping: 26 }}
         >
-          <div className="flex items-center justify-between font-semibold text-sm">
+          <div className="flex items-center font-semibold text-sm">
             <span className="uppercase tracking-wider text-xs dark:text-white/70 text-gray-600">
-              {showSidebarLabels ? "Navigation" : "Nav"}
+              Navigation
             </span>
-            {!isMobile && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="dark:bg-white/8 bg-gray-100 dark:hover:bg-white/12 hover:bg-gray-200"
-                onClick={() => setIsSidebarCollapsed((prev) => !prev)}
-                aria-label={
-                  isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
-                }
-              >
-                {isSidebarCollapsed ? <ChevronRight /> : <ChevronLeft />}
-              </Button>
-            )}
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -237,7 +231,7 @@ export default function ProfilePage() {
                   key={item.id}
                   className={`p-2.5 rounded-xl flex gap-2 cursor-pointer mb-2 items-center transition-colors ${
                     isActive
-                      ? "bg-gradient-to-r from-blue-500 to-cyan-500"
+                      ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
                       : "dark:hover:bg-white/5 hover:bg-gray-100"
                   }`}
                   onClick={() => handleNavigate(item.href)}
@@ -255,17 +249,15 @@ export default function ProfilePage() {
                   <span className="inline-flex items-center justify-center w-5">
                     {item.icon}
                   </span>
-                  {showSidebarLabels && (
-                    <span className="whitespace-nowrap">{item.label}</span>
+                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  {item.count !== null && (
+                    <span
+                      className="ml-auto rounded-lg bg-[var(--color-primary)] px-1.5 py-0.5 text-xs font-semibold text-[var(--color-text-inverse)]"
+                      aria-live="polite"
+                    >
+                      {item.count}
+                    </span>
                   )}
-                  <span
-                    className={`rounded-lg bg-[var(--color-primary)] px-1.5 py-0.5 text-xs font-semibold text-[var(--color-text-inverse)] ${
-                      showSidebarLabels ? "ml-auto" : "ml-0"
-                    }`}
-                    aria-live="polite"
-                  >
-                    {item.count !== null && item.count}
-                  </span>
                   {"reviewCount" in item &&
                     item.reviewCount !== undefined &&
                     item.reviewCount > 0 && (
@@ -285,17 +277,17 @@ export default function ProfilePage() {
                 <span className="inline-flex items-center justify-center w-5">
                   <Users />
                 </span>
-                {showSidebarLabels ? "Loading..." : "..."}
+                Loading...
               </div>
             )}
           </div>
         </m.aside>
 
-        <main className="flex-1 overflow-auto p-5">
+        <main className="flex-1 min-w-0 overflow-auto p-2 sm:p-5">
           {/* Profile Card */}
-          <div className="max-w-2xl mx-auto rounded-2xl border dark:border-white/10 border-gray-200 dark:bg-white/5 bg-white p-10 backdrop-blur-md shadow-sm">
+          <div className="max-w-2xl mx-auto rounded-2xl border dark:border-white/10 border-gray-200 dark:bg-white/5 bg-white p-4 sm:p-6 md:p-10 backdrop-blur-md shadow-sm">
             {/* Profile Header */}
-            <div className="text-center mb-10 pb-8 border-b dark:border-white/10 border-gray-200">
+            <div className="text-center mb-6 sm:mb-10 pb-4 sm:pb-8 border-b dark:border-white/10 border-gray-200">
               <div className="mb-5">
                 {user?.image ? (
                   <Image
@@ -303,17 +295,17 @@ export default function ProfilePage() {
                     alt={user.name || "User"}
                     width={120}
                     height={120}
-                    className="h-[120px] w-[120px] rounded-full border-4 border-blue-300/50 object-cover"
+                    className="h-20 w-20 sm:h-[120px] sm:w-[120px] rounded-full border-4 border-blue-300/50 object-cover"
                   />
                 ) : (
-                  <div className="h-[120px] w-[120px] rounded-full dark:bg-blue-300/30 bg-blue-500/20 border-4 dark:border-blue-300/50 border-blue-400/50 inline-flex items-center justify-center text-5xl font-bold dark:text-white text-blue-700">
+                  <div className="h-20 w-20 sm:h-[120px] sm:w-[120px] rounded-full dark:bg-blue-300/30 bg-blue-500/20 border-4 dark:border-blue-300/50 border-blue-400/50 inline-flex items-center justify-center text-3xl sm:text-5xl font-bold dark:text-white text-blue-700">
                     {user?.name?.charAt(0).toUpperCase() ||
                       user?.email?.charAt(0).toUpperCase() ||
                       "U"}
                   </div>
                 )}
               </div>
-              <h2 className="text-3xl font-bold mt-2.5 mb-1 dark:text-white text-gray-900">
+              <h2 className="text-2xl sm:text-3xl font-bold mt-2.5 mb-1 dark:text-white text-gray-900">
                 {user?.name || "Anonymous User"}
               </h2>
               <p className="dark:text-white/60 text-gray-500">

@@ -9,7 +9,7 @@
 export const PAGE_BG_GRADIENT = "min-h-screen";
 
 /** Standard page padding */
-export const PAGE_PADDING = "p-6";
+export const PAGE_PADDING = "p-3 sm:p-4 md:p-6";
 
 /** Combined full page container style (background + padding) */
 export const PAGE_CONTAINER = `${PAGE_BG_GRADIENT} ${PAGE_PADDING}`;

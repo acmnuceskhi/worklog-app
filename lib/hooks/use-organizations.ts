@@ -402,11 +402,6 @@ export const useDeleteOrganization = () => {
 
   return useMutation({
     mutationFn: async (organizationId: string) => {
-      const confirmed = window.confirm(
-        "Are you sure you want to delete this organization? This action cannot be undone.",
-      );
-      if (!confirmed) throw new Error("User cancelled");
-
       const response = await fetch(`/api/organizations/${organizationId}`, {
         method: "DELETE",
         headers: { "Idempotency-Key": idempotencyToken },
@@ -437,83 +432,6 @@ export const useDeleteOrganization = () => {
       queryClient.refetchQueries({
         queryKey: queryKeys.user.sidebarStats(),
       });
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.organizations.all(),
-      });
-    },
-  });
-};
-
-/**
- * Update organization credits mutation
- */
-export const useUpdateOrganizationCredits = (organizationId: string) => {
-  const queryClient = useQueryClient();
-  const { token: idempotencyToken, reset: resetIdempotencyToken } =
-    useIdempotencyToken();
-
-  return useMutation({
-    mutationFn: async (data: {
-      action: "add" | "subtract" | "set";
-      amount: number;
-    }) => {
-      const response = await fetch(
-        `/api/organizations/${organizationId}/credits`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            "Idempotency-Key": idempotencyToken,
-          },
-          body: JSON.stringify(data),
-        },
-      );
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.error || "Failed to update organization credits",
-        );
-      }
-      const payload = await response.json();
-      return payload.data || payload;
-    },
-    onMutate: async (data) => {
-      await queryClient.cancelQueries({
-        queryKey: queryKeys.organizations.all(),
-      });
-
-      const previousOrg = queryClient.getQueryData<Organization>(
-        queryKeys.organizations.detail(organizationId),
-      );
-
-      // Optimistically apply the credit change so the UI reflects it instantly
-      queryClient.setQueryData<Organization>(
-        queryKeys.organizations.detail(organizationId),
-        (old) => {
-          if (!old) return old;
-          let newCredits = old.credits;
-          if (data.action === "add") newCredits += data.amount;
-          else if (data.action === "subtract")
-            newCredits = Math.max(0, newCredits - data.amount);
-          else if (data.action === "set") newCredits = data.amount;
-          return { ...old, credits: newCredits };
-        },
-      );
-
-      return { previousOrg };
-    },
-    onError: (_err, _data, context) => {
-      if (context?.previousOrg) {
-        queryClient.setQueryData(
-          queryKeys.organizations.detail(organizationId),
-          context.previousOrg,
-        );
-      }
-    },
-    onSuccess: () => {
-      resetIdempotencyToken();
     },
     onSettled: () => {
       queryClient.invalidateQueries({

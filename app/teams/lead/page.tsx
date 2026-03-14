@@ -6,7 +6,13 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { TeamCreationWizard } from "@/components/teams/team-creation-wizard";
+const TeamCreationWizard = dynamic(
+  () =>
+    import("@/components/teams/team-creation-wizard").then((m) => ({
+      default: m.TeamCreationWizard,
+    })),
+  { loading: () => null },
+);
 import { Plus, Users, Settings, Search, Building2 } from "lucide-react";
 import { useOwnedTeams, useTeamSearch } from "@/lib/hooks";
 import { queryKeys } from "@/lib/query-keys";
@@ -123,11 +129,11 @@ export default function LeadTeamsPage() {
   );
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap justify-between items-start gap-3">
         <div>
-          <h1 className="text-3xl font-bold dark:text-white text-gray-900 flex items-center gap-3">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold dark:text-white text-gray-900 flex items-center gap-3">
             <Users className="text-blue-400" />
             Teams I Lead
           </h1>
@@ -148,7 +154,12 @@ export default function LeadTeamsPage() {
             </div>
           )}
         </div>
-        <Button onClick={() => setShowWizard(true)} variant="primary" size="lg">
+        <Button
+          onClick={() => setShowWizard(true)}
+          variant="primary"
+          size="lg"
+          className="flex-shrink-0"
+        >
           <Plus />
           Create Team
         </Button>

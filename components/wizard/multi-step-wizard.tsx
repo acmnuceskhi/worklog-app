@@ -115,17 +115,9 @@ export const MultiStepWizard: React.FC<MultiStepWizardProps> = ({
 
   const handleCancel = () => {
     if (persistKey) {
-      // Optionally clear persisted data on cancel
-      const shouldClear = window.confirm(
-        "Are you sure you want to cancel? Your progress will be lost.",
-      );
-      if (shouldClear) {
-        localStorage.removeItem(persistKey);
-        onCancel?.();
-      }
-    } else {
-      onCancel?.();
+      localStorage.removeItem(persistKey);
     }
+    onCancel?.();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

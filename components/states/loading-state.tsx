@@ -38,11 +38,28 @@ export interface LoadingStateProps {
 
 /* ── Spinner sub-component ────────────────────────────────────── */
 const Spinner: React.FC = () => (
-  <div
-    className="h-8 w-8 animate-spin rounded-full border-4 dark:border-white/20 border-gray-300 border-t-cyan-400"
-    role="status"
-    aria-label="Loading"
-  />
+  <div className="relative h-10 w-10" role="status" aria-label="Loading">
+    <div
+      className="absolute inset-0 animate-spin rounded-full"
+      style={{
+        background:
+          "conic-gradient(from 0deg, transparent 0%, transparent 25%, #22d3ee 50%, #3b82f6 100%)",
+        WebkitMask:
+          "radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px))",
+        mask: "radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px))",
+      }}
+    />
+    <div
+      className="absolute inset-0 animate-spin rounded-full blur-[1px] opacity-50"
+      style={{
+        background:
+          "conic-gradient(from 0deg, transparent 0%, transparent 25%, #22d3ee 50%, #3b82f6 100%)",
+        WebkitMask:
+          "radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px))",
+        mask: "radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px))",
+      }}
+    />
+  </div>
 );
 
 /* ── Pulse sub-component ─────────────────────────────────────── */
@@ -65,10 +82,12 @@ const SkeletonLines: React.FC<{ count: number }> = ({ count }) => (
       <div
         key={i}
         className={cn(
-          "h-4 animate-pulse rounded dark:bg-white/10 bg-gray-100",
-          i === count - 1 && "w-2/3", // last line shorter for realism
+          "h-4 rounded dark:bg-white/10 bg-gray-100 overflow-hidden relative",
+          i === count - 1 && "w-2/3",
         )}
-      />
+      >
+        <div className="absolute inset-0 shimmer" />
+      </div>
     ))}
   </div>
 );

@@ -232,11 +232,6 @@ export const useDeleteRating = () => {
 
   return useMutation({
     mutationFn: async (ratingId: string) => {
-      const confirmed = window.confirm(
-        "Are you sure you want to delete this rating?",
-      );
-      if (!confirmed) throw new Error("User cancelled");
-
       const response = await fetch(`/api/ratings/${ratingId}`, {
         method: "DELETE",
         headers: { "Idempotency-Key": idempotencyToken },

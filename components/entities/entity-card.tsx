@@ -86,21 +86,25 @@ export const EntityCard: React.FC<EntityCardProps> = ({
       : {})}
   >
     <CardHeader className="pb-3">
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
-          {avatar}
-          <div>
-            <CardTitle className="text-lg dark:text-white text-gray-900">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3 min-w-0 flex-1">
+          {avatar && <div className="flex-shrink-0">{avatar}</div>}
+          <div className="min-w-0 flex-1">
+            <CardTitle className="text-base font-semibold dark:text-white text-gray-900 leading-snug line-clamp-2">
               {title}
             </CardTitle>
             {subtitle && (
-              <CardDescription className="dark:text-white/70 text-gray-600">
+              <CardDescription className="dark:text-white/70 text-gray-600 mt-0.5 line-clamp-2">
                 {subtitle}
               </CardDescription>
             )}
           </div>
         </div>
-        {actions && <div className="flex items-center gap-2">{actions}</div>}
+        {actions && (
+          <div className="flex items-center gap-1.5 flex-shrink-0 ml-1">
+            {actions}
+          </div>
+        )}
       </div>
     </CardHeader>
 

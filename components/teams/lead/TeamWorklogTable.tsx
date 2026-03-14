@@ -263,7 +263,7 @@ export function TeamWorklogTable({
   }
 
   return (
-    <div className="space-y-0 rounded-lg border dark:border-white/10 border-gray-200 overflow-hidden">
+    <div className="space-y-0 rounded-lg border dark:border-white/10 border-gray-200 overflow-x-auto">
       {worklogs.map((worklog, index) => {
         const isExpanded = expandedIds.has(worklog.id);
         const isFirst = index === 0;
@@ -276,10 +276,83 @@ export function TeamWorklogTable({
               isExpanded && "dark:bg-white/[0.01] bg-gray-50/30",
             )}
           >
-            {/* Row */}
+            {/* Mobile card layout */}
+            <div
+              className="block md:hidden px-3 py-3 cursor-pointer dark:hover:bg-white/[0.03] hover:bg-gray-50 transition-colors"
+              onClick={() => toggleExpand(worklog.id)}
+              role="button"
+              tabIndex={0}
+              aria-expanded={isExpanded}
+              aria-label={`${worklog.title} by ${worklog.memberName}`}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  toggleExpand(worklog.id);
+                }
+              }}
+            >
+              <div className="flex items-start justify-between gap-2 mb-1.5">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 dark:text-white/40 text-gray-400 transition-transform duration-200 shrink-0",
+                        isExpanded &&
+                          "rotate-180 dark:text-white/60 text-gray-500",
+                      )}
+                    />
+                    <span className="font-medium dark:text-white/90 text-gray-800 text-sm truncate">
+                      {worklog.title}
+                    </span>
+                    {worklog.githubLink && (
+                      <GitBranch className="h-3.5 w-3.5 text-blue-400/60 shrink-0" />
+                    )}
+                  </div>
+                </div>
+                <StatusBadge
+                  status={worklog.status}
+                  label={worklog.statusLabel}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-2 pl-6">
+                <span className="dark:text-white/60 text-gray-500 text-xs truncate">
+                  {worklog.memberName}
+                </span>
+                <div className="w-24 shrink-0">
+                  <ProgressBar value={worklog.progress} />
+                </div>
+              </div>
+              {worklog.deadline && (
+                <div className="pl-6 mt-1.5">
+                  <DeadlineStatusBadge
+                    deadline={worklog.deadline}
+                    status={worklog.statusLabel}
+                  />
+                </div>
+              )}
+              {onDelete && (
+                <div className="flex justify-end mt-1.5">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 dark:text-white/40 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(worklog.id, worklog.title);
+                    }}
+                    disabled={isDeleting}
+                    aria-label={`Delete ${worklog.title}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Desktop grid row */}
             <div
               className={cn(
-                "grid items-center gap-4 px-4 py-3 text-sm cursor-pointer dark:hover:bg-white/[0.03] hover:bg-gray-50 transition-colors",
+                "hidden md:grid items-center gap-4 px-4 py-3 text-sm cursor-pointer dark:hover:bg-white/[0.03] hover:bg-gray-50 transition-colors",
                 onDelete
                   ? "grid-cols-[28px_1fr_110px_100px_110px_130px_36px]"
                   : "grid-cols-[28px_1fr_110px_100px_110px_130px]",

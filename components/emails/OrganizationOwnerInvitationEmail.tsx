@@ -74,7 +74,7 @@ export const OrganizationOwnerInvitationEmail: React.FC<
           • Invite team members and team owners
           <br />
           • Review and rate worklogs across all teams
-          <br />• Manage organization settings and credits
+          <br />• Manage organization settings
         </EmailText>
       </EmailSection>
 

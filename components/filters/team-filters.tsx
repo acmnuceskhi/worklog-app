@@ -55,7 +55,7 @@ export function TeamFilters({
 
   return (
     <div className="flex flex-wrap gap-3">
-      <div className="min-w-[220px] flex-1">
+      <div className="min-w-0 flex-1 w-full sm:w-auto">
         <Label
           htmlFor="team-search"
           className="dark:text-slate-300 text-slate-600"
@@ -70,7 +70,7 @@ export function TeamFilters({
           className="dark:bg-slate-800/60 bg-white dark:border-slate-700 border-gray-200 dark:text-white text-gray-900"
         />
       </div>
-      <div className="min-w-[160px]">
+      <div className="w-[calc(50%-6px)] sm:min-w-[160px] sm:w-auto">
         <Label
           htmlFor="team-sort"
           className="dark:text-slate-300 text-slate-600"
@@ -96,7 +96,7 @@ export function TeamFilters({
           </SelectContent>
         </Select>
       </div>
-      <div className="min-w-[140px]">
+      <div className="w-[calc(50%-6px)] sm:min-w-[140px] sm:w-auto">
         <Label
           htmlFor="team-direction"
           className="dark:text-slate-300 text-slate-600"

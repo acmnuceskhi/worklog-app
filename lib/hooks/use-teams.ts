@@ -520,11 +520,6 @@ export const useRemoveTeamMember = (teamId: string) => {
       memberId: string;
       memberName: string;
     }) => {
-      const confirmed = window.confirm(
-        `Are you sure you want to remove ${memberName} from this team?`,
-      );
-      if (!confirmed) throw new Error("User cancelled");
-
       const response = await fetch(`/api/teams/${teamId}/members/${memberId}`, {
         method: "DELETE",
         headers: {
@@ -575,11 +570,6 @@ export const useDeleteTeam = () => {
 
   return useMutation({
     mutationFn: async (teamId: string) => {
-      const confirmed = window.confirm(
-        "Are you sure you want to delete this team? This action cannot be undone.",
-      );
-      if (!confirmed) throw new Error("User cancelled");
-
       const response = await fetch(`/api/teams/${teamId}`, {
         method: "DELETE",
         headers: { "Idempotency-Key": idempotencyToken },
@@ -618,71 +608,6 @@ export const useDeleteTeam = () => {
       queryClient.refetchQueries({
         queryKey: queryKeys.user.sidebarStats(),
       });
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.teams.all() });
-    },
-  });
-};
-
-/**
- * Update team credits mutation
- */
-export const useUpdateTeamCredits = (teamId: string) => {
-  const queryClient = useQueryClient();
-  const { token: idempotencyToken, reset: resetIdempotencyToken } =
-    useIdempotencyToken();
-
-  return useMutation({
-    mutationFn: async (data: {
-      action: "add" | "subtract" | "set";
-      amount: number;
-    }) => {
-      const response = await fetch(`/api/teams/${teamId}/credits`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Idempotency-Key": idempotencyToken,
-        },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to update team credits");
-      }
-      const payload = await response.json();
-      return payload.data || payload;
-    },
-    onMutate: async (data) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.teams.all() });
-
-      const previousTeam = queryClient.getQueryData<Team>(
-        queryKeys.teams.detail(teamId),
-      );
-
-      // Optimistically apply the credit change so the UI reflects it instantly
-      queryClient.setQueryData<Team>(queryKeys.teams.detail(teamId), (old) => {
-        if (!old) return old;
-        let newCredits = old.credits;
-        if (data.action === "add") newCredits += data.amount;
-        else if (data.action === "subtract")
-          newCredits = Math.max(0, newCredits - data.amount);
-        else if (data.action === "set") newCredits = data.amount;
-        return { ...old, credits: newCredits };
-      });
-
-      return { previousTeam };
-    },
-    onError: (_err, _data, context) => {
-      if (context?.previousTeam) {
-        queryClient.setQueryData(
-          queryKeys.teams.detail(teamId),
-          context.previousTeam,
-        );
-      }
-    },
-    onSuccess: () => {
-      resetIdempotencyToken();
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.teams.all() });

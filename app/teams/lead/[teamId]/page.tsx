@@ -11,11 +11,22 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/states/error-state";
+import { LoadingState } from "@/components/states/loading-state";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { PageHeader } from "@/components/ui/page-header";
 import { toast } from "sonner";
 import { Plus, ClipboardList, BarChart3 } from "lucide-react";
 import { useSharedSession } from "@/components/providers";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import {
   useTeam,
@@ -84,23 +95,6 @@ const STATUS_LABELS: Record<ProgressStatus, string> = {
   REVIEWED: "Reviewed",
   GRADED: "Graded",
 };
-
-// ── Loading skeleton ─────────────────────────────────────────────────────────
-
-function TeamLoadingSkeleton() {
-  return (
-    <div className="animate-pulse space-y-6 p-6 max-w-6xl mx-auto">
-      <Skeleton className="h-[72px] w-full rounded-xl" />
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-20 rounded-xl" />
-        ))}
-      </div>
-      <Skeleton className="h-64 rounded-xl" />
-      <Skeleton className="h-48 rounded-xl" />
-    </div>
-  );
-}
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -181,6 +175,10 @@ function TeamDetailsContent({
   /* ── UI state ────────────────────────────────────────────────────────── */
   const [showAssign, setShowAssign] = useState(false);
   const notifiedRef = useRef<Set<string>>(new Set());
+  const [memberToRemove, setMemberToRemove] = useState<{
+    memberId: string;
+    memberName: string;
+  } | null>(null);
 
   /* ── Derived: worklog rows ───────────────────────────────────────────── */
   const worklogRows = useMemo<WorklogRow[]>(
@@ -367,6 +365,13 @@ function TeamDetailsContent({
   };
 
   const handleRemoveMember = (memberId: string, memberName: string) => {
+    setMemberToRemove({ memberId, memberName });
+  };
+
+  const confirmRemoveMember = () => {
+    if (!memberToRemove) return;
+    const { memberId, memberName } = memberToRemove;
+    setMemberToRemove(null);
     toast.promise(removeMemberMutation.mutateAsync({ memberId, memberName }), {
       loading: `Removing ${memberName}…`,
       success: `${memberName} removed successfully`,
@@ -392,7 +397,8 @@ function TeamDetailsContent({
 
   /* ── Early returns ───────────────────────────────────────────────────── */
 
-  if (isLoading || worklogsLoading) return <TeamLoadingSkeleton />;
+  if (isLoading || worklogsLoading)
+    return <LoadingState fullPage text="Loading team..." />;
 
   if (error) {
     return (
@@ -565,6 +571,32 @@ function TeamDetailsContent({
         onSubmit={handleAssignTask}
         isSubmitting={createWorklogMutation.isPending}
       />
+
+      {/* Remove Member Confirmation */}
+      <AlertDialog
+        open={!!memberToRemove}
+        onOpenChange={(open) => !open && setMemberToRemove(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Team Member</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove{" "}
+              <strong>{memberToRemove?.memberName}</strong> from this team? They
+              will lose access to all team worklogs.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={confirmRemoveMember}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

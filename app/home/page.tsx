@@ -11,7 +11,6 @@ import {
   UserCog,
   Search,
   Menu,
-  ChevronLeft,
   ChevronRight,
   LogOut,
   LayoutGrid,
@@ -42,9 +41,17 @@ import {
   useTeamSearch,
   useWorklogSearch,
 } from "@/lib/hooks";
+import dynamic from "next/dynamic";
 import { LoadingState } from "@/components/states/loading-state";
 import { EmptyState } from "@/components/states/empty-state";
-import { TeamCreationWizard } from "@/components/teams/team-creation-wizard";
+
+const TeamCreationWizard = dynamic(
+  () =>
+    import("@/components/teams/team-creation-wizard").then((m) => ({
+      default: m.TeamCreationWizard,
+    })),
+  { loading: () => null },
+);
 import { InvitationsPanel } from "@/components/invitations-panel";
 import { PageHeader } from "@/components/ui/page-header";
 import { Pagination } from "@/components/ui/pagination";
@@ -92,11 +99,23 @@ export default function DashboardPage() {
   // State declarations
   const [contentTheme, setContentTheme] = useContentTheme();
   const mounted = useMounted();
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  // Initialize sidebar state based on current viewport (will hydrate correctly after mount)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    // On client, check media query; on server, default to false
+    if (typeof window !== "undefined") {
+      return !window.matchMedia("(max-width: 960px)").matches;
+    }
+    return false;
+  });
   const [showTeamWizard, setShowTeamWizard] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.matchMedia("(max-width: 960px)").matches;
+    }
+    return false;
+  });
   const deadlineNotifiedRef = useRef<Set<string>>(new Set());
 
   // Worklog view mode: grid or table
@@ -104,16 +123,14 @@ export default function DashboardPage() {
     "grid",
   );
 
-  // Detect mobile breakpoint changes and initialise sidebar
+  // Detect mobile breakpoint changes
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 960px)");
     const update = () => {
       const mobile = mediaQuery.matches;
       setIsMobile(mobile);
       setIsSidebarOpen(!mobile);
-      if (mobile) setIsSidebarCollapsed(false);
     };
-    update();
     mediaQuery.addEventListener("change", update);
     return () => mediaQuery.removeEventListener("change", update);
   }, []);
@@ -194,6 +211,11 @@ export default function DashboardPage() {
     setWorklogPage(1);
   };
 
+  const handleSignOut = useCallback(async () => {
+    setIsSigningOut(true);
+    await signOut({ callbackUrl: "/" });
+  }, []);
+
   const sidebarItems = [
     {
       id: "dashboard",
@@ -226,19 +248,15 @@ export default function DashboardPage() {
     },
   ];
 
-  const sidebarWidth = isMobile ? 260 : isSidebarCollapsed ? 72 : 220;
-  const showSidebarLabels = !isSidebarCollapsed || isMobile;
+  const sidebarWidth = isMobile ? 260 : 220;
   const pageClassName =
-    "min-h-screen w-screen p-3 flex flex-col text-[var(--color-text)]";
+    "min-h-screen w-full p-3 flex flex-col text-[var(--color-text)]";
   const cardBaseClassName =
     "rounded-xl border backdrop-blur-md shadow-md transition-all";
   const cardClassName = `${cardBaseClassName} bg-[var(--card-themed)] border-[var(--card-themed-border)] p-5`;
   const teamCardClassName = `${cardBaseClassName} bg-[var(--card-themed)] border-[var(--card-themed-border)] p-3`;
-  const sidebarClassName = `p-4 rounded-xl flex flex-col gap-3 overflow-hidden relative z-100 bg-[var(--nav-bg)] dark:text-white text-gray-900 ${
-    isMobile
-      ? "fixed top-[88px] left-[12px] bottom-[12px] h-auto shadow-[0_24px_80px_rgba(2,6,23,0.4)]"
-      : ""
-  }`;
+  const sidebarClassName =
+    "p-4 rounded-xl flex flex-col gap-3 overflow-hidden z-100 bg-[var(--nav-bg)] dark:text-white text-gray-900 max-[960px]:fixed max-[960px]:top-[64px] max-[960px]:left-[12px] max-[960px]:bottom-[12px] max-[960px]:h-auto max-[960px]:shadow-[0_24px_80px_rgba(2,6,23,0.4)] min-[961px]:relative";
   const handleNavigate = useCallback(
     (href: string) => {
       // Prefetch data for the destination page
@@ -259,8 +277,8 @@ export default function DashboardPage() {
   // Prevent hydration mismatch by waiting for client mount
   if (!mounted) {
     return (
-      <div className="min-h-screen w-screen p-3 flex flex-col">
-        <LoadingState text="Loading..." className="min-h-[200px]" />
+      <div className="min-h-screen w-full flex items-center justify-center">
+        <LoadingState text="Loading..." />
       </div>
     );
   }
@@ -272,9 +290,7 @@ export default function DashboardPage() {
           <Button
             variant="ghost"
             size="sm"
-            className={`border border-white/20 items-center gap-1.5 ${
-              isMobile ? "inline-flex" : "hidden"
-            }`}
+            className="border dark:border-white/20 border-gray-300 items-center gap-1.5 inline-flex min-[961px]:hidden"
             onClick={() => setIsSidebarOpen((prev) => !prev)}
             aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
             aria-expanded={isSidebarOpen}
@@ -286,8 +302,8 @@ export default function DashboardPage() {
           >
             Worklog
           </h1>
-          <div className="flex items-center gap-2 dark:bg-white/10 bg-gray-100 border dark:border-white/10 border-gray-300 px-2.5 py-1.5 rounded-lg w-70">
-            <Search />
+          <div className="hidden sm:flex items-center gap-2 dark:bg-white/10 bg-gray-100 border dark:border-white/10 border-gray-300 px-2.5 py-1.5 rounded-lg sm:w-56 md:w-70">
+            <Search className="h-4 w-4 flex-shrink-0" />
             <input
               className="bg-transparent border-none outline-none dark:text-white text-gray-900 dark:placeholder-white/70 placeholder-gray-400 w-full"
               placeholder="Search teams & worklogs..."
@@ -342,16 +358,32 @@ export default function DashboardPage() {
           <Button
             variant="danger"
             size="sm"
-            onClick={() => signOut({ callbackUrl: "/" })}
+            onClick={handleSignOut}
+            disabled={isSigningOut}
+            isLoading={isSigningOut}
             aria-label="Sign out of account"
           >
-            <LogOut className="mr-2" />
-            Sign Out
+            <LogOut className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Sign Out</span>
           </Button>
         </div>
       </PageHeader>
 
-      <div className="flex gap-4 flex-1 mt-3 w-full">
+      {/* Mobile-only search bar (full-width, below header) */}
+      <div className="flex sm:hidden items-center gap-2 dark:bg-white/10 bg-gray-100 border dark:border-white/10 border-gray-300 px-3 py-2 rounded-lg">
+        <Search className="h-4 w-4 flex-shrink-0 dark:text-white/60 text-gray-400" />
+        <input
+          className="bg-transparent border-none outline-none dark:text-white text-gray-900 dark:placeholder-white/70 placeholder-gray-400 w-full text-sm"
+          placeholder="Search teams & worklogs..."
+          value={searchQuery}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            handleSearchChange(e.target.value)
+          }
+          aria-label="Search teams and worklogs"
+        />
+      </div>
+
+      <div className="flex gap-4 flex-1 mt-3 w-full overflow-x-hidden">
         <AnimatePresence>
           {isMobile && isSidebarOpen && (
             <m.div
@@ -369,6 +401,7 @@ export default function DashboardPage() {
           className={sidebarClassName}
           aria-label="Main navigation"
           aria-expanded={isSidebarOpen}
+          data-lenis-prevent
           initial={false}
           animate={{
             width: sidebarWidth,
@@ -376,23 +409,10 @@ export default function DashboardPage() {
           }}
           transition={{ type: "spring", stiffness: 260, damping: 26 }}
         >
-          <div className="flex items-center justify-between font-semibold text-sm">
+          <div className="flex items-center font-semibold text-sm">
             <span className="uppercase tracking-wider text-xs dark:text-white/70 text-gray-600">
-              {showSidebarLabels ? "Navigation" : "Nav"}
+              Navigation
             </span>
-            {!isMobile && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="dark:text-white text-gray-900 p-1.5"
-                onClick={() => setIsSidebarCollapsed((prev) => !prev)}
-                aria-label={
-                  isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
-                }
-              >
-                {isSidebarCollapsed ? <ChevronRight /> : <ChevronLeft />}
-              </Button>
-            )}
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -425,15 +445,15 @@ export default function DashboardPage() {
                   <span className="inline-flex items-center justify-center w-5">
                     {item.icon}
                   </span>
-                  {showSidebarLabels && (
-                    <span className="whitespace-nowrap">{item.label}</span>
+                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  {item.count !== null && (
+                    <span
+                      className="ml-auto rounded-lg bg-[var(--color-primary)] px-1.5 py-0.5 text-xs font-semibold text-[var(--color-text-inverse)]"
+                      aria-live="polite"
+                    >
+                      {item.count}
+                    </span>
                   )}
-                  <span
-                    className="ml-auto rounded-lg bg-[var(--color-primary)] px-1.5 py-0.5 text-xs font-semibold text-[var(--color-text-inverse)]"
-                    aria-live="polite"
-                  >
-                    {item.count !== null && item.count}
-                  </span>
                   {"reviewCount" in item &&
                     item.reviewCount !== undefined &&
                     item.reviewCount > 0 && (
@@ -450,7 +470,7 @@ export default function DashboardPage() {
 
             {isLoading && (
               <div className="p-2.5 rounded-xl flex gap-2 opacity-60">
-                <Users /> {showSidebarLabels ? "Loading..." : "..."}
+                <Users /> Loading...
               </div>
             )}
 
@@ -458,13 +478,13 @@ export default function DashboardPage() {
               sidebarStatsData?.memberTeamsCount === 0 &&
               sidebarStatsData?.organizationsCount === 0 && (
                 <div className="p-2.5 rounded-xl flex gap-2 opacity-60">
-                  <Users /> {showSidebarLabels ? "No teams yet" : "0"}
+                  <Users /> No teams yet
                 </div>
               )}
           </div>
         </m.aside>
 
-        <main className="flex-1 flex flex-col gap-4 overflow-hidden">
+        <main className="flex-1 min-w-0 flex flex-col gap-4 overflow-x-hidden">
           {/* ── Hero Section ─────────────────────────────────── */}
           <section
             className={`${cardClassName} flex flex-col gap-4 md:flex-row md:items-center md:justify-between`}
@@ -720,7 +740,7 @@ export default function DashboardPage() {
                 {/* View toggle */}
                 <div className="flex rounded-lg border dark:border-white/10 border-gray-200 overflow-hidden">
                   <button
-                    className={`p-1.5 text-xs transition-colors ${
+                    className={`p-2 sm:p-1.5 text-xs transition-colors ${
                       worklogViewMode === "grid"
                         ? "dark:bg-white/10 bg-gray-100 dark:text-white text-gray-900"
                         : "dark:text-white/40 text-gray-400 dark:hover:text-white/60 hover:text-gray-600"
@@ -729,10 +749,10 @@ export default function DashboardPage() {
                     aria-label="Grid view"
                     aria-pressed={worklogViewMode === "grid"}
                   >
-                    <LayoutGrid className="h-3 w-3" />
+                    <LayoutGrid className="h-4 w-4 sm:h-3 sm:w-3" />
                   </button>
                   <button
-                    className={`p-1.5 text-xs transition-colors ${
+                    className={`p-2 sm:p-1.5 text-xs transition-colors ${
                       worklogViewMode === "table"
                         ? "dark:bg-white/10 bg-gray-100 dark:text-white text-gray-900"
                         : "dark:text-white/40 text-gray-400 dark:hover:text-white/60 hover:text-gray-600"
@@ -741,7 +761,7 @@ export default function DashboardPage() {
                     aria-label="Table view"
                     aria-pressed={worklogViewMode === "table"}
                   >
-                    <LayoutList className="h-3 w-3" />
+                    <LayoutList className="h-4 w-4 sm:h-3 sm:w-3" />
                   </button>
                 </div>
               </div>

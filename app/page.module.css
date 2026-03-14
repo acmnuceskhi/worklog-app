@@ -382,6 +382,8 @@
 
 .redirectContainer {
   display: flex;
+  flex-direction: column;
+  gap: 24px;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
@@ -399,9 +401,52 @@
     linear-gradient(135deg, #0a173b 0%, #1a1a2e 50%, #16213e 100%);
 }
 
+.redirectBrand {
+  font-size: 2.4rem;
+  font-weight: bold;
+  color: #00fff0;
+  text-shadow: 0 0 20px rgba(0, 255, 240, 0.5);
+}
+
+.redirectBrand span.caret {
+  color: #ff6ecf;
+  animation: blink 1s infinite;
+}
+
+.redirectSpinner {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0%,
+    transparent 30%,
+    #22d3ee 70%,
+    #3b82f6 100%
+  );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 4px),
+    #000 calc(100% - 3.5px)
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 4px),
+    #000 calc(100% - 3.5px)
+  );
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .redirectText {
-  color: white;
-  font-size: 1.2rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
 }
 
 @media (max-width: 1024px) {

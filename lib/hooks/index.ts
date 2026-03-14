@@ -25,7 +25,6 @@ export {
   useCreateOrganization,
   useUpdateOrganization,
   useDeleteOrganization,
-  useUpdateOrganizationCredits,
   type Organization,
   type OrgListData,
 } from "./use-organizations";
@@ -42,7 +41,6 @@ export {
   useUpdateTeam,
   useRemoveTeamMember,
   useDeleteTeam,
-  useUpdateTeamCredits,
   type Team,
   type TeamMember,
 } from "./use-teams";

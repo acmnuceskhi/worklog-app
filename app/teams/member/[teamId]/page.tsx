@@ -38,6 +38,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { DatePicker } from "@/components/ui/date-picker";
 import dynamic from "next/dynamic";
 
@@ -218,6 +228,10 @@ function ContributionFlashcardPageContent({
   const [editingWorklog, setEditingWorklog] = useState<WorklogPreview | null>(
     null,
   );
+  const [worklogToDelete, setWorklogToDelete] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const skipAutosaveRef = useRef(true);
@@ -686,27 +700,20 @@ function ContributionFlashcardPageContent({
     });
   };
 
-  const handleDeleteWorklog = async (
-    worklogId: string,
-    worklogTitle: string,
-  ) => {
-    if (
-      !confirm(
-        `Are you sure you want to delete "${worklogTitle}"? This action cannot be undone.`,
-      )
-    ) {
-      return;
-    }
+  const handleDeleteWorklog = (worklogId: string, worklogTitle: string) => {
+    setWorklogToDelete({ id: worklogId, title: worklogTitle });
+  };
 
-    toast.promise(
-      deleteWorklogMutation.mutateAsync({ worklogId, title: worklogTitle }),
-      {
-        loading: `Deleting "${worklogTitle}"...`,
-        success: () => `"${worklogTitle}" deleted successfully`,
-        error: (err: unknown) =>
-          err instanceof Error ? err.message : "Failed to delete worklog",
-      },
-    );
+  const confirmDeleteWorklog = () => {
+    if (!worklogToDelete) return;
+    const { id, title } = worklogToDelete;
+    setWorklogToDelete(null);
+    toast.promise(deleteWorklogMutation.mutateAsync({ worklogId: id, title }), {
+      loading: `Deleting "${title}"...`,
+      success: () => `"${title}" deleted successfully`,
+      error: (err: unknown) =>
+        err instanceof Error ? err.message : "Failed to delete worklog",
+    });
   };
 
   return (
@@ -1225,6 +1232,32 @@ function ContributionFlashcardPageContent({
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Worklog Confirmation */}
+      <AlertDialog
+        open={!!worklogToDelete}
+        onOpenChange={(open) => !open && setWorklogToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Worklog</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete{" "}
+              <strong>&ldquo;{worklogToDelete?.title}&rdquo;</strong>? This
+              action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={confirmDeleteWorklog}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

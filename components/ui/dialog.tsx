@@ -35,12 +35,28 @@ const DialogContent = React.forwardRef<
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}
+      data-lenis-prevent
       className={cn(
-        "fixed left-[50%] top-[50%] z-[110] grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border border-slate-200 bg-white p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg dark:border-slate-800 dark:bg-slate-950",
+        // Base: mobile bottom-sheet; desktop: centered modal
+        "fixed inset-x-0 bottom-0 z-[110] grid w-full gap-4 border bg-white p-4 shadow-lg duration-300 overflow-y-auto",
+        // Mobile: rounded top corners, max height, slide from bottom
+        "rounded-t-2xl max-h-[90vh]",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out",
+        "data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom",
+        "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        // Desktop (sm+): centered modal, all rounded corners, desktop animations
+        "sm:inset-auto sm:left-[50%] sm:top-[50%] sm:max-w-lg sm:translate-x-[-50%] sm:translate-y-[-50%]",
+        "sm:rounded-lg sm:max-h-[85vh] sm:p-6",
+        "sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95",
+        "sm:data-[state=closed]:slide-out-to-left-1/2 sm:data-[state=open]:slide-in-from-left-1/2",
+        "sm:data-[state=closed]:slide-out-to-top-[48%] sm:data-[state=open]:slide-in-from-top-[48%]",
+        "border-slate-200 dark:border-slate-800 dark:bg-slate-950",
         className,
       )}
       {...props}
     >
+      {/* Bottom-sheet drag handle — mobile only */}
+      <div className="sm:hidden mx-auto mb-2 -mt-1 h-1.5 w-12 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
       {children}
       <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-white transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2 disabled:pointer-events-none dark:ring-offset-slate-950 dark:focus:ring-slate-300">
         <X className="h-4 w-4" />

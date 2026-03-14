@@ -399,14 +399,21 @@ export default function OrganizationDashboardPage({
           },
         ]}
         rightAction={
-          <Button variant="ghost" onClick={() => router.push("/home")}>
-            Back to Dashboard
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push("/home")}
+            aria-label="Back to home"
+            className="dark:border-white/20 border-gray-300 border"
+          >
+            <ArrowLeft className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Home</span>
           </Button>
         }
       />
 
       {/* Main Content */}
-      <div className="p-4 md:p-8">
+      <div className="p-2 sm:p-4 md:p-8">
         <div className="max-w-7xl mx-auto space-y-8">
           {/* ── Hero Header ─────────────────────────────────────── */}
           <div className="space-y-5">

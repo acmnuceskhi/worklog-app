@@ -73,7 +73,10 @@ export function Pagination({
     <nav
       role="navigation"
       aria-label="Pagination"
-      className={cn("flex items-center justify-center gap-1.5 py-4", className)}
+      className={cn(
+        "flex items-center justify-center gap-2 sm:gap-1.5 py-4",
+        className,
+      )}
     >
       {/* Previous */}
       <Button
@@ -89,13 +92,13 @@ export function Pagination({
       </Button>
 
       {/* Page numbers */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5 sm:gap-1">
         {pages.map((page, idx) => {
           if (page === "ellipsis") {
             return (
               <span
                 key={`ellipsis-${idx}`}
-                className="flex h-9 w-9 items-center justify-center dark:text-white/40 text-gray-400"
+                className="flex h-11 w-11 sm:h-9 sm:w-9 items-center justify-center dark:text-white/40 text-gray-400"
                 aria-hidden
               >
                 <MoreHorizontal className="h-4 w-4" />
@@ -114,7 +117,7 @@ export function Pagination({
               aria-label={`Go to page ${page}`}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "h-9 w-9 p-0",
+                "h-11 w-11 sm:h-9 sm:w-9 p-0",
                 isActive && "pointer-events-none font-bold",
               )}
             >

@@ -25,6 +25,7 @@ export default function Home() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isMounted, setIsMounted] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -95,10 +96,12 @@ export default function Home() {
       });
       return;
     }
+    setIsLoggingIn(true);
     router.push("/home");
   };
 
   const handleGoogleLogin = () => {
+    setIsLoggingIn(true);
     signIn("google", { callbackUrl: "/home" });
   };
 
@@ -117,11 +120,15 @@ export default function Home() {
     );
   }
 
-  // Handle loading state
-  if (status === "loading") {
+  // Handle loading state - show during login OR authentication
+  if (status === "loading" || isLoggingIn) {
     return (
       <div className={styles.redirectContainer}>
-        <p className={styles.redirectText}>Initializing...</p>
+        <div className={`${shareTechMono.className} ${styles.redirectBrand}`}>
+          WORKLOG<span className="caret">_</span>
+        </div>
+        <div className={styles.redirectSpinner} />
+        <p className={styles.redirectText}>Signing in...</p>
       </div>
     );
   }
@@ -130,7 +137,11 @@ export default function Home() {
   if (status === "authenticated") {
     return (
       <div className={styles.redirectContainer}>
-        <p className={styles.redirectText}>Redirecting to home...</p>
+        <div className={`${shareTechMono.className} ${styles.redirectBrand}`}>
+          WORKLOG<span className="caret">_</span>
+        </div>
+        <div className={styles.redirectSpinner} />
+        <p className={styles.redirectText}>Redirecting...</p>
       </div>
     );
   }
@@ -175,6 +186,8 @@ export default function Home() {
           <Button
             onClick={handleLogin}
             className={styles.loginButton}
+            disabled={isLoggingIn}
+            isLoading={isLoggingIn}
             aria-label="Login to account"
           >
             Login
@@ -190,6 +203,8 @@ export default function Home() {
             <Button
               onClick={handleGoogleLogin}
               className={styles.socialButton}
+              disabled={isLoggingIn}
+              isLoading={isLoggingIn}
               aria-label="Sign in with Google"
             >
               <GoogleIcon size={20} />

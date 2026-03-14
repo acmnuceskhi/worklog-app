@@ -220,53 +220,8 @@ export function RichTextEditor({
 
   const openLinkDialog = useCallback(() => {
     if (!editor) return;
-
-    // Check if Link extension is available
-    const hasLinkExtension = editor.extensionManager.extensions.some(
-      (ext) => ext.name === "link",
-    );
-
-    if (!hasLinkExtension) {
-      // Fallback to simple prompt if Link extension not available
-      const url = window.prompt("Enter URL:", "");
-      if (url && url.trim()) {
-        // Security: Validate URL to prevent XSS
-        const isValidUrl = (inputUrl: string): boolean => {
-          try {
-            const parsed = new URL(inputUrl);
-            return ["http:", "https:"].includes(parsed.protocol);
-          } catch {
-            return false;
-          }
-        };
-
-        if (!isValidUrl(url.trim())) {
-          toast.error("Invalid URL Format", {
-            description:
-              "Please enter a valid HTTP or HTTPS URL (http:// or https://)",
-            duration: 2500,
-          });
-          return;
-        }
-
-        // Simple link insertion without proper link extension
-        const { from, to } = editor.state.selection;
-        const selectedText = editor.state.doc.textBetween(from, to, " ");
-        const linkText = selectedText || "link";
-        // Sanitize link text
-        const sanitizedText = linkText.replace(/[<>]/g, "").trim();
-        editor
-          .chain()
-          .focus()
-          .insertContent(`<a href="${url.trim()}">${sanitizedText}</a>`)
-          .run();
-      }
-      return;
-    }
-
     const { from, to } = editor.state.selection;
     const selectedText = editor.state.doc.textBetween(from, to, " ");
-
     setLinkText(selectedText || "");
     setLinkUrl(editor.getAttributes("link").href || "");
     setIsLinkDialogOpen(true);
@@ -316,12 +271,11 @@ export function RichTextEditor({
         .insertContent(`<a href="${trimmedUrl}">${sanitizedText}</a>`)
         .run();
     } else {
-      // Apply link to selected text
+      // No custom text — insert the URL itself as the link text
       editor
         .chain()
         .focus()
-        .extendMarkRange("link")
-        .setLink({ href: trimmedUrl })
+        .insertContent(`<a href="${trimmedUrl}">${trimmedUrl}</a>`)
         .run();
     }
 
