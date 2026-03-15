@@ -47,11 +47,6 @@ export async function GET(
               email: true,
             },
           },
-          ratings: {
-            select: {
-              value: true,
-            },
-          },
         },
         orderBy: {
           createdAt: "desc",

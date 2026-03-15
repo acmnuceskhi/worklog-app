@@ -133,6 +133,23 @@ model Team {
   @@index([ownerId])
 }
 
+model IdempotencyKey {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String   @map("user_id")
+  opType    String   @map("op_type") // e.g., "CREATE_TEAM", "CREATE_WORKLOG"
+  status    Int      // HTTP status code (201, etc.)
+  response  String   @db.Text // Cached JSON response
+  expiresAt DateTime @map("expires_at") // 24 hours from creation
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token, userId])
+  @@index([expiresAt])
+  @@index([userId])
+  @@map("idempotency_keys")
+}
+
 model TeamMember {
   id        String   @id @default(cuid())
   teamId    String   @map("team_id")
@@ -248,22 +265,116 @@ enum ProgressStatus {
   REVIEWED
   GRADED
 }
-  REVIEWED
-}
 ```
 
 ## Authentication Setup (Auth.js)
 
 Based on [official Prisma Auth.js guide](https://www.prisma.io/docs/guides/authjs-nextjs). Implemented with Prisma adapter, Google OAuth (with `hd=nu.edu.pk` domain enforcement), and GitHub provider. Google OAuth restricts to dual domains: `@nu.edu.pk` and `@isb.nu.edu.pk` via OpenID Connect hd parameter AND runtime validation in `signIn` callback (defense in depth). Email domain validation for invitations enforced at API level in `lib/validations.ts`.
 
-## Key Project Structure
+## Pagination Implementation
+
+**Status**: ✅ **100% IMPLEMENTED** across all paginated endpoints following best practices.
+
+### Pagination Pattern
+
+All paginated endpoints return responses in this format:
+
+```typescript
+interface PaginatedResponse<T> {
+  data: T[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNextPage: boolean;
+  };
+}
+```
+
+### Paginated Endpoints (8/8)
+
+- `GET /api/teams/owned?page=1&limit=25` — Teams owned by user
+- `GET /api/teams/member?page=1&limit=25` — Teams where user is member
+- `GET /api/organizations?page=1&limit=25` — Organizations owned by user
+- `GET /api/teams/[teamId]/members?page=1&limit=50` — Team members list
+- `GET /api/teams/[teamId]/worklogs?page=1&limit=25` — Team worklogs
+- `GET /api/organizations/[id]/worklogs?page=1&limit=25` — Organization worklogs
+- `GET /api/worklogs/[worklogId]/ratings?page=1&limit=25` — Worklog ratings
+- `GET /api/dashboard?worklogPage=1&worklogLimit=25` — Dashboard with paginated worklogs
+
+### React Query Hooks (6/6)
+
+All hooks accept `page` and `limit` parameters:
+
+```typescript
+// Example: useTeamWorklogs(teamId, page, limit)
+const { data: paginatedWorklogs } = useTeamWorklogs(teamId, 1, 25);
+const worklogs = paginatedWorklogs?.items ?? [];
+const totalPages = paginatedWorklogs?.meta.totalPages ?? 1;
+```
+
+### UI Component
+
+```typescript
+<Pagination
+  currentPage={page}
+  totalPages={totalPages}
+  onPageChange={setPage}
+  isLoading={isLoading}
+/>
+```
+
+## Idempotency for Duplicate Prevention
+
+**Status**: ✅ **100% IMPLEMENTED** using atomic transactions.
+
+### Pattern
+
+All data-mutating hooks generate and inject idempotency tokens:
+
+```typescript
+const { mutateAsync: createTeam } = useCreateTeam();
+// Hook internally:
+// 1. Generates UUID on component mount via useRef
+// 2. Injects Idempotency-Key header on every request
+// 3. Resets token after success
+```
+
+### Server Implementation
+
+Atomic transaction wrapper in `app/api/_idempotency.ts`:
+
+```typescript
+const result = await withIdempotency<Team>(
+  token,
+  userId,
+  "CREATE_TEAM",
+  201,
+  (tx) => tx.team.create({ data: teamData }),
+);
+
+if (result.cached) return result.response; // Duplicate — return previous response
+return apiResponse(result.data, 201); // New — return created data
+```
+
+### Covered Routes
+
+- `POST /api/teams` — Team creation
+- `POST /api/organizations` — Organization creation
+- `POST /api/worklogs` — Worklog creation
+
+### Cleanup
+
+Vercel cron job (`app/api/cron/cleanup-idempotency-keys/route.ts`) runs daily at 03:00 UTC to delete expired keys (24-hour lifetime).
+
+## Critical Patterns
 
 - `app/generated/prisma/`: Custom Prisma client output location
 - `lib/prisma.ts`: Singleton Prisma client with PostgreSQL adapter
 - `lib/auth.ts`: Auth.js configuration with GitHub and Google OAuth providers
 - `middleware.ts`: Authentication middleware with Node.js runtime
 - `components/auth-components.tsx`: Reusable authentication components
-- `components/email-template.tsx`: Email template component for testing
 - `components/team-invitation-email.tsx`: React Email template for team invitations
 - `components/emails/OrganizationInvitationEmail.tsx`: React Email template for organization invitations
 - `app/api/dashboard/route.ts`: Optimized dashboard data endpoint (combines sidebar stats, worklogs, and team data in single request)
@@ -285,10 +396,18 @@ Based on [official Prisma Auth.js guide](https://www.prisma.io/docs/guides/authj
 - `app/api/ratings/[ratingId]/route.ts`: Individual rating management (GET/PATCH/DELETE)
 - `app/api/invitations/[token]/accept/route.tsx`: Invitation acceptance endpoint
 - `app/api/invitations/[token]/reject/route.tsx`: Invitation rejection endpoint
-- `app/api/send/route.tsx`: Test email sending endpoint (development only)
+- `app/api/cron/cleanup-idempotency-keys/route.ts`: Vercel cron job (daily at 03:00 UTC) to clean expired idempotency keys
 - `lib/auth-utils.ts`: Comprehensive RBAC helper functions (isOrganizationOwner, isTeamOwner, etc.)
 - `lib/validations.ts`: Zod validation schemas for all API requests
 - `lib/mock-data.ts`: Complete mock data for development (users, teams, organizations, worklogs, ratings)
+- `lib/api-pagination.ts`: Pagination helpers — `parsePaginationParams()`, `createPaginatedResponse()` for all paginated endpoints
+- `lib/query-optimizations.ts`: Query optimization helpers — cursor pagination (`buildCursorPage()`), batch statistics, minimal selects
+- `lib/types/pagination.ts`: Pagination types — `PaginatedResponse<T>`, `PaginationMeta`, helpers
+- `lib/api-utils/idempotency-middleware.ts`: Idempotency header helpers — `fetchWithIdempotency()`, `idempotencyHeaders()`
+- `lib/hooks/use-idempotency-token.ts`: React hook for per-component idempotency token management
+- `app/api/_idempotency.ts`: Atomic transaction wrapper `withIdempotency<T>()` for duplicate prevention
+- `app/api/cron/cleanup-idempotency-keys/route.ts`: Vercel cron job (daily at 03:00 UTC) to clean expired idempotency keys
+- `components/ui/pagination.tsx`: Pagination control component (with page ellipsis, accessibility)
 - `lib/hooks/`: Complete set of React Query hooks with client-side dev mocks (use-dashboard, use-organizations, use-teams, use-worklogs, use-ratings, use-user, use-content-theme, use-mounted, use-prefetch)
 - `prisma/schema.prisma`: Database schema with Auth.js and hierarchical models
 - `app/debug/`: Development-only debug page for testing team access
@@ -453,46 +572,196 @@ Use Resend Node.js SDK for team and organization invitations. Follow [Resend Nex
 
 ## Current State
 
-- ✅ **Authentication Backend**: Fully implemented with Auth.js v5, GitHub OAuth, Google OAuth, and Prisma integration
-- ✅ **Email Workflow**: Complete team and organization invitation system with Resend SDK, secure tokens, React Email templates, dual domain validation (@nu.edu.pk and @isb.nu.edu.pk), and invitation expiration (7/14 days)
-- ✅ **Database Schema**: Organization, Team, TeamMember, Worklog, Rating, WorklogAttachment models implemented with performance indexes and migrations applied
-- ✅ **API Endpoints**: Complete REST API implementation with 15+ endpoints for organizations, teams, worklogs, ratings, invitations, and file uploads
-- ✅ **File Upload System**: Worklog attachments support for images and documents with validation and storage
-- ✅ **Organization Model**: Added to database with credits field and proper relations
-- ✅ **Progress Tracking**: Worklog progress status updates (STARTED → HALF_DONE → COMPLETED → REVIEWED → GRADED) with strict role-based enforcement
-- ✅ **Rating System**: Organization owner rating interface and CRUD operations (POST/GET ratings, PATCH/DELETE individual ratings)
-- ✅ **Credits System**: Organization and team credits management APIs (GET/PATCH endpoints)
+- ✅ **Authentication Backend**: Fully implemented with Auth.js v5, GitHub OAuth, Google OAuth (dual domain restriction `@nu.edu.pk` and `@isb.nu.edu.pk`), and Prisma integration
+- ✅ **Email Workflow**: Complete team and organization invitation system with Resend SDK, secure tokens, React Email templates, dual domain validation, and invitation expiration (7/14 days)
+- ✅ **Database Schema**: Organization, Team, TeamMember, Worklog, Rating, WorklogAttachment, IdempotencyKey models with performance indexes and migrations applied
+- ✅ **API Endpoints**: 15+ REST endpoints for organizations, teams, worklogs, ratings, invitations, and file uploads
+- ✅ **File Upload System**: Worklog attachments support for images and documents with validation
+- ✅ **Organization Model**: Full CRUD with credits field, team assignment, and proper relations
+- ✅ **Progress Tracking**: 5-state progression (STARTED → HALF_DONE → COMPLETED → REVIEWED → GRADED) with strict role-based enforcement
+- ✅ **Rating System**: Organization owner rating interface and CRUD operations (hidden from lower roles)
+- ✅ **Credits System**: Organization and team credits management APIs (GET/PATCH with add/subtract/set actions)
 - ✅ **Authorization Utilities**: Comprehensive RBAC helper functions in lib/auth-utils.ts
 - ✅ **Validation Layer**: Zod schemas for all API request validation
-- ✅ **Deadline System**: API-level deadline management implemented (CRUD operations for team owners); visual indicators fully implemented in GanttChart component and deadline components
-- **Rating Automation**: Tentative feature for automatic rating reduction on late worklog completions (details not finalized yet)
-- ✅ **Multi-Role UI**: Sidebar navigation structure fully implemented with dynamic behavior for users with multiple roles (Member Teams, Lead Teams, My Organizations)
-- ✅ **Organization Management**: Complete organization CRUD operations, team assignment to organizations, and organization-level worklog/rating management
-- ✅ **Client-Side Dev Mocks**: Comprehensive mock data implementation across all data-fetching hooks (useTeam, useTeamMembers, useMemberTeams, useOwnedTeams, useOrganizations, useWorklogs, useTeamWorklogs, useSidebarStats, useUserPermissions, useWorklogRatings, useOrganizationRatings, useDashboard, useTeamInvitations) with `process.env.NODE_ENV === "development"` guards for 100% frontend mock data visibility without database dependency
+- ✅ **Deadline System**: Full CRUD operations with visual indicators in GanttChart and deadline components
+- ✅ **Multi-Role UI**: Sidebar navigation with dynamic behavior for users with multiple roles
+- ✅ **Organization Management**: Complete org CRUD, team assignment, org-level worklog/rating management
+- ✅ **Client-Side Dev Mocks**: Comprehensive mock data for all data-fetching hooks with NODE_ENV guards
+- ✅ **Pagination Implementation**: 100% implemented across 8 paginated endpoints (teams/owned, teams/member, organizations, team members, team worklogs, org worklogs, worklog ratings, dashboard)
+- ✅ **Idempotency for Duplicate Prevention**: Atomic transaction pattern with per-hook token generation; covers team, org, and worklog creation; 24-hour TTL with Vercel cron cleanup
+- ✅ **Org-Deleted Teams Read-Only State**: Atomic `organizationWasDeleted` flag with API and UI enforcement; supports re-linking migration path
+- ✅ **HTTP Cache Collision Fix**: `Cache-Control: no-store` enforced globally on all API routes; TanStack Query now receives fresh data after mutations
+- ✅ **Security Hardening**: Unauthenticated test endpoint removed, cron auth fail-closed, rating data leaks fixed, DB version disclosure removed, Zod validation on all mutation endpoints, `handleApiError()` standardized, Dependabot configured, SECURITY.md published
 
 **🎉 APPLICATION STATUS: FULLY INTEGRATED AND PRODUCTION READY**
 
 ## Common Pitfalls
 
-- **TanStack Query + HTTP Cache Collision**: NEVER add `Cache-Control: max-age > 0` headers to API routes in `next.config.ts` — it causes `refetchQueries`/`invalidateQueries` to receive stale HTTP-cached responses after mutations (shows correct data briefly then reverts). All `/api/:path*` routes must use `Cache-Control: no-store` (enforced in `next.config.ts` and `apiResponse()` helper in `lib/api-utils.ts`). In mutation `onSettled`, prefer `refetchQueries(specificKey)` over `invalidateQueries(broadPrefix)` for the primary data list.
-- Don't import Prisma client from `@prisma/client` - use the custom generated path `../app/generated/prisma`
-- Ensure `dotenv/config` is imported before Prisma operations in config files
-- Use PostgreSQL connection string format for `DATABASE_URL`
-- Ratings must be hidden from team members and team owners (security requirement)
-- Progress status transitions must follow: STARTED → HALF_DONE → COMPLETED → REVIEWED → GRADED (with proper role permissions)
-- Organization owners can only access teams/worklogs within their own organizations
-- When an organization is deleted, teams remain in the database but the `organizationWasDeleted` boolean field is set to `true` atomically before deletion. After `SetNull` cascades `organizationId` to `null`, this flag is the only way to distinguish org-deleted teams from standalone teams. Read-only enforcement (403 on invites/credits/worklog creation/settings updates) is at both API and UI level. Exception: `PATCH /api/teams/[teamId]` with only `organizationId` is allowed for re-linking (migration path).
-- **OAuth Domain Restriction**: Google OAuth enforces `@nu.edu.pk` via `hd` parameter; fallback validation in `signIn` callback extends to `@isb.nu.edu.pk`. Both domains must be validated together in API invitation endpoints.
-- **Email Domain Validation**: Invitations require valid domain emails. Dual domain restriction enforced in both OAuth layer and Resend email sending layer. See `lib/validations.ts` for domain schemas.
-- Team invitations validate email domain via Resend email service (see `RESEND_EMAIL_IMPLEMENTATION_PLAN.md` for details)
-- Always check team membership status and organizational ownership before allowing access
-- Tailwind CSS 4 requires `@import "tailwindcss"` syntax (not v3 style)
-- Auth.js middleware requires `runtime = 'nodejs'` for Prisma client compatibility
-- Next.js 16 shows middleware deprecation warning but Auth.js v5 still requires middleware.ts (safe to ignore per official Auth.js docs)
+### TanStack Query + HTTP Cache Collision (CRITICAL)
+
+**Problem**: Adding `Cache-Control: max-age > 0` to API routes in `next.config.ts` causes `refetchQueries` to receive stale HTTP-cached responses after mutations — shows correct data briefly then reverts to old data.
+
+**Solution**:
+
+- ✅ ALL `/api/:path*` routes MUST use `Cache-Control: no-store` (enforced in `next.config.ts`)
+- ✅ `apiResponse()` helper in `lib/api-utils.ts` adds `no-store` header on every response (defense-in-depth)
+- ✅ In mutation `onSettled`, use `refetchQueries(specificKey)` for primary data list instead of `invalidateQueries(broadPrefix)` — refetter directly triggers network fetch; invalidate only marks stale and relies on observer re-render cycles
+
+### Org-Deleted Teams Read-Only Enforcement
+
+**Problem**: When an organization is deleted, Prisma's `SetNull` cascade sets `organizationId = null` on all linked teams. After deletion, org-deleted teams are indistinguishable from standalone teams (both have `organizationId = null`).
+
+**Solution**:
+
+- ✅ Added `organizationWasDeleted Boolean @default(false)` to `Team` model in Prisma schema
+- ✅ Org DELETE handler uses atomic `prisma.$transaction(async tx => { ... })` form to:
+  1. Set `organizationWasDeleted = true` on all linked teams
+  2. Delete the org
+  - This guarantees ordering — updateMany completes before Prisma's SetNull cascade runs
+- ✅ API-level read-only enforcement (return 403) on:
+  - `POST /api/teams/[teamId]/invite` (team invitations blocked)
+  - `PATCH /api/teams/[teamId]/credits` (credits updates blocked)
+  - `DELETE /api/teams/[teamId]` (team deletion blocked)
+  - `POST /api/worklogs` (worklog creation blocked if team is org-deleted)
+  - **Exception**: `PATCH /api/teams/[teamId]` with ONLY `organizationId` field is allowed (re-linking migration path) — automatically resets `organizationWasDeleted: false` when re-linking
+- ✅ UI-level read-only enforcement:
+  - Amber "Organization deleted · Read-only" badge on team cards in `/teams/lead`
+  - Amber banner + disabled form fields in TeamSettingsDialog (only org select is enabled)
+  - Amber banner + disabled "Assign Task" button in `/teams/lead/[teamId]`
+  - Hidden delete/status action buttons in TeamWorklogTable when `isReadOnly`
+
+### Team Settings Form Submission Bug (Fixed 2026-03-14)
+
+**Problem**: `onSubmit` always included all form fields (name, description, project) in the payload, even when disabled. For org-deleted teams, the backend guard checked `if (name !== undefined)` and returned 403 — blocking legitimate re-links.
+
+**Solution**:
+
+- ✅ Frontend: When `isOrgDeleted`, `onSubmit` sends ONLY `{ organizationId }` and skips all other fields
+- ✅ Backend: Early-return path for org-deleted teams that applies ONLY the org change (any extra fields silently discarded)
+- ✅ Mutation hook now surfaces actual server error messages in toast instead of generic "Failed to update team"
+
+### Prisma Client Import Pitfall
+
+- ❌ DON'T: `import { PrismaClient } from "@prisma/client"`
+- ✅ DO: Use singleton from `lib/prisma.ts` — custom output path at `app/generated/prisma/`
+
+### Idempotency Implementation
+
+- ✅ Per-hook idempotency via `useIdempotencyToken()` — each hook creates its own UUID on mount, resets after success
+- ✅ Server pattern: `withIdempotency<T>(token, userId, opType, status, action)` atomic transaction wrapper
+- ✅ Atomic design prevents TOCTOU races — check + execute + record in single transaction; P2002 race rolls back entire transaction
+- ✅ Idempotency keys expire after 24 hours (cleanup via Vercel cron job)
+
+### Database Connectivity
+
+- Requires `DATABASE_URL` in `.env` (PostgreSQL connection string)
+- For development: `postgresql://postgres:password@localhost:5432/worklog_app`
+- Ensure dotenv is imported BEFORE Prisma operations in config files
+
+### Tailwind CSS 4
+
+- Uses `@import "tailwindcss"` as entry point (NOT v3 style `@tailwind directives`)
+- `utilities/` directory handles no custom Tailwind output — all CSS is Tailwind
+- CSS variables in `app/globals.css` `:root` and `.dark {}` for theme support
+
+### Auth.js Middleware
+
+- Requires `runtime = 'nodejs'` (NOT `vercel-edge`) — needed for Prisma client
+- Next.js 16 shows deprecation warning but Auth.js v5 still requires middleware.ts per official docs (safe to ignore)
 - Remove `runtime = "vercel-edge"` from Prisma generator for local development
-- The `styles/` directory is empty and unused - can be safely deleted as all styling is handled through Tailwind CSS and component-scoped styles
-- Database schema includes performance indexes for efficient queries (composite indexes on user+status, team+createdAt, etc.)
-- **Mock Data Development**: All data-fetching hooks use `process.env.NODE_ENV === "development"` guards to return mock data instantly without network calls; never modify these guards or the mock data structure without understanding the full client-side mock system
+
+### OAuth Domain Restriction
+
+- Google OAuth enforces `@nu.edu.pk` via OpenID Connect HDomain (`hd`) parameter
+- Fallback validation in `signIn` callback extends to `@isb.nu.edu.pk` (defense-in-depth)
+- BOTH domains must be validated together in API invitation endpoints
+- GitHub OAuth has no domain restriction; email domain validation happens at invitation level
+
+### Email Domain Validation
+
+- Invitations require valid dual-domain emails (`@nu.edu.pk`, `@isb.nu.edu.pk`)
+- Enforced in three layers:
+  1. OAuth (`hd` parameter for Google)
+  2. API validation in `lib/validations.ts` (invitation endpoints)
+  3. Resend email sending layer (email service respects domain restrictions)
+
+### Progress Status Transitions
+
+- ALWAYS validate via `VALID_TRANSITIONS` map in API route
+- ALWAYS check role permissions before allowing transition
+- NEVER allow backdoor state changes (e.g., skipping HALF_DONE)
+- Transitions enforced: STARTED → HALF_DONE → COMPLETED → REVIEWED → GRADED
+
+### Rating Visibility (Security Requirement)
+
+- Ratings MUST be hidden from team members AND team owners
+- ONLY organization owners can see/manage ratings for worklogs in their organizations
+
+### Pagination Best Practices
+
+- ✅ All paginated endpoints return `{ items, meta: { page, limit, total, totalPages, hasNextPage } }`
+- ✅ Hooks accept `page` and `limit` parameters; default to page=1, limit=25
+- ✅ UI components pass `currentPage`, `totalPages`, `onPageChange` to `<Pagination />`
+- ✅ TanStack Query caching handles pagination automatically per (page, limit) combination
+
+### Mock Data Development
+
+- ✅ All data-fetching hooks include `process.env.NODE_ENV === "development"` guards that return mock data instantly without database calls
+- ✅ Never modify mock data guards or structure without understanding the full client-side mock system
+- ✅ Frontend dev can proceed 100% independently of database
+
+### Stale `.next` Cache Error
+
+- On TypeScript errors like `Type error: ';' expected` in `.next/dev/types/routes.d.ts`, run `rm -rf .next` before rebuilding
+- Ensures clean typecheck after schema changes
+
+### Disabled Form Fields in React Hook Form
+
+- Disabled inputs don't get included in form submission by default
+- When form fields are disabled via `disabled={condition}`, their values still reach `handleSubmit()` via `watch()` or control
+- Solution: Strip disabled fields from payload in `onSubmit` before calling mutation (see org-deleted team re-link pattern)
+
+### User Invitations & Duplicate Prevention
+
+- TeamMember and OrganizationInvitation both use `MemberStatus` enum (PENDING/ACCEPTED/REJECTED)
+- Unique constraint on `(teamId, email)` and `(organizationId, email)` prevents duplicate invitations
+- Tokens must be unique and validated before status update
+- Idempotency keys prevent duplicate resource creation on retry
+
+### File Upload & Attachments
+
+- Files stored via WorklogAttachment model
+- Type/size validation enforced (images and documents supported)
+- Kind field distinguishes image vs file for UI rendering
+
+### CSP Headers
+
+- Content-Security-Policy headers in `next.config.ts` restrict external resources
+- Update if adding new external services (check current config before integrating third-party assets)
+
+### Cron Endpoint Security
+
+- All cron endpoints (`app/api/cron/`) require `CRON_SECRET` via `Authorization: Bearer` header
+- Guard MUST use fail-closed pattern: `if (!cronSecret || authHeader !== ...)` — returns 401 if secret is unset
+- ❌ NEVER use `if (cronSecret && ...)` — skips auth when secret is unset (fail-open vulnerability)
+
+### Error Handling Standard
+
+- All API route `catch` blocks MUST use `handleApiError()` from `lib/api-utils.ts`
+- ❌ NEVER use bare `console.error(...)` + `NextResponse.json({ error: "..." })` in catch blocks
+- `handleApiError()` logs full error server-side, returns generic "Internal server error" to client, handles ZodError as 400
+
+### Rating Visibility (Security Requirement)
+
+- Ratings MUST NEVER be returned to team members or team owners via ANY API route
+- `GET /api/teams/[teamId]/worklogs` MUST NOT include `ratings` in Prisma query
+- `GET /api/worklogs` (member's own worklogs) MUST NOT fetch or return rating data
+- ONLY org-owner-gated endpoints (`/api/worklogs/[id]/ratings`, `/api/ratings/[id]`) may return ratings
+
+### Session Token Encryption
+
+- Session tokens encrypted with AUTH_SECRET environment variable
+- Rotate AUTH_SECRET in production after deployment (existing sessions become invalid)
 
 ## Backend Requirements
 

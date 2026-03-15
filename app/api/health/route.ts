@@ -11,23 +11,10 @@ export async function GET() {
   try {
     // Check database connection
     let databaseStatus = "error";
-    let databaseVersion = "";
 
     try {
-      // Use a simple count query instead of version() for better compatibility
       await prisma.user.count();
       databaseStatus = "ok";
-      // Try to get version if possible (may fail on some DB setups)
-      try {
-        const result = await prisma.$queryRaw<
-          Array<{ version: string }>
-        >`SELECT version()`;
-        if (result && result[0]) {
-          databaseVersion = result[0].version;
-        }
-      } catch {
-        // Version query failed, but DB connection is OK
-      }
     } catch (dbError) {
       console.error("Database health check failed:", dbError);
       databaseStatus = "error";
@@ -55,12 +42,7 @@ export async function GET() {
           database: databaseStatus,
           auth: authStatus,
         },
-        environment: process.env.NODE_ENV,
         version: "1.0.0",
-        databaseInfo:
-          process.env.NODE_ENV === "production"
-            ? { status: databaseStatus }
-            : { status: databaseStatus, version: databaseVersion },
       },
       {
         status: isHealthy ? 200 : 503,

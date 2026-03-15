@@ -16,10 +16,10 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
-import { Building2 } from "lucide-react";
+import { Building2, Info } from "lucide-react";
 import { useCreateOrganization } from "@/lib/hooks";
+import { m } from "framer-motion";
 
 type OrganizationFormData = z.infer<typeof organizationCreateSchema>;
 
@@ -67,27 +67,36 @@ export const OrganizationCreationDialog: React.FC<
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg dark:border-white/10 border-gray-200 dark:bg-[var(--card-dark)] bg-white">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500">
-              <Building2 className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <DialogTitle className="dark:text-white text-gray-900">
-                Create Organization
-              </DialogTitle>
-              <DialogDescription className="dark:text-white/60 text-gray-500">
-                Set up a new organization to manage your teams
-              </DialogDescription>
-            </div>
-          </div>
+      <DialogContent className="sm:max-w-lg dark:border-white/10 border-gray-200 dark:bg-[var(--card-dark)] bg-white max-h-screen overflow-y-auto">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="flex items-center gap-2 text-2xl dark:text-white text-gray-900">
+            <Building2 className="h-6 w-6 text-blue-600" />
+            Create Organization
+          </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)}>
+        {/* Guidance Section */}
+        <m.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className="rounded-lg dark:bg-blue-500/10 bg-blue-50 dark:border-blue-500/20 border-blue-200 border p-3 flex gap-3"
+        >
+          <Info className="h-5 w-5 dark:text-blue-400 text-blue-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm dark:text-blue-300 text-blue-700 font-medium">
+              Set up your organization
+            </p>
+            <p className="text-xs dark:text-blue-300/70 text-blue-700/70 mt-1">
+              Create an organization to manage teams and invite team leaders
+            </p>
+          </div>
+        </m.div>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 py-4">
           <fieldset
             disabled={createOrganization.isPending}
-            className="space-y-6 py-4"
+            className="space-y-5"
           >
             <FormField
               label="Organization Name"
@@ -99,7 +108,7 @@ export const OrganizationCreationDialog: React.FC<
               <Input
                 id="org-name"
                 type="text"
-                placeholder="Enter organization name"
+                placeholder="e.g., Tech Innovation Labs"
                 aria-invalid={!!errors.name}
                 className="dark:bg-white/5 bg-gray-50 dark:border-white/10 border-gray-200 dark:text-white text-gray-900 dark:placeholder:text-white/50 placeholder:text-gray-400 dark:focus:border-white/30 focus:border-gray-400 dark:focus:ring-white/10 focus:ring-gray-200"
                 {...register("name")}
@@ -114,7 +123,7 @@ export const OrganizationCreationDialog: React.FC<
             >
               <Textarea
                 id="org-description"
-                placeholder="Describe what this organization is about..."
+                placeholder="Describe your organization's mission and purpose..."
                 rows={4}
                 aria-invalid={!!errors.description}
                 className="dark:bg-white/5 bg-gray-50 dark:border-white/10 border-gray-200 dark:text-white text-gray-900 dark:placeholder:text-white/50 placeholder:text-gray-400 dark:focus:border-white/30 focus:border-gray-400 dark:focus:ring-white/10 focus:ring-gray-200 resize-none"
@@ -123,22 +132,22 @@ export const OrganizationCreationDialog: React.FC<
             </FormField>
           </fieldset>
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-4 border-t dark:border-white/10 border-gray-200">
             <Button
               type="button"
               variant="outline"
-              className="flex-1 dark:border-white/20 border-gray-300 dark:text-white/70 text-gray-600 dark:hover:bg-white/10 hover:bg-gray-200"
               onClick={() => handleOpenChange(false)}
               disabled={createOrganization.isPending}
+              className="flex-1"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               variant="primary"
-              className="flex-1"
               disabled={createOrganization.isPending}
               isLoading={createOrganization.isPending}
+              className="flex-1"
             >
               Create Organization
             </Button>

@@ -647,26 +647,6 @@ Upload files for worklog attachments.
 
 ---
 
-### Email Testing
-
-#### POST /api/send
-
-Send test email (development only).
-
-**Authorization**: None (development only)
-
-**Request Body**:
-
-```json
-{
-  "to": "string",
-  "subject": "string",
-  "html": "string"
-}
-```
-
----
-
 ## Data Models
 
 ### Organization

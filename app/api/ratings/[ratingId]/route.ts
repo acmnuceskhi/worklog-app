@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import {
   getCurrentUser,
@@ -9,6 +9,8 @@ import {
   success,
   badRequest,
 } from "@/lib/auth-utils";
+import { handleApiError } from "@/lib/api-utils";
+import { validateRequest, ratingUpdateSchema } from "@/lib/validations";
 
 /**
  * PATCH /api/ratings/[ratingId]
@@ -25,16 +27,11 @@ export async function PATCH(
     }
 
     const { ratingId } = await params;
-    const body = await request.json();
-    const { value, comment } = body;
-
-    // Validate rating value if provided
-    if (
-      value !== undefined &&
-      (typeof value !== "number" || value < 1 || value > 10)
-    ) {
-      return badRequest("Rating value must be between 1 and 10");
+    const validation = await validateRequest(request, ratingUpdateSchema);
+    if (!validation.success) {
+      return badRequest(validation.error);
     }
+    const { value, comment } = validation.data;
 
     // Get rating with worklog and organization info
     const rating = await prisma.rating.findUnique({
@@ -103,11 +100,7 @@ export async function PATCH(
 
     return success(updated);
   } catch (error) {
-    console.error("Update rating error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleApiError(error);
   }
 }
 
@@ -175,11 +168,7 @@ export async function DELETE(
 
     return success({ message: "Rating deleted successfully" });
   } catch (error) {
-    console.error("Delete rating error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleApiError(error);
   }
 }
 
@@ -243,10 +232,6 @@ export async function GET(
 
     return success(rating);
   } catch (error) {
-    console.error("Get rating error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleApiError(error);
   }
 }

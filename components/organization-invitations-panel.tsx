@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import { useOrganizations } from "@/lib/hooks";
 import { useSession } from "next-auth/react";
 import { ManageOwnersSection } from "@/components/organizations/ManageOwnersSection";
@@ -43,7 +42,6 @@ interface OrganizationInvitationsPanelProps {
 export function OrganizationInvitationsPanel({
   className = "",
 }: OrganizationInvitationsPanelProps) {
-  const router = useRouter();
   const { data: session } = useSession();
   const [inviteEmails, setInviteEmails] = useState<string[]>([""]);
   const [selectedOrgId, setSelectedOrgId] = useState<string>("");
@@ -289,17 +287,9 @@ export function OrganizationInvitationsPanel({
               </div>
             ) : (
               <div className="text-center py-4">
-                <div className="text-xs dark:text-white/60 text-gray-500 mb-2">
+                <div className="text-xs dark:text-white/60 text-gray-500">
                   No organizations found
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => router.push("/teams/organisations")}
-                  className="text-xs"
-                >
-                  Create Organization
-                </Button>
               </div>
             )}
           </CardContent>

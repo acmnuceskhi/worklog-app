@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import { useOwnedTeams } from "@/lib/hooks";
 import { useSession } from "next-auth/react";
 import {
@@ -42,7 +41,6 @@ interface TeamLeaderInvitationsPanelProps {
 export function TeamLeaderInvitationsPanel({
   className = "",
 }: TeamLeaderInvitationsPanelProps) {
-  const router = useRouter();
   const { data: session } = useSession();
   const [inviteEmails, setInviteEmails] = useState<string[]>([""]);
   const [selectedTeamId, setSelectedTeamId] = useState<string>("");
@@ -266,17 +264,9 @@ export function TeamLeaderInvitationsPanel({
               </div>
             ) : (
               <div className="text-center py-4">
-                <div className="text-xs dark:text-white/60 text-gray-500 mb-2">
+                <div className="text-xs dark:text-white/60 text-gray-500">
                   No teams found
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => router.push("/teams/lead")}
-                  className="text-xs"
-                >
-                  Create a Team
-                </Button>
               </div>
             )}
           </CardContent>

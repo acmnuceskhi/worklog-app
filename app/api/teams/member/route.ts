@@ -5,11 +5,7 @@ import {
   parsePaginationParams,
   createPaginatedResponse,
 } from "@/lib/api-pagination";
-import {
-  unauthorized,
-  withCacheHeaders,
-  handleApiError,
-} from "@/lib/api-utils";
+import { unauthorized, handleApiError } from "@/lib/api-utils";
 
 /**
  * GET /api/teams/member
@@ -112,9 +108,9 @@ export async function GET(request: NextRequest) {
       role: "member",
     }));
 
-    return withCacheHeaders(
-      NextResponse.json(createPaginatedResponse(teams, total, page, limit)),
-      60,
+    return NextResponse.json(
+      createPaginatedResponse(teams, total, page, limit),
+      { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
     return handleApiError(error);

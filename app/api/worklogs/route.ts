@@ -8,7 +8,6 @@ import {
   handleApiError,
   getRateLimitIdentifier,
   checkRateLimit,
-  withCacheHeaders,
 } from "@/lib/api-utils";
 import { validateRequest, worklogCreateSchema } from "@/lib/validations";
 import { apiLimiter } from "@/lib/rate-limit";
@@ -56,64 +55,36 @@ export async function GET() {
 
     // Early return if no worklogs
     if (worklogs.length === 0) {
-      return withCacheHeaders(NextResponse.json({ data: [] }), 30);
+      return apiResponse([]);
     }
 
-    // Get unique team IDs and worklog IDs for efficient batch queries
+    // Get unique team IDs for efficient batch query
     const teamIds = [...new Set(worklogs.map((w) => w.teamId))];
-    const worklogIds = worklogs.map((w) => w.id);
 
-    // Batch fetch related data
-    const [teamsData, ratingsData] = await Promise.all([
-      prisma.team.findMany({
-        where: { id: { in: teamIds } },
-        select: {
-          id: true,
-          name: true,
-          owner: {
-            select: {
-              name: true,
-            },
+    // Batch fetch team data (ratings are NOT returned to members per visibility rules)
+    const teamsData = await prisma.team.findMany({
+      where: { id: { in: teamIds } },
+      select: {
+        id: true,
+        name: true,
+        owner: {
+          select: {
+            name: true,
           },
         },
-      }),
-      prisma.rating.findMany({
-        where: {
-          worklogId: { in: worklogIds },
-        },
-        select: {
-          id: true,
-          value: true,
-          comment: true,
-          worklogId: true,
-          rater: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      }),
-    ]);
-
-    // Create lookup maps for O(1) access
-    const teamsMap = new Map(teamsData.map((team) => [team.id, team]));
-    const ratingsByWorklog = new Map<string, typeof ratingsData>();
-
-    ratingsData.forEach((rating) => {
-      if (!ratingsByWorklog.has(rating.worklogId)) {
-        ratingsByWorklog.set(rating.worklogId, []);
-      }
-      ratingsByWorklog.get(rating.worklogId)!.push(rating);
+      },
     });
+
+    // Create lookup map for O(1) access
+    const teamsMap = new Map(teamsData.map((team) => [team.id, team]));
 
     // Combine data efficiently
     const worklogsWithDetails = worklogs.map((worklog) => ({
       ...worklog,
       team: teamsMap.get(worklog.teamId),
-      ratings: ratingsByWorklog.get(worklog.id) || [],
     }));
 
-    return withCacheHeaders(apiResponse(worklogsWithDetails), 30);
+    return apiResponse(worklogsWithDetails);
   } catch (error) {
     return handleApiError(error);
   }
