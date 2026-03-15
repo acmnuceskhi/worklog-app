@@ -591,7 +591,7 @@ Use Resend Node.js SDK for team and organization invitations. Follow [Resend Nex
 - ✅ **Idempotency for Duplicate Prevention**: Atomic transaction pattern with per-hook token generation; covers team, org, and worklog creation; 24-hour TTL with Vercel cron cleanup
 - ✅ **Org-Deleted Teams Read-Only State**: Atomic `organizationWasDeleted` flag with API and UI enforcement; supports re-linking migration path
 - ✅ **HTTP Cache Collision Fix**: `Cache-Control: no-store` enforced globally on all API routes; TanStack Query now receives fresh data after mutations
-- ✅ **Security Hardening**: Unauthenticated test endpoint removed, cron auth fail-closed, rating data leaks fixed, DB version disclosure removed, Zod validation on all mutation endpoints, `handleApiError()` standardized, Dependabot configured, SECURITY.md published
+- ✅ **Security Hardening**: Unauthenticated test endpoint removed, cron auth fail-closed, rating data leaks fixed, DB version disclosure removed, Zod validation on all mutation endpoints, `handleApiError()` standardized, Dependabot configured
 
 **🎉 APPLICATION STATUS: FULLY INTEGRATED AND PRODUCTION READY**
 
