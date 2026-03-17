@@ -647,6 +647,58 @@ Upload files for worklog attachments.
 
 ---
 
+### Health
+
+#### GET /api/health
+
+Check application health status. Does not require authentication.
+
+**Response**:
+
+```json
+{
+  "status": "healthy",
+  "timestamp": "string",
+  "checks": {
+    "database": "ok",
+    "auth": "ok"
+  },
+  "environment": "production"
+}
+```
+
+---
+
+### Webhooks
+
+#### POST /api/webhooks/resend
+
+Receive email delivery events (bounces, complaints) from Resend.
+
+**Authorization**: Resend webhook signature (`RESEND_WEBHOOK_SECRET`)
+
+**Response**: 200 OK on success
+
+---
+
+### Cron Jobs
+
+#### GET /api/cron/cleanup-expired-invitations
+
+Clean up expired invitations. Runs daily at 02:00 UTC via Vercel cron.
+
+**Authorization**: `Authorization: Bearer <CRON_SECRET>` (returns 401 if secret is missing or wrong)
+
+---
+
+#### GET /api/cron/cleanup-idempotency-keys
+
+Delete expired idempotency keys (24-hour TTL). Runs daily at 03:00 UTC via Vercel cron.
+
+**Authorization**: `Authorization: Bearer <CRON_SECRET>` (returns 401 if secret is missing or wrong)
+
+---
+
 ## Data Models
 
 ### Organization
@@ -675,6 +727,7 @@ Upload files for worklog attachments.
   project?: string;
   credits: number;
   organizationId?: string;
+  organizationWasDeleted: boolean; // true = org deleted, team is read-only until re-linked
   ownerId: string;
   createdAt: string;
   updatedAt: string;
@@ -765,22 +818,16 @@ Common HTTP status codes:
 - `404` - Not Found
 - `500` - Internal Server Error
 
+## Cache Control
+
+All API endpoints return `Cache-Control: no-store` to prevent browser caching conflicts with TanStack Query's client-side invalidation logic.
+
 ## Development Mode
 
-In development environment (`NODE_ENV === "development"`), all API endpoints provide mock data without requiring authentication or database connectivity. This enables full frontend development and testing without backend dependencies.
+In development environment (`NODE_ENV === "development"`), all data-fetching hooks return mock data without requiring authentication or database connectivity. This enables full frontend development without backend dependencies.
 
 Mock data includes:
 
 - Default user: "mock-org-owner-1" (Alice Johnson)
 - Sample organizations, teams, members, worklogs, and ratings
 - Realistic data relationships and permissions
-
-## Rate Limiting
-
-API endpoints implement rate limiting to prevent abuse. Contact the development team for specific limits.
-
-## Versioning
-
-Current API version: v1
-
-All endpoints are prefixed with `/api/`. Future versions will use `/api/v2/`, etc.

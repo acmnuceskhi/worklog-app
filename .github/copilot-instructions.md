@@ -5,7 +5,7 @@
 This is a hierarchical worklog tracking system for organizations, teams, and members. Key features:
 
 - **Three-Tier Hierarchy**: Organization Owner → Team Owner → Team Member
-- **OAuth Authentication**: Google university email restricted to dual domains (`@nu.edu.pk` and `@isb.nu.edu.pk`) via `hd` parameter + GitHub login (GitHub has no domain restriction; email domain validation happens at invitation level)
+- **OAuth Authentication**: Google OAuth restricted to dual university domains (`@nu.edu.pk` and `@isb.nu.edu.pk`) via `hd` parameter + `signIn` callback. GitHub OAuth is implemented in `lib/auth.ts` but currently disabled (commented out)
 - **Organization Management**: Users can create organizations, invite team owners via email to join the organization, and manage teams within them
 - **Team Management**: Team owners create teams, invite members, and set worklog deadlines
 - **Credits System**: Organizations and teams have credit management (add/subtract/set credits)
@@ -20,9 +20,9 @@ This is a hierarchical worklog tracking system for organizations, teams, and mem
 ## Architecture Overview
 
 - **Framework**: Next.js 16 with App Router
-- **Database**: Prisma 7 + PostgreSQL (hosted on Prisma Cloud)
+- **Database**: Prisma 7 + PostgreSQL (custom client output at `app/generated/prisma/`)
 - **Styling**: Tailwind CSS 4 with custom theme variables
-- **Auth**: ✅ Auth.js v5 with GitHub OAuth and Google OAuth (Google enforces `@nu.edu.pk` domain restriction via OpenID Connect HDomain parameter)
+- **Auth**: ✅ Auth.js v5 with Google OAuth (primary, enforces `@nu.edu.pk`/`@isb.nu.edu.pk` via `hd` + `signIn` callback) and GitHub OAuth (implemented but disabled in `lib/auth.ts`)
 - **Email**: Resend SDK with dual domain validation for invitations
 - **Runtime**: Node.js-compatible with PrismaPg adapter
 
@@ -269,7 +269,7 @@ enum ProgressStatus {
 
 ## Authentication Setup (Auth.js)
 
-Based on [official Prisma Auth.js guide](https://www.prisma.io/docs/guides/authjs-nextjs). Implemented with Prisma adapter, Google OAuth (with `hd=nu.edu.pk` domain enforcement), and GitHub provider. Google OAuth restricts to dual domains: `@nu.edu.pk` and `@isb.nu.edu.pk` via OpenID Connect hd parameter AND runtime validation in `signIn` callback (defense in depth). Email domain validation for invitations enforced at API level in `lib/validations.ts`.
+Based on [official Prisma Auth.js guide](https://www.prisma.io/docs/guides/authjs-nextjs). Implemented with Prisma adapter, Google OAuth (with `hd=nu.edu.pk` domain enforcement), and GitHub OAuth (implemented but disabled in `lib/auth.ts`). Google OAuth restricts to dual domains: `@nu.edu.pk` and `@isb.nu.edu.pk` via OpenID Connect hd parameter AND runtime validation in `signIn` callback (defense in depth). Email domain validation for invitations enforced at API level in `lib/validations.ts`.
 
 ## Pagination Implementation
 
@@ -372,8 +372,8 @@ Vercel cron job (`app/api/cron/cleanup-idempotency-keys/route.ts`) runs daily at
 
 - `app/generated/prisma/`: Custom Prisma client output location
 - `lib/prisma.ts`: Singleton Prisma client with PostgreSQL adapter
-- `lib/auth.ts`: Auth.js configuration with GitHub and Google OAuth providers
-- `middleware.ts`: Authentication middleware with Node.js runtime
+- `lib/auth.ts`: Auth.js configuration with Google OAuth (primary) and GitHub OAuth (disabled)
+- `proxy.ts`: Auth.js proxy (Next.js 16 renamed middleware.ts → proxy.ts; export is `auth as proxy`)
 - `components/auth-components.tsx`: Reusable authentication components
 - `components/team-invitation-email.tsx`: React Email template for team invitations
 - `components/emails/OrganizationInvitationEmail.tsx`: React Email template for organization invitations
@@ -406,7 +406,6 @@ Vercel cron job (`app/api/cron/cleanup-idempotency-keys/route.ts`) runs daily at
 - `lib/api-utils/idempotency-middleware.ts`: Idempotency header helpers — `fetchWithIdempotency()`, `idempotencyHeaders()`
 - `lib/hooks/use-idempotency-token.ts`: React hook for per-component idempotency token management
 - `app/api/_idempotency.ts`: Atomic transaction wrapper `withIdempotency<T>()` for duplicate prevention
-- `app/api/cron/cleanup-idempotency-keys/route.ts`: Vercel cron job (daily at 03:00 UTC) to clean expired idempotency keys
 - `components/ui/pagination.tsx`: Pagination control component (with page ellipsis, accessibility)
 - `lib/hooks/`: Complete set of React Query hooks with client-side dev mocks (use-dashboard, use-organizations, use-teams, use-worklogs, use-ratings, use-user, use-content-theme, use-mounted, use-prefetch)
 - `prisma/schema.prisma`: Database schema with Auth.js and hierarchical models
@@ -415,7 +414,6 @@ Vercel cron job (`app/api/cron/cleanup-idempotency-keys/route.ts`) runs daily at
 - `app/profile/`: User profile page with account information and settings
 - `app/teams/`: Role-specific team views and worklog management
 - `api-documentation.md`: Complete API reference documentation
-- `OAUTH_BYPASS_IMPLEMENTATION_PLAN.md`: OAuth bypass implementation plan
 - Environment variables loaded via `dotenv/config` in `prisma.config.ts`
 
 ## Component Organization
@@ -664,10 +662,10 @@ Use Resend Node.js SDK for team and organization invitations. Follow [Resend Nex
 - `utilities/` directory handles no custom Tailwind output — all CSS is Tailwind
 - CSS variables in `app/globals.css` `:root` and `.dark {}` for theme support
 
-### Auth.js Middleware
+### Auth.js Proxy
 
-- Requires `runtime = 'nodejs'` (NOT `vercel-edge`) — needed for Prisma client
-- Next.js 16 shows deprecation warning but Auth.js v5 still requires middleware.ts per official docs (safe to ignore)
+- Next.js 16 renamed `middleware.ts` → `proxy.ts`; export must be `auth as proxy` (NOT `auth as middleware`)
+- **No `runtime` export**: proxy always runs on Node.js runtime in Next.js 16+ — `export const runtime` is not allowed in proxy files and will throw an error
 - Remove `runtime = "vercel-edge"` from Prisma generator for local development
 
 ### OAuth Domain Restriction

@@ -9,7 +9,7 @@ A hierarchical worklog tracking system for organizations, teams, and members wit
 - **5-State Progress Tracking**: STARTED → HALF_DONE → COMPLETED → REVIEWED → GRADED
 - **Rating System**: Organization owners rate worklogs 1-10 (hidden from team members/owners)
 - **File Attachments**: Support for images and documents as worklog evidence
-- **OAuth Authentication**: Google + GitHub login with Auth.js v5
+- **OAuth Authentication**: Google OAuth with Auth.js v5, restricted to `@nu.edu.pk` / `@isb.nu.edu.pk` domains
 - **Team Management**: Invite members via email, set deadlines, review worklogs
 - **Role-Based Access Control**: Strict permissions based on organizational hierarchy
 
@@ -18,7 +18,7 @@ A hierarchical worklog tracking system for organizations, teams, and members wit
 - **Framework**: Next.js 16 with App Router
 - **Database**: Prisma 7 + PostgreSQL
 - **Styling**: Tailwind CSS 4
-- **Authentication**: Auth.js v5 (Google/GitHub OAuth)
+- **Authentication**: Auth.js v5 (Google OAuth, restricted to university domains)
 - **Validation**: Zod for API request validation
 - **Email**: Resend SDK with React Email templates
 

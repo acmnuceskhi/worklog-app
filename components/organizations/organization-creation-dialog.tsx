@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -73,6 +74,9 @@ export const OrganizationCreationDialog: React.FC<
             <Building2 className="h-6 w-6 text-blue-600" />
             Create Organization
           </DialogTitle>
+          <DialogDescription>
+            Create a new organization to manage teams and members.
+          </DialogDescription>
         </DialogHeader>
 
         {/* Guidance Section */}

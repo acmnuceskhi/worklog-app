@@ -1,6 +1,5 @@
 import { PrismaClient } from "../app/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { withOptimize } from "@prisma/extension-optimize";
 
 // Warn if DATABASE_URL lacks SSL in production
 if (process.env.NODE_ENV === "production") {
@@ -43,13 +42,6 @@ function createPrismaClient() {
         );
       }
     });
-  }
-
-  // withOptimize is optional — only applied when OPTIMIZE_API_KEY is present
-  if (process.env.OPTIMIZE_API_KEY) {
-    return client.$extends(
-      withOptimize({ apiKey: process.env.OPTIMIZE_API_KEY }),
-    ) as unknown as PrismaClient;
   }
 
   return client;

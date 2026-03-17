@@ -13,6 +13,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -140,6 +141,9 @@ export const TeamCreationWizard: React.FC<TeamCreationWizardProps> = ({
             <Users className="text-blue-600" />
             Create Team
           </DialogTitle>
+          <DialogDescription>
+            Set up a new team with members and organization details.
+          </DialogDescription>
         </DialogHeader>
 
         <MultiStepWizard
