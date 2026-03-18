@@ -27,11 +27,13 @@ type OrganizationFormData = z.infer<typeof organizationCreateSchema>;
 interface OrganizationCreationDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Called right before redirect so the parent can show a loading state */
+  onCreated?: () => void;
 }
 
 export const OrganizationCreationDialog: React.FC<
   OrganizationCreationDialogProps
-> = ({ isOpen, onClose }) => {
+> = ({ isOpen, onClose, onCreated }) => {
   const router = useRouter();
   const createOrganization = useCreateOrganization();
 
@@ -51,6 +53,7 @@ export const OrganizationCreationDialog: React.FC<
       success: (result) => {
         reset();
         onClose();
+        onCreated?.();
         router.push(`/organizations/${result.id}`);
         return "Organization created successfully";
       },

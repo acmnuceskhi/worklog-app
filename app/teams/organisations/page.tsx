@@ -46,6 +46,7 @@ export default function OrganisationsPage() {
   const { data: paginatedOrgs, isLoading, error } = useOrganizations();
   const organizations = paginatedOrgs?.items ?? [];
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const [settingsOrgId, setSettingsOrgId] = useState<string | null>(null);
   const settingsOrg =
     organizations.find((org) => org.id === settingsOrgId) || null;
@@ -89,8 +90,15 @@ export default function OrganisationsPage() {
     });
   }, [queryClient]);
 
-  if (isLoading) {
-    return <LoadingState text="Loading organizations..." fullPage />;
+  if (isLoading || isRedirecting) {
+    return (
+      <LoadingState
+        text={
+          isRedirecting ? "Loading organization..." : "Loading organizations..."
+        }
+        fullPage
+      />
+    );
   }
 
   if (error) {
@@ -248,6 +256,7 @@ export default function OrganisationsPage() {
         <OrganizationCreationDialog
           isOpen={showCreateDialog}
           onClose={() => setShowCreateDialog(false)}
+          onCreated={() => setIsRedirecting(true)}
         />
         {settingsOrg && (
           <OrganizationSettingsDialog

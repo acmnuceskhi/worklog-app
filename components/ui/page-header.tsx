@@ -31,7 +31,7 @@ interface PageHeaderProps {
   /** Page title (structured mode) */
   title?: string;
   /** Page subtitle (structured mode) */
-  description?: string;
+  description?: React.ReactNode;
   /** Element rendered to the left of the title (e.g. sidebar toggle) */
   leftAction?: React.ReactNode;
   /** Element(s) rendered on the right side */

@@ -46,6 +46,16 @@
       "sourceType": "github",
       "computedHash": "844401be868754beba2e7dc2c66abbe08b740eeefdec69c630ff6cbd81cc4c62"
     },
+    "nextauth-authentication": {
+      "source": "mindrally/skills",
+      "sourceType": "github",
+      "computedHash": "71be099a628217df877d48b9423468097e6706df5a382f4ab6cb28b0e7212343"
+    },
+    "oauth-implementation": {
+      "source": "mindrally/skills",
+      "sourceType": "github",
+      "computedHash": "451ce99b5d15c32fc4e7ed79223e59530093156fd8a3e80434a677a2d7601faf"
+    },
     "prisma-cli": {
       "source": "prisma/skills",
       "sourceType": "github",
@@ -115,6 +125,11 @@
       "source": "anthropic/theme-factory",
       "sourceType": "local",
       "computedHash": "f0e3d6c9b2a5f8e1d4a7c0f3e6b9d2c5a8f1e4d7a0c3f6b9e2d5a8c1f4e7b0"
+    },
+    "typescript": {
+      "source": "mindrally/skills",
+      "sourceType": "github",
+      "computedHash": "4d7494a8eb35339459ba2e999bd0774d453d422af905fa1ed0ab333ba4758b90"
     },
     "ui-ux-pro-max": {
       "source": "nextlevelbuilder/ui-ux-pro-max-skill",

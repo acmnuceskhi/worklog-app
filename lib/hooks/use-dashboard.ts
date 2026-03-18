@@ -72,9 +72,10 @@ export interface DashboardData {
 export const useDashboard = (
   worklogPage: number = DEFAULT_PAGE,
   worklogLimit: number = 20,
+  userId?: string,
 ) => {
   return useQuery({
-    queryKey: queryKeys.dashboard.all(worklogPage, worklogLimit),
+    queryKey: queryKeys.dashboard.all(worklogPage, worklogLimit, userId),
     queryFn: async (): Promise<DashboardData> => {
       const response = await fetch(
         `/api/dashboard?worklogPage=${worklogPage}&worklogLimit=${worklogLimit}`,
@@ -101,7 +102,7 @@ export const useDashboard = (
 
       return payload as DashboardData;
     },
-    staleTime: 30 * 1000,
+    staleTime: 15 * 1000,
     gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,

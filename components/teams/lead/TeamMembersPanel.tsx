@@ -33,6 +33,7 @@ export interface MemberRow {
   contribution: string;
   rating: number;
   taskCount: number;
+  canRemove?: boolean;
 }
 
 export interface TeamMembersPanelProps {
@@ -153,7 +154,7 @@ export function TeamMembersPanel({
                   size="icon"
                   className="h-8 w-8 dark:text-white/40 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
                   onClick={() => onRemove(row.original.id, row.original.name)}
-                  disabled={isRemoving}
+                  disabled={isRemoving || row.original.canRemove === false}
                   aria-label={`Remove ${row.original.name}`}
                 >
                   <Trash2 className="h-4 w-4" />

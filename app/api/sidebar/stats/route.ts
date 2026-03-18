@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getCurrentUser, success, unauthorized } from "@/lib/auth-utils";
+import { handleApiError } from "@/lib/api-utils";
 
 /**
  * GET /api/sidebar/stats
@@ -59,10 +59,6 @@ export async function GET() {
       pendingReviewsCount,
     });
   } catch (error) {
-    console.error("Get sidebar stats error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleApiError(error);
   }
 }

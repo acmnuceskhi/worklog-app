@@ -70,12 +70,13 @@ async function canUpdateToStatus(
 ): Promise<{ allowed: boolean; reason?: string }> {
   // Members can update: STARTED → HALF_DONE → COMPLETED
   if (["STARTED", "HALF_DONE", "COMPLETED"].includes(newStatus)) {
-    const [isOwner, isMember] = await Promise.all([
+    const [isOwner, isMember, isTeamOwnr] = await Promise.all([
       isWorklogOwner(userId, worklog.id),
       isTeamMember(userId, worklog.teamId),
+      isTeamOwner(userId, worklog.teamId),
     ]);
 
-    if (isOwner || isMember) {
+    if (isOwner || isMember || isTeamOwnr) {
       return { allowed: true };
     }
     return {

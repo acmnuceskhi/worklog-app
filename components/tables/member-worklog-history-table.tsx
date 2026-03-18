@@ -25,7 +25,7 @@ import {
   ProgressBar,
   STATUS_STYLES,
 } from "@/lib/tables/column-patterns";
-import { formatTableDate } from "@/lib/tables/table-utils";
+import { formatTableDate, formatTableDateTime } from "@/lib/tables/table-utils";
 import { DeadlineStatusBadge } from "@/components/worklog/deadline-status-badge";
 import { DeadlineCountdown } from "@/components/worklog/deadline-countdown";
 import { ClipboardList, Eye, FileText } from "lucide-react";
@@ -175,9 +175,17 @@ export function MemberWorklogHistoryTable({
         <TableColumnHeader column={column} title="Created" />
       ),
       cell: ({ row }) => (
-        <span className="text-white/60 text-sm">
-          {formatTableDate(row.original.createdAt)}
-        </span>
+        <div className="flex flex-col">
+          <span className="text-white/60 text-sm">
+            {formatTableDate(row.original.createdAt)}
+          </span>
+          {row.original.updatedAt &&
+            row.original.updatedAt !== row.original.createdAt && (
+              <span className="text-[10px] dark:text-white/35 text-gray-500">
+                Last updated {formatTableDateTime(row.original.updatedAt)}
+              </span>
+            )}
+        </div>
       ),
     });
 

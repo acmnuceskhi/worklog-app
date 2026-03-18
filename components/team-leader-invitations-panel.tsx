@@ -256,7 +256,7 @@ export function TeamLeaderInvitationsPanel({
                     <div className="flex items-center gap-2 mt-2">
                       <Badge variant="secondary" className="text-xs">
                         <Users className="mr-1" />
-                        {team._count?.members || 0} members
+                        {(team._count?.members || 0) + 1} members
                       </Badge>
                     </div>
                   </button>

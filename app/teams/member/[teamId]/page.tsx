@@ -35,6 +35,7 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -86,9 +87,23 @@ import {
   getDeadlineStatus,
   toLocalDateString,
 } from "@/lib/deadline-utils";
+import { formatTableDateTime } from "@/lib/tables/table-utils";
 
 const AUTO_SAVE_DELAY_MS = 2000;
-const githubPattern = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+(?:\/.*)?$/;
+const githubPattern = /^https:\/\/(www\.)?github\.com\/.+/;
+
+function parseGithubLinks(value: string) {
+  return value
+    .split(/[\n,\s]+/)
+    .map((v) => v.trim())
+    .filter(Boolean);
+}
+
+function hasValidGithubLinks(value?: string) {
+  if (!value) return true;
+  const links = parseGithubLinks(value);
+  return links.length > 0 && links.every((link) => githubPattern.test(link));
+}
 
 interface UploadedFile {
   url: string;
@@ -102,8 +117,16 @@ interface WorklogPreview {
   title: string;
   description: string;
   createdAt: string;
+  updatedAt?: string;
   deadline?: string | null;
   progressStatus?: string | null;
+}
+
+interface EditableWorklog {
+  id: string;
+  title: string;
+  description: string;
+  githubLink: string;
 }
 
 function TeamMemberLoadingSkeleton() {
@@ -179,6 +202,10 @@ function stripHtml(value: string) {
     .trim();
 }
 
+function normalizeRichTextHtml(value: string) {
+  return stripHtml(value).length > 0 ? value : "";
+}
+
 export default function ContributionFlashcardPage({
   params,
 }: {
@@ -204,8 +231,11 @@ function ContributionFlashcardPageContent({
   const { data: paginatedMembers } = useTeamMembers(teamId);
   const teamMembers = paginatedMembers?.items ?? [];
   const [worklogPage, setWorklogPage] = useState(1);
-  const { data: paginatedWorklogs, isLoading: worklogsLoading } =
-    useTeamWorklogs(teamId, worklogPage, 8);
+  const {
+    data: paginatedWorklogs,
+    isLoading: worklogsLoading,
+    refetch: refetchTeamWorklogs,
+  } = useTeamWorklogs(teamId, worklogPage, 8);
   const teamWorklogs = useMemo(
     () => paginatedWorklogs?.items ?? [],
     [paginatedWorklogs?.items],
@@ -216,7 +246,8 @@ function ContributionFlashcardPageContent({
   const deleteWorklogMutation = useDeleteWorklog(teamId);
 
   // Initialize all hooks at the top
-  const [editorValue, setEditorValue] = useState("<p></p>");
+  const [createEditorSeed, setCreateEditorSeed] = useState("<p></p>");
+  const createEditorHtmlRef = useRef("<p></p>");
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -232,8 +263,19 @@ function ContributionFlashcardPageContent({
     id: string;
     title: string;
   } | null>(null);
+  const [editableWorklog, setEditableWorklog] =
+    useState<EditableWorklog | null>(null);
+  const [editEditorSeed, setEditEditorSeed] = useState("<p></p>");
+  const editEditorHtmlRef = useRef("<p></p>");
+  const [editPendingFiles, setEditPendingFiles] = useState<File[]>([]);
+  const [isEditUploading, setIsEditUploading] = useState(false);
+  const [clearCreateOpen, setClearCreateOpen] = useState(false);
+  const [clearEditOpen, setClearEditOpen] = useState(false);
+  const [createFormVersion, setCreateFormVersion] = useState(0);
+  const [editFormVersion, setEditFormVersion] = useState(0);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const editFileInputRef = useRef<HTMLInputElement | null>(null);
   const skipAutosaveRef = useRef(true);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const deadlineNotifiedRef = useRef<Set<string>>(new Set());
@@ -241,8 +283,6 @@ function ContributionFlashcardPageContent({
   const {
     register,
     handleSubmit,
-    setError,
-    clearErrors,
     setValue,
     watch,
     formState: { errors, isSubmitting },
@@ -263,9 +303,11 @@ function ContributionFlashcardPageContent({
   const recentWorklogs = useMemo(() => {
     return (teamWorklogs || []).map((worklog) => ({
       id: worklog.id,
+      userId: worklog.userId,
       title: worklog.title,
       description: stripHtml(worklog.description || ""),
-      createdAt: new Date(worklog.createdAt).toLocaleString(),
+      createdAt: formatTableDateTime(worklog.createdAt),
+      updatedAt: formatTableDateTime(worklog.updatedAt),
       deadline: worklog.deadline ?? null,
       progressStatus: worklog.progressStatus ?? null,
     }));
@@ -380,8 +422,8 @@ function ContributionFlashcardPageContent({
         setValue("title", parsed.title, { shouldValidate: false });
       }
       if (parsed?.description) {
-        setEditorValue(parsed.description);
-        setValue("description", parsed.description, { shouldValidate: false });
+        setCreateEditorSeed(parsed.description);
+        createEditorHtmlRef.current = parsed.description;
       }
       if (parsed?.githubLink !== undefined) {
         setValue("githubLink", parsed.githubLink, { shouldValidate: false });
@@ -417,7 +459,7 @@ function ContributionFlashcardPageContent({
 
         const payload: WorklogDraft = {
           title: values.title || "",
-          description: editorValue,
+          description: createEditorHtmlRef.current,
           githubLink: values.githubLink || "",
           progressStatus: values.progressStatus || "STARTED",
           deadline: values.deadline ? String(values.deadline) : undefined,
@@ -438,28 +480,7 @@ function ContributionFlashcardPageContent({
         clearTimeout(autosaveTimerRef.current);
       }
     };
-  }, [editorValue, teamId, watch]);
-
-  const githubLink = watch("githubLink");
-  useEffect(() => {
-    if (!githubLink) {
-      clearErrors("githubLink");
-      return;
-    }
-
-    const handler = setTimeout(() => {
-      if (!githubPattern.test(githubLink)) {
-        setError("githubLink", {
-          type: "validate",
-          message: "Provide a valid GitHub URL",
-        });
-      } else {
-        clearErrors("githubLink");
-      }
-    }, 400);
-
-    return () => clearTimeout(handler);
-  }, [githubLink, clearErrors, setError]);
+  }, [teamId, watch]);
 
   const previews = useMemo(() => {
     return pendingFiles.map((file) => ({
@@ -537,11 +558,11 @@ function ContributionFlashcardPageContent({
     );
   }
 
-  // In development, always use mock user ID to avoid auth dependency
+  // Prefer authenticated user ID; only fall back to mock ID in dev when no
+  // session exists. This prevents Access Denied for real owners in dev mode.
   const effectiveUserId =
-    process.env.NODE_ENV === "development"
-      ? "mock-org-owner-1"
-      : session?.user?.id;
+    session?.user?.id ||
+    (process.env.NODE_ENV === "development" ? "mock-org-owner-1" : undefined);
 
   // Check if user is a member of this team
   const isMember = teamMembers.some(
@@ -637,7 +658,7 @@ function ContributionFlashcardPageContent({
       const rawDeadline = canSetDeadline ? values.deadline : undefined;
       const payload = {
         title: values.title,
-        description: values.description,
+        description: normalizeRichTextHtml(createEditorHtmlRef.current),
         githubLink: values.githubLink || undefined,
         teamId,
         deadline: rawDeadline,
@@ -650,7 +671,8 @@ function ContributionFlashcardPageContent({
     toast.promise(processSubmission(), {
       loading: "Creating worklog...",
       success: () => {
-        setEditorValue("<p></p>");
+        createEditorHtmlRef.current = "<p></p>";
+        setCreateEditorSeed("<p></p>");
         setPendingFiles([]);
         setUploadedFiles([]);
         reset({
@@ -704,6 +726,151 @@ function ContributionFlashcardPageContent({
     setWorklogToDelete({ id: worklogId, title: worklogTitle });
   };
 
+  const uploadEditFiles = async () => {
+    if (editPendingFiles.length === 0) {
+      return [] as UploadedFile[];
+    }
+
+    setIsEditUploading(true);
+    try {
+      const formData = new FormData();
+      editPendingFiles.forEach((file) => formData.append("files", file));
+      const response = await fetch("/api/uploads", {
+        method: "POST",
+        body: formData,
+      });
+      if (!response.ok) {
+        const payload = await response.json();
+        throw new Error(payload.error || "Upload failed");
+      }
+      const payload = await response.json();
+      return (payload.data || []) as UploadedFile[];
+    } finally {
+      setIsEditUploading(false);
+    }
+  };
+
+  const clearCreateForm = () => {
+    createEditorHtmlRef.current = "<p></p>";
+    setCreateEditorSeed("<p></p>");
+    setCreateFormVersion((v) => v + 1);
+    setPendingFiles([]);
+    setUploadedFiles([]);
+    setSubmitError(null);
+    setSubmitSuccess(null);
+    reset({
+      title: "",
+      description: "",
+      githubLink: "",
+      deadline: undefined,
+      progressStatus: "STARTED",
+      teamId,
+    });
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(`worklog-draft-${teamId}`);
+    }
+    setDraftNotice("Draft cleared.");
+  };
+
+  const clearEditForm = () => {
+    if (!editableWorklog) return;
+    editEditorHtmlRef.current = "<p></p>";
+    setEditEditorSeed("<p></p>");
+    setEditPendingFiles([]);
+    setEditableWorklog((prev) =>
+      prev
+        ? {
+            ...prev,
+            title: "",
+            description: "",
+            githubLink: "",
+          }
+        : prev,
+    );
+    setEditFormVersion((v) => v + 1);
+  };
+
+  const handleOpenEditWorklog = (worklogId: string) => {
+    const original = teamWorklogs.find((worklog) => worklog.id === worklogId);
+    if (!original) {
+      return;
+    }
+
+    if (
+      original.progressStatus === "REVIEWED" ||
+      original.progressStatus === "GRADED"
+    ) {
+      toast.info("Locked Worklog", {
+        description: "Reviewed or graded worklogs cannot be edited.",
+        duration: 2500,
+      });
+      return;
+    }
+
+    setEditableWorklog({
+      id: original.id,
+      title: original.title || "",
+      description: original.description || "",
+      githubLink: original.githubLink || "",
+    });
+    editEditorHtmlRef.current = original.description || "<p></p>";
+    setEditEditorSeed(original.description || "<p></p>");
+    setEditPendingFiles([]);
+  };
+
+  const handleSaveEditedWorklog = async () => {
+    if (!editableWorklog) {
+      return;
+    }
+
+    if (!editableWorklog.title.trim()) {
+      toast.error("Title is required");
+      return;
+    }
+
+    if (!hasValidGithubLinks(editableWorklog.githubLink || undefined)) {
+      toast.error("Provide valid GitHub URL(s), separated by commas/new lines");
+      return;
+    }
+
+    const processUpdate = async () => {
+      const attachments = await uploadEditFiles();
+      const response = await fetch(`/api/worklogs/${editableWorklog.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: editableWorklog.title,
+          description: normalizeRichTextHtml(editEditorHtmlRef.current),
+          githubLink: editableWorklog.githubLink || null,
+          attachments,
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to update worklog");
+      }
+
+      return payload;
+    };
+
+    toast.promise(processUpdate(), {
+      loading: "Updating worklog...",
+      success: async () => {
+        setEditableWorklog(null);
+        editEditorHtmlRef.current = "<p></p>";
+        setEditEditorSeed("<p></p>");
+        setEditPendingFiles([]);
+        await refetchTeamWorklogs();
+        return "Worklog updated successfully";
+      },
+      error: (err: unknown) =>
+        err instanceof Error ? err.message : "Failed to update worklog",
+    });
+  };
+
   const confirmDeleteWorklog = () => {
     if (!worklogToDelete) return;
     const { id, title } = worklogToDelete;
@@ -745,7 +912,8 @@ function ContributionFlashcardPageContent({
               Create Worklog
             </CardTitle>
             <CardDescription className="text-center text-muted mt-2">
-              {team.name} • Led by: {team.leader}
+              {team.name} • Led by:{" "}
+              {team.owner?.name || team.owner?.email || "Unknown"}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4 flex-1">
@@ -756,6 +924,7 @@ function ContributionFlashcardPageContent({
               <input type="hidden" {...register("teamId")} />
               <FormField
                 label="Title"
+                required
                 htmlFor="title"
                 error={errors.title?.message}
               >
@@ -770,15 +939,14 @@ function ContributionFlashcardPageContent({
               <FormField
                 label="Description"
                 htmlFor="worklog-description"
+                helpText="Optional"
                 error={errors.description?.message}
               >
                 <RichTextEditor
-                  value={editorValue}
+                  key={`create-worklog-editor-${createFormVersion}`}
+                  value={createEditorSeed}
                   onChange={(newValue) => {
-                    setEditorValue(newValue);
-                    setValue("description", newValue, {
-                      shouldValidate: true,
-                    });
+                    createEditorHtmlRef.current = newValue;
                   }}
                   placeholder="Describe your work and any outcomes."
                   id="worklog-description"
@@ -786,19 +954,24 @@ function ContributionFlashcardPageContent({
               </FormField>
 
               <FormField
-                label="GitHub Link"
+                label="GitHub Link(s)"
                 htmlFor="githubLink"
+                helpText="Optional"
                 error={errors.githubLink?.message}
               >
                 <Input
                   id="githubLink"
                   {...register("githubLink")}
-                  placeholder="https://github.com/owner/repo/pull/123 (optional)"
+                  placeholder="Comma/new-line separated GitHub PR/commit links"
                   className="dark:bg-white/5 bg-gray-50 dark:border-white/20 border-gray-300 dark:text-white text-gray-900 dark:placeholder:text-white/50 placeholder:text-gray-400"
                 />
               </FormField>
 
-              <FormField label="Current Progress" htmlFor="progress-status">
+              <FormField
+                label="Current Progress"
+                required
+                htmlFor="progress-status"
+              >
                 <Select
                   value={watch("progressStatus") || "STARTED"}
                   onValueChange={(value) =>
@@ -873,7 +1046,11 @@ function ContributionFlashcardPageContent({
                 </FormField>
               )}
 
-              <FormField label="Attach Files" htmlFor="files">
+              <FormField
+                label="Attach Files"
+                helpText="Optional"
+                htmlFor="files"
+              >
                 <div
                   onDrop={handleDrop}
                   onDragOver={handleDragOver}
@@ -963,6 +1140,16 @@ function ContributionFlashcardPageContent({
               )}
 
               <Button
+                type="button"
+                variant="secondary"
+                className="w-full"
+                onClick={() => setClearCreateOpen(true)}
+                disabled={isSubmitting || isUploading}
+              >
+                Clear All
+              </Button>
+
+              <Button
                 type="submit"
                 disabled={
                   isSubmitting || isUploading || createWorklogMutation.isPending
@@ -1016,7 +1203,11 @@ function ContributionFlashcardPageContent({
                           {worklog.title}
                         </h4>
                         <p className="text-xs dark:text-white/60 text-gray-500 mt-1">
-                          {worklog.createdAt}
+                          Created {worklog.createdAt}
+                          {worklog.updatedAt &&
+                          worklog.updatedAt !== worklog.createdAt
+                            ? ` • Last updated ${worklog.updatedAt}`
+                            : ""}
                         </p>
                       </div>
                       {worklog.deadline && (
@@ -1036,102 +1227,125 @@ function ContributionFlashcardPageContent({
                       {worklog.description}
                     </p>
                     <div className="mt-3 flex gap-2 flex-wrap items-center">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs dark:text-white/60 text-gray-500">
-                          Status:
-                        </span>
-                        <Select
-                          value={worklog.progressStatus || "STARTED"}
-                          onValueChange={(value) =>
-                            handleStatusUpdate(worklog.id, value)
-                          }
-                          disabled={
-                            (statusUpdateMutation.isPending &&
-                              statusUpdateMutation.variables?.worklogId ===
-                                worklog.id) ||
-                            worklog.progressStatus === "COMPLETED" ||
-                            worklog.progressStatus === "REVIEWED" ||
-                            worklog.progressStatus === "GRADED"
-                          }
-                        >
-                          <SelectTrigger
-                            className="w-32 h-8 text-xs dark:bg-white/5 bg-gray-50 dark:border-white/20 border-gray-300 dark:text-white text-gray-900"
-                            aria-label={`Update status for ${worklog.title}`}
-                          >
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-[var(--panel-strong)] dark:border-white/10 border-gray-200">
-                            <SelectItem
-                              value={worklog.progressStatus || "STARTED"}
-                              className="dark:text-white/80 text-gray-700"
-                            >
-                              {worklog.progressStatus === "STARTED" &&
-                                "Started"}
-                              {worklog.progressStatus === "HALF_DONE" &&
-                                "Halfway Done"}
-                              {worklog.progressStatus === "COMPLETED" &&
-                                "Completed"}
-                              {worklog.progressStatus === "REVIEWED" &&
-                                "Reviewed"}
-                              {worklog.progressStatus === "GRADED" && "Graded"}
-                              {!worklog.progressStatus && "Started"}
-                            </SelectItem>
-                            {getValidStatusTransitions(
-                              worklog.progressStatus,
-                            ).map((transition) => (
-                              <SelectItem
-                                key={transition.value}
-                                value={transition.value}
-                                className="dark:text-white/80 text-gray-700"
+                      {(() => {
+                        const isCreator = worklog.userId === session?.user?.id;
+                        const isLocked =
+                          worklog.progressStatus === "REVIEWED" ||
+                          worklog.progressStatus === "GRADED";
+                        const canModify = isCreator && !isLocked;
+                        const visibleStatus =
+                          !canSetDeadline && isLocked
+                            ? "COMPLETED"
+                            : worklog.progressStatus || "STARTED";
+                        return (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs dark:text-white/60 text-gray-500">
+                                Status:
+                              </span>
+                              <Select
+                                value={visibleStatus}
+                                onValueChange={(value) =>
+                                  handleStatusUpdate(worklog.id, value)
+                                }
+                                disabled={
+                                  (statusUpdateMutation.isPending &&
+                                    statusUpdateMutation.variables
+                                      ?.worklogId === worklog.id) ||
+                                  worklog.progressStatus === "COMPLETED" ||
+                                  worklog.progressStatus === "REVIEWED" ||
+                                  worklog.progressStatus === "GRADED"
+                                }
                               >
-                                {transition.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {statusUpdateMutation.isPending &&
-                          statusUpdateMutation.variables?.worklogId ===
-                            worklog.id && (
-                            <div className="text-xs text-amber-400 animate-pulse">
-                              Updating...
+                                <SelectTrigger
+                                  className="w-32 h-8 text-xs dark:bg-white/5 bg-gray-50 dark:border-white/20 border-gray-300 dark:text-white text-gray-900"
+                                  aria-label={`Update status for ${worklog.title}`}
+                                >
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-[var(--panel-strong)] dark:border-white/10 border-gray-200">
+                                  <SelectItem
+                                    value={visibleStatus}
+                                    className="dark:text-white/80 text-gray-700"
+                                  >
+                                    {visibleStatus === "STARTED" && "Started"}
+                                    {visibleStatus === "HALF_DONE" &&
+                                      "Halfway Done"}
+                                    {visibleStatus === "COMPLETED" &&
+                                      "Completed"}
+                                  </SelectItem>
+                                  {getValidStatusTransitions(visibleStatus).map(
+                                    (transition) => (
+                                      <SelectItem
+                                        key={transition.value}
+                                        value={transition.value}
+                                        className="dark:text-white/80 text-gray-700"
+                                      >
+                                        {transition.label}
+                                      </SelectItem>
+                                    ),
+                                  )}
+                                </SelectContent>
+                              </Select>
+                              {statusUpdateMutation.isPending &&
+                                statusUpdateMutation.variables?.worklogId ===
+                                  worklog.id && (
+                                  <div className="text-xs text-amber-400 animate-pulse">
+                                    Updating...
+                                  </div>
+                                )}
                             </div>
-                          )}
-                      </div>
-                      {canSetDeadline && (
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          className="dark:border-white/20 border-gray-300 dark:text-white/80 text-gray-700 dark:hover:bg-white/10 hover:bg-gray-200 h-8 text-xs"
-                          onClick={() =>
-                            setEditingWorklog({
-                              ...worklog,
-                              deadline: worklog.deadline ?? null,
-                            })
-                          }
-                          aria-label={`Edit deadline for ${worklog.title}`}
-                        >
-                          <Pencil className="mr-2" />
-                          Edit deadline
-                        </Button>
-                      )}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="border-red-400/30 text-red-300 hover:bg-red-500/20 h-8 text-xs ml-auto"
-                        onClick={() =>
-                          handleDeleteWorklog(worklog.id, worklog.title)
-                        }
-                        disabled={deleteWorklogMutation.isPending}
-                        isLoading={
-                          deleteWorklogMutation.isPending &&
-                          deleteWorklogMutation.variables?.worklogId ===
-                            worklog.id
-                        }
-                      >
-                        Delete
-                      </Button>
+                            {canSetDeadline && (
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                className="dark:border-white/20 border-gray-300 dark:text-white/80 text-gray-700 dark:hover:bg-white/10 hover:bg-gray-200 h-8 text-xs"
+                                onClick={() =>
+                                  setEditingWorklog({
+                                    ...worklog,
+                                    deadline: worklog.deadline ?? null,
+                                  })
+                                }
+                                aria-label={`Edit deadline for ${worklog.title}`}
+                              >
+                                <Pencil className="mr-2" />
+                                Edit deadline
+                              </Button>
+                            )}
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              className="dark:border-white/20 border-gray-300 dark:text-white/80 text-gray-700 dark:hover:bg-white/10 hover:bg-gray-200 h-8 text-xs"
+                              onClick={() => handleOpenEditWorklog(worklog.id)}
+                              disabled={!canModify}
+                            >
+                              <Pencil className="mr-2" />
+                              Edit
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="border-red-400/30 text-red-300 hover:bg-red-500/20 h-8 text-xs ml-auto"
+                              onClick={() =>
+                                handleDeleteWorklog(worklog.id, worklog.title)
+                              }
+                              disabled={
+                                deleteWorklogMutation.isPending || !canModify
+                              }
+                              isLoading={
+                                deleteWorklogMutation.isPending &&
+                                deleteWorklogMutation.variables?.worklogId ===
+                                  worklog.id
+                              }
+                            >
+                              Delete
+                            </Button>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 ))}
@@ -1152,6 +1366,149 @@ function ContributionFlashcardPageContent({
       </div>
 
       <Dialog
+        open={Boolean(editableWorklog)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditableWorklog(null);
+          }
+        }}
+      >
+        <DialogContent className="bg-[var(--panel-strong)] dark:border-white/10 border-gray-200">
+          <DialogHeader>
+            <DialogTitle className="dark:text-white text-gray-900">
+              Edit worklog
+            </DialogTitle>
+            <DialogDescription className="dark:text-white/60 text-gray-500">
+              Update your worklog content. Reviewed or graded worklogs are
+              locked.
+            </DialogDescription>
+          </DialogHeader>
+          {editableWorklog && (
+            <div className="space-y-4">
+              <FormField label="Title" required htmlFor="edit-worklog-title">
+                <Input
+                  key={`edit-title-${editFormVersion}`}
+                  id="edit-worklog-title"
+                  defaultValue={editableWorklog.title}
+                  onBlur={(e) =>
+                    setEditableWorklog((prev) =>
+                      prev ? { ...prev, title: e.target.value } : prev,
+                    )
+                  }
+                  className="dark:bg-white/5 bg-gray-50 dark:border-white/20 border-gray-300 dark:text-white text-gray-900"
+                />
+              </FormField>
+
+              <FormField
+                label="Description"
+                helpText="Optional"
+                htmlFor="edit-worklog-description"
+              >
+                <RichTextEditor
+                  id="edit-worklog-description"
+                  value={editEditorSeed}
+                  onChange={(newValue) => {
+                    editEditorHtmlRef.current = newValue;
+                  }}
+                  placeholder="Describe your work and any outcomes."
+                />
+              </FormField>
+
+              <FormField
+                label="GitHub Link(s)"
+                helpText="Optional"
+                htmlFor="edit-worklog-github"
+              >
+                <Input
+                  key={`edit-github-${editFormVersion}`}
+                  id="edit-worklog-github"
+                  defaultValue={editableWorklog.githubLink}
+                  onBlur={(e) =>
+                    setEditableWorklog((prev) =>
+                      prev ? { ...prev, githubLink: e.target.value } : prev,
+                    )
+                  }
+                  placeholder="Comma/new-line separated GitHub PR/commit links"
+                  className="dark:bg-white/5 bg-gray-50 dark:border-white/20 border-gray-300 dark:text-white text-gray-900"
+                />
+              </FormField>
+
+              <FormField
+                label="Attach Files"
+                helpText="Optional"
+                htmlFor="edit-files"
+              >
+                <div className="rounded-md border border-dashed dark:border-white/20 border-gray-300 px-4 py-4 text-sm dark:bg-white/5 bg-gray-50">
+                  <p className="text-center">
+                    Add images or PDFs, or{" "}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="h-auto p-0 ml-1 text-amber-200 underline hover:text-amber-100 bg-transparent hover:bg-transparent"
+                      onClick={() => editFileInputRef.current?.click()}
+                    >
+                      browse
+                    </Button>
+                  </p>
+                  <Input
+                    ref={editFileInputRef}
+                    id="edit-files"
+                    type="file"
+                    multiple
+                    accept="image/*,application/pdf"
+                    onChange={(event) => {
+                      const files = Array.from(event.target.files || []);
+                      const filtered = files.filter(
+                        (file) =>
+                          file.type.startsWith("image/") ||
+                          file.type === "application/pdf",
+                      );
+                      setEditPendingFiles(filtered);
+                    }}
+                    className="hidden"
+                  />
+                </div>
+                {editPendingFiles.length > 0 && (
+                  <p className="text-xs dark:text-white/70 text-gray-600">
+                    {editPendingFiles.length} file(s) will be attached on save.
+                  </p>
+                )}
+              </FormField>
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setClearEditOpen(true)}
+                >
+                  Clear All
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="dark:border-white/20 border-gray-300 dark:text-white/80 text-gray-700 dark:hover:bg-white/10 hover:bg-gray-200"
+                  onClick={() => setEditableWorklog(null)}
+                >
+                  <X className="mr-2" />
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  className="bg-amber-400 hover:bg-amber-500 text-black font-semibold"
+                  onClick={handleSaveEditedWorklog}
+                  disabled={isEditUploading}
+                  isLoading={isEditUploading}
+                >
+                  <Check className="mr-2" />
+                  Save changes
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
         open={Boolean(editingWorklog)}
         onOpenChange={(open) => {
           if (!open) {
@@ -1164,6 +1521,9 @@ function ContributionFlashcardPageContent({
             <DialogTitle className="dark:text-white text-gray-900">
               Edit deadline
             </DialogTitle>
+            <DialogDescription className="dark:text-white/60 text-gray-500">
+              Adjust the deadline for this worklog.
+            </DialogDescription>
           </DialogHeader>
           {editingWorklog && (
             <div className="space-y-4">
@@ -1234,6 +1594,52 @@ function ContributionFlashcardPageContent({
       </Dialog>
 
       {/* Delete Worklog Confirmation */}
+      <AlertDialog open={clearCreateOpen} onOpenChange={setClearCreateOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear Worklog Form</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will clear title, description, links, and pending files. Are
+              you sure?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                clearCreateForm();
+                setClearCreateOpen(false);
+              }}
+            >
+              Clear All
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={clearEditOpen} onOpenChange={setClearEditOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear Edit Form</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will clear all editable fields in the current worklog edit
+              modal. Continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                clearEditForm();
+                setClearEditOpen(false);
+              }}
+            >
+              Clear All
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog
         open={!!worklogToDelete}
         onOpenChange={(open) => !open && setWorklogToDelete(null)}

@@ -49,7 +49,10 @@ export const MultiStepWizard: React.FC<MultiStepWizardProps> = ({
         const saved = localStorage.getItem(persistKey);
         if (saved) {
           const parsed = JSON.parse(saved);
-          setFormData((prev) => ({ ...prev, ...parsed }));
+          // initialData (current prev) takes precedence over localStorage so
+          // explicitly-provided defaults (e.g. pre-selected org) are never
+          // overridden by a stale persisted session.
+          setFormData((prev) => ({ ...parsed, ...prev }));
         }
       } catch (error) {
         console.error("Failed to load persisted wizard state:", error);

@@ -130,12 +130,17 @@ export async function GET(
               id: true,
               value: true,
               comment: true,
+              createdAt: true,
+              updatedAt: true,
               rater: {
                 select: {
                   id: true,
                   name: true,
                 },
               },
+            },
+            orderBy: {
+              updatedAt: "desc",
             },
           },
         },

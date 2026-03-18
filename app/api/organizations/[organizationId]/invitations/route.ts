@@ -1,36 +1,39 @@
-import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import {
+  getCurrentUser,
+  isOrganizationOwnerOrCoOwner,
+  unauthorized,
+  forbidden,
+  badRequest,
+} from "@/lib/auth-utils";
+import { apiResponse, handleApiError } from "@/lib/api-utils";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ organizationId: string }> },
 ) {
   try {
-    const session = await auth();
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const user = await getCurrentUser();
+    if (!user) {
+      return unauthorized();
     }
 
     const { organizationId } = await params;
 
     // Verify user is the organization owner or an accepted co-owner
-    const organization = await prisma.organization.findFirst({
-      where: {
-        id: organizationId,
-        OR: [
-          { ownerId: session.user.id },
-          {
-            invitations: {
-              some: { userId: session.user.id, status: "ACCEPTED" },
-            },
-          },
-        ],
-      },
+    const canAccess = await isOrganizationOwnerOrCoOwner(
+      user.id,
+      organizationId,
+    );
+    if (!canAccess) {
+      return forbidden("Organization not found or access denied");
+    }
+
+    const organization = await prisma.organization.findUnique({
+      where: { id: organizationId },
       select: {
         id: true,
-        ownerId: true,
         owner: {
           select: {
             id: true,
@@ -43,20 +46,21 @@ export async function GET(
     });
 
     if (!organization) {
-      return NextResponse.json(
-        { error: "Organization not found or access denied" },
-        { status: 403 },
-      );
+      return forbidden("Organization not found or access denied");
     }
 
     // Parse optional status filter
     const { searchParams } = new URL(request.url);
     const statusFilter = searchParams.get("status");
-    const validStatuses = ["PENDING", "ACCEPTED", "REJECTED"];
+    const validStatuses = ["PENDING", "ACCEPTED", "REJECTED", "EXPIRED"];
 
     const whereClause: Record<string, unknown> = { organizationId };
-    if (statusFilter && validStatuses.includes(statusFilter.toUpperCase())) {
-      whereClause.status = statusFilter.toUpperCase();
+    if (statusFilter) {
+      const normalizedStatus = statusFilter.toUpperCase();
+      if (!validStatuses.includes(normalizedStatus)) {
+        return badRequest(`Invalid status filter: ${statusFilter}`);
+      }
+      whereClause.status = normalizedStatus;
     }
 
     // Fetch invitations
@@ -80,7 +84,7 @@ export async function GET(
     const accepted = invitations.filter((i) => i.status === "ACCEPTED").length;
     const rejected = invitations.filter((i) => i.status === "REJECTED").length;
 
-    return NextResponse.json({
+    return apiResponse({
       data: invitations.map((inv) => ({
         id: inv.id,
         email: inv.email,
@@ -110,10 +114,6 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("List organization invitations error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleApiError(error);
   }
 }

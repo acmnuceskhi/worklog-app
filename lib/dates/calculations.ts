@@ -5,7 +5,12 @@
  * spread across deadline-utils.ts.
  */
 
-import { differenceInDays, differenceInMinutes, isAfter } from "date-fns";
+import {
+  differenceInDays,
+  differenceInMinutes,
+  endOfDay,
+  isAfter,
+} from "date-fns";
 import { DEADLINE_THRESHOLDS } from "./constants";
 import { parseDeadline } from "./parsing";
 
@@ -49,10 +54,14 @@ export function getDeadlineStatus(params: {
   }
 
   // Completed / graded worklogs
-  const isCompleted = status.includes("completed") || status === "graded";
+  const isCompleted =
+    status.includes("completed") ||
+    status === "graded" ||
+    status === "reviewed";
   if (isCompleted) {
+    const deadlineEnd = endOfDay(deadline);
     const completedTime = completedAt ?? now;
-    const onTime = !isAfter(completedTime, deadline);
+    const onTime = !isAfter(completedTime, deadlineEnd);
     return onTime
       ? {
           status: "completed_on_time",
@@ -68,8 +77,9 @@ export function getDeadlineStatus(params: {
         };
   }
 
-  // Active worklogs
-  if (isAfter(now, deadline)) {
+  // Active worklogs — use end-of-day so a deadline "due today" is never overdue
+  const deadlineEnd = endOfDay(deadline);
+  if (isAfter(now, deadlineEnd)) {
     return {
       status: "overdue",
       label: "Overdue",
@@ -78,7 +88,7 @@ export function getDeadlineStatus(params: {
     };
   }
 
-  const daysLeft = differenceInDays(deadline, now);
+  const daysLeft = differenceInDays(deadlineEnd, now);
   if (daysLeft <= DEADLINE_THRESHOLDS.DUE_SOON_DAYS) {
     return {
       status: "due_soon",
@@ -114,21 +124,26 @@ export function getCountdownLabel(params: {
   }
 
   // Completed / graded
-  const isCompleted = status.includes("completed") || status === "graded";
+  const isCompleted =
+    status.includes("completed") ||
+    status === "graded" ||
+    status === "reviewed";
   if (isCompleted) {
+    const deadlineEnd = endOfDay(deadline);
     const completionTime = completedAt ?? now;
-    const onTime = !isAfter(completionTime, deadline);
+    const onTime = !isAfter(completionTime, deadlineEnd);
     return {
       label: onTime ? "Completed on time" : "Completed late",
       isOverdue: !onTime,
     };
   }
 
-  const isOverdue = isAfter(now, deadline);
+  const deadlineEnd = endOfDay(deadline);
+  const isOverdue = isAfter(now, deadlineEnd);
 
   // Calculate granular countdown using date-fns
-  const reference = isOverdue ? deadline : now;
-  const target = isOverdue ? now : deadline;
+  const reference = isOverdue ? deadlineEnd : now;
+  const target = isOverdue ? now : deadlineEnd;
 
   const totalMinutes = Math.abs(differenceInMinutes(target, reference));
   const days = Math.floor(totalMinutes / (24 * 60));

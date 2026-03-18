@@ -19,9 +19,9 @@ export const queryKeys = {
 
   // Dashboard queries (combined data for home page)
   dashboard: {
-    all: (worklogPage?: number, worklogLimit?: number) =>
-      worklogPage != null || worklogLimit != null
-        ? (["dashboard", { worklogPage, worklogLimit }] as const)
+    all: (worklogPage?: number, worklogLimit?: number, userId?: string) =>
+      worklogPage != null || worklogLimit != null || userId != null
+        ? (["dashboard", { worklogPage, worklogLimit, userId }] as const)
         : (["dashboard"] as const),
   },
 

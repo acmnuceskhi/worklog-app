@@ -4,7 +4,14 @@
  * Keeps the page component lean by extracting pure logic here.
  */
 
-import { differenceInDays, isAfter, startOfDay, addDays } from "date-fns";
+import {
+  differenceInDays,
+  isAfter,
+  startOfDay,
+  addDays,
+  endOfDay,
+} from "date-fns";
+import { parseDeadline } from "@/lib/dates/parsing";
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -66,13 +73,15 @@ export function isActiveWorklog(status: string | null): boolean {
 // ── Deadline segmentation ─────────────────────────────────────
 
 export function daysUntilDeadline(deadline: string | Date): number {
-  const d = typeof deadline === "string" ? new Date(deadline) : deadline;
+  const d = parseDeadline(deadline);
+  if (!d) return 0;
   return differenceInDays(startOfDay(d), startOfDay(new Date()));
 }
 
 export function isOverdue(deadline: string | Date): boolean {
-  const d = typeof deadline === "string" ? new Date(deadline) : deadline;
-  return isAfter(new Date(), d);
+  const d = parseDeadline(deadline);
+  if (!d) return false;
+  return isAfter(new Date(), endOfDay(d));
 }
 
 /**
@@ -108,8 +117,9 @@ export function segmentDeadlinesByUrgency(
   const later: DeadlineWorklog[] = [];
 
   for (const dl of withDeadlines) {
-    const d = new Date(dl.deadline);
-    if (isAfter(now, d)) {
+    const d = parseDeadline(dl.deadline);
+    if (!d) continue;
+    if (isAfter(now, endOfDay(d))) {
       overdue.push(dl);
     } else if (!isAfter(d, soonCutoff)) {
       dueSoon.push(dl);

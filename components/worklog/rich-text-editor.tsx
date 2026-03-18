@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback, useState } from "react";
+import { useEffect, useCallback, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import {
   Redo2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { AppTooltip, TooltipProvider } from "@/components/ui/tooltip";
 
 interface RichTextEditorProps {
   value: string;
@@ -41,9 +42,24 @@ export function RichTextEditor({
   disabled = false,
   className = "",
 }: RichTextEditorProps) {
+  const onChangeRef = useRef(onChange);
+  const onChangeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
   const [linkText, setLinkText] = useState("");
+  const [isEditorEmpty, setIsEditorEmpty] = useState(true);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  useEffect(() => {
+    return () => {
+      if (onChangeTimerRef.current) {
+        clearTimeout(onChangeTimerRef.current);
+      }
+    };
+  }, []);
 
   // Keyboard shortcuts handler - defined before editor to avoid closure issues
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -78,9 +94,16 @@ export function RichTextEditor({
     ],
     content: value,
     immediatelyRender: false,
+    shouldRerenderOnTransaction: false,
     editable: !disabled,
     onUpdate: ({ editor: activeEditor }) => {
-      onChange(activeEditor.getHTML());
+      const html = activeEditor.getHTML();
+      if (onChangeTimerRef.current) {
+        clearTimeout(onChangeTimerRef.current);
+      }
+      onChangeTimerRef.current = setTimeout(() => {
+        onChangeRef.current(html);
+      }, 80);
     },
     editorProps: {
       attributes: {
@@ -121,6 +144,7 @@ export function RichTextEditor({
       const element = editor.view.dom;
       const hasContent = editor.getText().trim().length > 0;
       element.setAttribute("data-empty", hasContent ? "false" : "true");
+      setIsEditorEmpty((prev) => (prev !== !hasContent ? !hasContent : prev));
     };
 
     editor.on("update", updatePlaceholder);
@@ -189,7 +213,7 @@ export function RichTextEditor({
 
     const currentContent = editor.getHTML();
     if (value !== currentContent) {
-      editor.commands.setContent(value, { emitUpdate: false });
+      editor.commands.setContent(value, { emitUpdate: true });
     }
   }, [editor, value]);
 
@@ -314,216 +338,228 @@ export function RichTextEditor({
 
   return (
     <>
-      <div className="flex flex-col gap-2">
-        {/* Enhanced Toolbar with distinctive design */}
-        <div className="flex flex-wrap items-center gap-1 p-3 bg-gradient-to-r from-amber-500/10 via-blue-500/10 to-purple-500/10 border border-amber-500/20 rounded-t-lg backdrop-blur-sm">
-          {/* History controls with subtle glow */}
-          <div className="flex items-center gap-1 p-1 bg-black/20 rounded-md">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={undo}
-              disabled={!editor.can().undo() || disabled}
-              className="h-7 w-7 p-0 text-amber-300 hover:text-amber-100 hover:bg-amber-500/20 transition-all duration-200"
-              aria-label="Undo"
-              title="Undo (Ctrl+Z)"
-            >
-              <Undo2 className="h-3 w-3" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={redo}
-              disabled={!editor.can().redo() || disabled}
-              className="h-7 w-7 p-0 text-amber-300 hover:text-amber-100 hover:bg-amber-500/20 transition-all duration-200"
-              aria-label="Redo"
-              title="Redo (Ctrl+Y)"
-            >
-              <Redo2 className="h-3 w-3" />
-            </Button>
+      <TooltipProvider>
+        <div className="flex flex-col gap-2">
+          {/* Enhanced Toolbar with distinctive design */}
+          <div className="flex flex-wrap items-center gap-1 p-3 bg-gradient-to-r from-amber-500/10 via-blue-500/10 to-purple-500/10 border border-amber-500/20 rounded-t-lg backdrop-blur-sm">
+            {/* History controls with subtle glow */}
+            <div className="flex items-center gap-1 p-1 bg-black/20 rounded-md">
+              <AppTooltip content="Undo (Ctrl+Z)">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={undo}
+                  disabled={!editor.can().undo() || disabled}
+                  className="h-7 w-7 p-0 text-amber-300 hover:text-amber-100 hover:bg-amber-500/20 transition-all duration-200"
+                  aria-label="Undo"
+                >
+                  <Undo2 className="h-3 w-3" />
+                </Button>
+              </AppTooltip>
+              <AppTooltip content="Redo (Ctrl+Y)">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={redo}
+                  disabled={!editor.can().redo() || disabled}
+                  className="h-7 w-7 p-0 text-amber-300 hover:text-amber-100 hover:bg-amber-500/20 transition-all duration-200"
+                  aria-label="Redo"
+                >
+                  <Redo2 className="h-3 w-3" />
+                </Button>
+              </AppTooltip>
+            </div>
+
+            <div className="w-px h-6 bg-amber-500/30 mx-2" />
+
+            {/* Text formatting with enhanced styling */}
+            <div className="flex items-center gap-1 p-1 bg-black/20 rounded-md">
+              <AppTooltip content="Bold (Ctrl+B)">
+                <Button
+                  type="button"
+                  variant={editor.isActive("bold") ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={toggleBold}
+                  disabled={disabled}
+                  className={`h-7 w-7 p-0 transition-all duration-200 ${
+                    editor.isActive("bold")
+                      ? "bg-amber-500/30 text-amber-100 shadow-lg shadow-amber-500/20"
+                      : "text-amber-300 hover:text-amber-100 hover:bg-amber-500/20"
+                  }`}
+                  aria-label="Toggle bold"
+                  aria-pressed={editor.isActive("bold")}
+                >
+                  <Bold className="h-3 w-3" />
+                </Button>
+              </AppTooltip>
+              <AppTooltip content="Italic (Ctrl+I)">
+                <Button
+                  type="button"
+                  variant={editor.isActive("italic") ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={toggleItalic}
+                  disabled={disabled}
+                  className={`h-7 w-7 p-0 transition-all duration-200 ${
+                    editor.isActive("italic")
+                      ? "bg-blue-500/30 text-blue-100 shadow-lg shadow-blue-500/20"
+                      : "text-blue-300 hover:text-blue-100 hover:bg-blue-500/20"
+                  }`}
+                  aria-label="Toggle italic"
+                  aria-pressed={editor.isActive("italic")}
+                >
+                  <Italic className="h-3 w-3" />
+                </Button>
+              </AppTooltip>
+            </div>
+
+            <div className="w-px h-6 bg-amber-500/30 mx-2" />
+
+            {/* Lists with unique styling */}
+            <div className="flex items-center gap-1 p-1 bg-black/20 rounded-md">
+              <Button
+                type="button"
+                variant={editor.isActive("bulletList") ? "secondary" : "ghost"}
+                size="sm"
+                onClick={toggleBulletList}
+                disabled={disabled}
+                className={`h-7 w-7 p-0 transition-all duration-200 ${
+                  editor.isActive("bulletList")
+                    ? "bg-purple-500/30 text-purple-100 shadow-lg shadow-purple-500/20"
+                    : "text-purple-300 hover:text-purple-100 hover:bg-purple-500/20"
+                }`}
+                aria-label="Toggle bullet list"
+                aria-pressed={editor.isActive("bulletList")}
+              >
+                <List className="h-3 w-3" />
+              </Button>
+              <Button
+                type="button"
+                variant={editor.isActive("orderedList") ? "secondary" : "ghost"}
+                size="sm"
+                onClick={toggleOrderedList}
+                disabled={disabled}
+                className={`h-7 w-7 p-0 transition-all duration-200 ${
+                  editor.isActive("orderedList")
+                    ? "bg-green-500/30 text-green-100 shadow-lg shadow-green-500/20"
+                    : "text-green-300 hover:text-green-100 hover:bg-green-500/20"
+                }`}
+                aria-label="Toggle ordered list"
+                aria-pressed={editor.isActive("orderedList")}
+              >
+                <ListOrdered className="h-3 w-3" />
+              </Button>
+            </div>
+
+            <div className="w-px h-6 bg-amber-500/30 mx-2" />
+
+            {/* Links with distinctive styling */}
+            <div className="flex items-center gap-1 p-1 bg-black/20 rounded-md">
+              <AppTooltip
+                content={
+                  editor.extensionManager.extensions.some(
+                    (ext) => ext.name === "link",
+                  )
+                    ? "Add or edit link"
+                    : "Add link (basic mode - install @tiptap/extension-link for full functionality)"
+                }
+              >
+                <Button
+                  type="button"
+                  variant={
+                    editor.extensionManager.extensions.some(
+                      (ext) => ext.name === "link",
+                    ) && editor.isActive("link")
+                      ? "secondary"
+                      : "ghost"
+                  }
+                  size="sm"
+                  onClick={openLinkDialog}
+                  disabled={disabled}
+                  className={`h-7 w-7 p-0 transition-all duration-200 ${
+                    editor.extensionManager.extensions.some(
+                      (ext) => ext.name === "link",
+                    ) && editor.isActive("link")
+                      ? "bg-cyan-500/30 text-cyan-100 shadow-lg shadow-cyan-500/20"
+                      : "text-cyan-300 hover:text-cyan-100 hover:bg-cyan-500/20"
+                  }`}
+                  aria-label="Add or edit link"
+                  aria-pressed={
+                    editor.extensionManager.extensions.some(
+                      (ext) => ext.name === "link",
+                    ) && editor.isActive("link")
+                  }
+                >
+                  <Link className="h-3 w-3" />
+                </Button>
+              </AppTooltip>
+              <AppTooltip
+                content={
+                  editor.extensionManager.extensions.some(
+                    (ext) => ext.name === "link",
+                  )
+                    ? "Remove link"
+                    : "Remove link (requires @tiptap/extension-link)"
+                }
+              >
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={removeLink}
+                  disabled={
+                    !editor.extensionManager.extensions.some(
+                      (ext) => ext.name === "link",
+                    ) ||
+                    !editor.isActive("link") ||
+                    disabled
+                  }
+                  className="h-7 w-7 p-0 text-red-300 hover:text-red-100 hover:bg-red-500/20 transition-all duration-200"
+                  aria-label="Remove link"
+                >
+                  <Unlink className="h-3 w-3" />
+                </Button>
+              </AppTooltip>
+            </div>
           </div>
 
-          <div className="w-px h-6 bg-amber-500/30 mx-2" />
+          {/* Editor content with enhanced styling */}
+          <div className="relative">
+            <EditorContent
+              id={id}
+              editor={editor}
+              className={`rounded-b-lg overflow-hidden ${
+                disabled ? "cursor-not-allowed" : ""
+              }`}
+              aria-label={placeholder || "Rich text editor"}
+              role="textbox"
+              aria-multiline="true"
+              aria-describedby={id ? `${id}-description` : undefined}
+            />
 
-          {/* Text formatting with enhanced styling */}
-          <div className="flex items-center gap-1 p-1 bg-black/20 rounded-md">
-            <Button
-              type="button"
-              variant={editor.isActive("bold") ? "secondary" : "ghost"}
-              size="sm"
-              onClick={toggleBold}
-              disabled={disabled}
-              className={`h-7 w-7 p-0 transition-all duration-200 ${
-                editor.isActive("bold")
-                  ? "bg-amber-500/30 text-amber-100 shadow-lg shadow-amber-500/20"
-                  : "text-amber-300 hover:text-amber-100 hover:bg-amber-500/20"
-              }`}
-              aria-label="Toggle bold"
-              title="Bold (Ctrl+B)"
-              aria-pressed={editor.isActive("bold")}
-            >
-              <Bold className="h-3 w-3" />
-            </Button>
-            <Button
-              type="button"
-              variant={editor.isActive("italic") ? "secondary" : "ghost"}
-              size="sm"
-              onClick={toggleItalic}
-              disabled={disabled}
-              className={`h-7 w-7 p-0 transition-all duration-200 ${
-                editor.isActive("italic")
-                  ? "bg-blue-500/30 text-blue-100 shadow-lg shadow-blue-500/20"
-                  : "text-blue-300 hover:text-blue-100 hover:bg-blue-500/20"
-              }`}
-              aria-label="Toggle italic"
-              title="Italic (Ctrl+I)"
-              aria-pressed={editor.isActive("italic")}
-            >
-              <Italic className="h-3 w-3" />
-            </Button>
+            {/* Custom placeholder */}
+            {editor && isEditorEmpty && !disabled && (
+              <div className="absolute top-2 left-3 text-white/40 italic pointer-events-none select-none">
+                {placeholder}
+              </div>
+            )}
+
+            {/* Subtle animated border effect */}
+            <div className="absolute inset-0 rounded-b-lg pointer-events-none bg-gradient-to-r from-white/5 via-transparent to-white/5 opacity-0 hover:opacity-100 transition-opacity duration-300" />
           </div>
 
-          <div className="w-px h-6 bg-amber-500/30 mx-2" />
-
-          {/* Lists with unique styling */}
-          <div className="flex items-center gap-1 p-1 bg-black/20 rounded-md">
-            <Button
-              type="button"
-              variant={editor.isActive("bulletList") ? "secondary" : "ghost"}
-              size="sm"
-              onClick={toggleBulletList}
-              disabled={disabled}
-              className={`h-7 w-7 p-0 transition-all duration-200 ${
-                editor.isActive("bulletList")
-                  ? "bg-purple-500/30 text-purple-100 shadow-lg shadow-purple-500/20"
-                  : "text-purple-300 hover:text-purple-100 hover:bg-purple-500/20"
-              }`}
-              aria-label="Toggle bullet list"
-              aria-pressed={editor.isActive("bulletList")}
-            >
-              <List className="h-3 w-3" />
-            </Button>
-            <Button
-              type="button"
-              variant={editor.isActive("orderedList") ? "secondary" : "ghost"}
-              size="sm"
-              onClick={toggleOrderedList}
-              disabled={disabled}
-              className={`h-7 w-7 p-0 transition-all duration-200 ${
-                editor.isActive("orderedList")
-                  ? "bg-green-500/30 text-green-100 shadow-lg shadow-green-500/20"
-                  : "text-green-300 hover:text-green-100 hover:bg-green-500/20"
-              }`}
-              aria-label="Toggle ordered list"
-              aria-pressed={editor.isActive("orderedList")}
-            >
-              <ListOrdered className="h-3 w-3" />
-            </Button>
-          </div>
-
-          <div className="w-px h-6 bg-amber-500/30 mx-2" />
-
-          {/* Links with distinctive styling */}
-          <div className="flex items-center gap-1 p-1 bg-black/20 rounded-md">
-            <Button
-              type="button"
-              variant={
-                editor.extensionManager.extensions.some(
-                  (ext) => ext.name === "link",
-                ) && editor.isActive("link")
-                  ? "secondary"
-                  : "ghost"
-              }
-              size="sm"
-              onClick={openLinkDialog}
-              disabled={disabled}
-              className={`h-7 w-7 p-0 transition-all duration-200 ${
-                editor.extensionManager.extensions.some(
-                  (ext) => ext.name === "link",
-                ) && editor.isActive("link")
-                  ? "bg-cyan-500/30 text-cyan-100 shadow-lg shadow-cyan-500/20"
-                  : "text-cyan-300 hover:text-cyan-100 hover:bg-cyan-500/20"
-              }`}
-              aria-label="Add or edit link"
-              title={
-                editor.extensionManager.extensions.some(
-                  (ext) => ext.name === "link",
-                )
-                  ? "Add or edit link"
-                  : "Add link (basic mode - install @tiptap/extension-link for full functionality)"
-              }
-              aria-pressed={
-                editor.extensionManager.extensions.some(
-                  (ext) => ext.name === "link",
-                ) && editor.isActive("link")
-              }
-            >
-              <Link className="h-3 w-3" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={removeLink}
-              disabled={
-                !editor.extensionManager.extensions.some(
-                  (ext) => ext.name === "link",
-                ) ||
-                !editor.isActive("link") ||
-                disabled
-              }
-              className="h-7 w-7 p-0 text-red-300 hover:text-red-100 hover:bg-red-500/20 transition-all duration-200"
-              aria-label="Remove link"
-              title={
-                editor.extensionManager.extensions.some(
-                  (ext) => ext.name === "link",
-                )
-                  ? "Remove link"
-                  : "Remove link (requires @tiptap/extension-link)"
-              }
-            >
-              <Unlink className="h-3 w-3" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Editor content with enhanced styling */}
-        <div className="relative">
-          <EditorContent
-            id={id}
-            editor={editor}
-            className={`rounded-b-lg overflow-hidden ${
-              disabled ? "cursor-not-allowed" : ""
-            }`}
-            aria-label={placeholder || "Rich text editor"}
-            role="textbox"
-            aria-multiline="true"
-            aria-describedby={id ? `${id}-description` : undefined}
-          />
-
-          {/* Custom placeholder */}
-          {editor && !editor.getText().trim() && !disabled && (
-            <div className="absolute top-2 left-3 text-white/40 italic pointer-events-none select-none">
-              {placeholder}
+          {/* Enhanced screen reader description */}
+          {id && (
+            <div id={`${id}-description`} className="sr-only">
+              Rich text editor with formatting options. Use toolbar buttons or
+              keyboard shortcuts: Ctrl+B for bold, Ctrl+I for italic, Ctrl+Z for
+              undo, Ctrl+Y for redo. Navigate with Tab key and activate buttons
+              with Enter or Space.
             </div>
           )}
-
-          {/* Subtle animated border effect */}
-          <div className="absolute inset-0 rounded-b-lg pointer-events-none bg-gradient-to-r from-white/5 via-transparent to-white/5 opacity-0 hover:opacity-100 transition-opacity duration-300" />
         </div>
-
-        {/* Enhanced screen reader description */}
-        {id && (
-          <div id={`${id}-description`} className="sr-only">
-            Rich text editor with formatting options. Use toolbar buttons or
-            keyboard shortcuts: Ctrl+B for bold, Ctrl+I for italic, Ctrl+Z for
-            undo, Ctrl+Y for redo. Navigate with Tab key and activate buttons
-            with Enter or Space.
-          </div>
-        )}
-      </div>
+      </TooltipProvider>
 
       {/* Enhanced Link Dialog */}
       <Dialog open={isLinkDialogOpen} onOpenChange={setIsLinkDialogOpen}>

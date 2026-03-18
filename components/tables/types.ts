@@ -29,6 +29,7 @@ export interface RatingInfo {
   comment: string | null;
   rater?: UserInfo;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 // ── Team Types ────────────────────────────────────────────────────────────────
@@ -52,6 +53,7 @@ export interface OrganizationWorklogRow {
   description?: string;
   progressStatus: ProgressStatus;
   createdAt: string;
+  updatedAt?: string;
   deadline?: string | null;
   team: TeamInfo;
   user: UserInfo;
@@ -66,6 +68,7 @@ export interface MemberWorklogRow {
   title: string;
   progressStatus: ProgressStatus;
   createdAt: string;
+  updatedAt?: string;
   deadline?: string | null;
   teamName: string;
   rating?: number | null;

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { isTeamOwner } from "@/lib/auth-utils";
+import {
+  isTeamMember,
+  isTeamOwner,
+  isOrganizationOwner,
+} from "@/lib/auth-utils";
 import { handleApiError, unauthorized, forbidden } from "@/lib/api-utils";
 import {
   parsePaginationParams,
@@ -22,15 +26,28 @@ export async function GET(
       return unauthorized();
     }
 
-    // Check if user is team owner
-    const canAccess = await isTeamOwner(session.user.id, teamId);
+    const teamMeta = await prisma.team.findUnique({
+      where: { id: teamId },
+      select: { organizationId: true },
+    });
+
+    const [isOwnr, isMember, isOrgOwnr] = await Promise.all([
+      isTeamOwner(session.user.id, teamId),
+      isTeamMember(session.user.id, teamId),
+      teamMeta?.organizationId
+        ? isOrganizationOwner(session.user.id, teamMeta.organizationId)
+        : Promise.resolve(false),
+    ]);
+
+    const canAccess = isOwnr || isMember || isOrgOwnr;
     if (!canAccess) {
       return forbidden(
         "You do not have permission to view worklogs for this team",
       );
     }
 
-    const where = { teamId };
+    const where =
+      isOwnr || isOrgOwnr ? { teamId } : { teamId, userId: session.user.id };
 
     // Fetch total count and paginated worklogs in parallel
     const [total, worklogs] = await Promise.all([
@@ -54,8 +71,17 @@ export async function GET(
       }),
     ]);
 
+    const adjustedWorklogs =
+      isOwnr || isOrgOwnr
+        ? worklogs
+        : worklogs.map((w) =>
+            w.progressStatus === "REVIEWED" || w.progressStatus === "GRADED"
+              ? { ...w, progressStatus: "COMPLETED" as const }
+              : w,
+          );
+
     return NextResponse.json(
-      createPaginatedResponse(worklogs, total, page, limit),
+      createPaginatedResponse(adjustedWorklogs, total, page, limit),
     );
   } catch (error) {
     return handleApiError(error);

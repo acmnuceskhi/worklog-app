@@ -240,6 +240,10 @@ export const useCreateWorklog = () => {
         queryClient.invalidateQueries({
           queryKey: queryKeys.teams.worklogs(data.teamId),
         });
+        queryClient.refetchQueries({
+          queryKey: queryKeys.teams.detail(data.teamId),
+          type: "all",
+        });
       }
     },
     onSettled: () => {
@@ -272,7 +276,7 @@ export const useUpdateWorklogStatus = () => {
           "Content-Type": "application/json",
           "Idempotency-Key": idempotencyToken,
         },
-        body: JSON.stringify({ progressStatus: newStatus }),
+        body: JSON.stringify({ status: newStatus }),
       });
       if (!response.ok) {
         throw new Error("Failed to update worklog status");
@@ -341,13 +345,36 @@ export const useUpdateWorklogStatus = () => {
         }
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       resetIdempotencyToken();
+
+      // Team lead pages depend on team-scoped worklog queries; refetch directly
+      // to avoid waiting for observer-driven invalidation.
+      if (data?.team?.id) {
+        queryClient.refetchQueries({
+          queryKey: queryKeys.teams.worklogs(data.team.id),
+          type: "all",
+        });
+      }
     },
-    onSettled: () => {
+    onSettled: (_data, _error, variables) => {
       // Always refetch to ensure server state consistency
-      queryClient.invalidateQueries({ queryKey: queryKeys.worklogs.list() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all() }); // Invalidate dashboard cache
+      queryClient.refetchQueries({
+        queryKey: queryKeys.worklogs.list(),
+        type: "all",
+      });
+      queryClient.refetchQueries({
+        queryKey: queryKeys.dashboard.all(),
+        type: "all",
+      });
+
+      // Fallback in case onSuccess didn't receive team metadata
+      if (variables?.worklogId) {
+        queryClient.refetchQueries({
+          queryKey: queryKeys.teams.all(),
+          type: "active",
+        });
+      }
     },
   });
 };
@@ -464,7 +491,16 @@ export const useDeleteWorklog = (teamId?: string) => {
         headers: { "Idempotency-Key": idempotencyToken },
       });
       if (!response.ok) {
-        throw new Error("Failed to delete worklog");
+        let message = "Failed to delete worklog";
+        try {
+          const errorData = (await response.json()) as { error?: string };
+          if (errorData?.error) {
+            message = errorData.error;
+          }
+        } catch {
+          // Ignore JSON parsing failure and keep fallback message.
+        }
+        throw new Error(message);
       }
       return { worklogId };
     },
@@ -528,6 +564,10 @@ export const useDeleteWorklog = (teamId?: string) => {
       if (teamId) {
         queryClient.invalidateQueries({
           queryKey: queryKeys.teams.worklogs(teamId),
+        });
+        queryClient.refetchQueries({
+          queryKey: queryKeys.teams.detail(teamId),
+          type: "all",
         });
       }
     },

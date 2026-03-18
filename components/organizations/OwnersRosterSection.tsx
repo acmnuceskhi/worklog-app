@@ -40,8 +40,10 @@ export function OwnersRosterSection({
   const { mutateAsync: removeOwner, isPending: isRemoving } =
     useRemoveOrganizationOwner(organizationId);
 
-  const acceptedOwners =
-    invitationsData?.data.filter((i) => i.status === "ACCEPTED") ?? [];
+  const invitationRows = Array.isArray(invitationsData?.data)
+    ? invitationsData.data
+    : [];
+  const acceptedOwners = invitationRows.filter((i) => i.status === "ACCEPTED");
   const originalOwner = invitationsData?.owner ?? null;
 
   const handleRemoveOwner = useCallback(async () => {

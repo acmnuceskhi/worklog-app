@@ -72,7 +72,11 @@ export default function DashboardPage() {
 
   // TanStack Query hooks for data fetching
   const [worklogPage, setWorklogPage] = useState(1);
-  const { data: dashboardData, isLoading } = useDashboard(worklogPage, 12);
+  const { data: dashboardData, isLoading } = useDashboard(
+    worklogPage,
+    12,
+    session?.user?.id,
+  );
 
   // Prefetch hooks for performance optimization
   const prefetchOwnedTeams = usePrefetchOwnedTeams();
@@ -94,6 +98,21 @@ export default function DashboardPage() {
   const ownedTeams = useMemo(
     () => dashboardData?.ownedTeams || [],
     [dashboardData?.ownedTeams],
+  );
+
+  // Set of owned team IDs for O(1) lookup
+  const ownedTeamIds = useMemo(
+    () => new Set(ownedTeams.map((t: { id: string }) => t.id)),
+    [ownedTeams],
+  );
+
+  // Navigate to the correct team page based on ownership
+  const getTeamPath = useCallback(
+    (teamId: string) =>
+      ownedTeamIds.has(teamId)
+        ? `/teams/lead/${teamId}`
+        : `/teams/member/${teamId}`,
+    [ownedTeamIds],
   );
 
   // State declarations
@@ -160,6 +179,15 @@ export default function DashboardPage() {
     window.addEventListener("focus", handleFocus);
     return () => window.removeEventListener("focus", handleFocus);
   }, [queryClient]);
+
+  // Ensure dashboard data refreshes immediately once authenticated user is known.
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    queryClient.refetchQueries({
+      queryKey: queryKeys.dashboard.all(undefined, undefined, session.user.id),
+      type: "all",
+    });
+  }, [queryClient, session?.user?.id]);
 
   // Show deadline notifications
   useEffect(() => {
@@ -603,7 +631,19 @@ export default function DashboardPage() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {filteredTeams.slice(0, 6).map((team) => (
-                  <div key={team.id} className={teamCardClassName}>
+                  <div
+                    key={team.id}
+                    className={`${teamCardClassName} cursor-pointer`}
+                    onClick={() => router.push(getTeamPath(team.id))}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        router.push(getTeamPath(team.id));
+                      }
+                    }}
+                  >
                     <div className="flex gap-2.5 items-center">
                       <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-white text-xs font-semibold flex items-center justify-center shrink-0">
                         {team.name
@@ -623,7 +663,7 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="flex justify-between items-center mt-2 text-xs text-muted">
-                      <span>{team._count?.members || 0} members</span>
+                      <span>{(team._count?.members || 0) + 1} members</span>
                       <span>{team._count?.worklogs || 0} worklogs</span>
                     </div>
                   </div>
@@ -638,7 +678,14 @@ export default function DashboardPage() {
             deadlineSegments.later.length > 0) && (
             <section className={cardClassName}>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-base font-semibold">Upcoming Deadlines</h3>
+                <div>
+                  <h3 className="text-base font-semibold">
+                    Upcoming Deadlines
+                  </h3>
+                  <p className="text-xs text-muted mt-0.5">
+                    Time-sensitive tasks grouped by urgency.
+                  </p>
+                </div>
                 <span className="text-xs text-muted tabular-nums">
                   {urgentCounts.totalDeadlines} active
                 </span>
@@ -661,6 +708,7 @@ export default function DashboardPage() {
                           key={dl.id}
                           deadline={dl}
                           priority="high"
+                          onClick={() => router.push(getTeamPath(dl.teamId))}
                         />
                       ))}
                       {deadlineSegments.overdue.length > 5 && (
@@ -688,6 +736,7 @@ export default function DashboardPage() {
                           key={dl.id}
                           deadline={dl}
                           priority="medium"
+                          onClick={() => router.push(getTeamPath(dl.teamId))}
                         />
                       ))}
                       {deadlineSegments.dueSoon.length > 5 && (
@@ -711,7 +760,12 @@ export default function DashboardPage() {
                       aria-label="Upcoming deadlines"
                     >
                       {deadlineSegments.later.slice(0, 5).map((dl) => (
-                        <DeadlineRow key={dl.id} deadline={dl} priority="low" />
+                        <DeadlineRow
+                          key={dl.id}
+                          deadline={dl}
+                          priority="low"
+                          onClick={() => router.push(getTeamPath(dl.teamId))}
+                        />
                       ))}
                       {deadlineSegments.later.length > 5 && (
                         <p className="text-xs dark:text-white/40 text-gray-400 text-center py-1.5">
@@ -728,7 +782,12 @@ export default function DashboardPage() {
           {/* ── Recent Worklogs ───────────────────────────────── */}
           <section className={cardClassName}>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-base font-semibold">Recent Worklogs</h3>
+              <div>
+                <h3 className="text-base font-semibold">Recent Worklogs</h3>
+                <p className="text-xs text-muted mt-0.5">
+                  Latest activity feed across your worklogs.
+                </p>
+              </div>
               <div className="flex items-center gap-2">
                 {hasTeamQuery && (
                   <span className="text-xs text-muted">
@@ -783,6 +842,11 @@ export default function DashboardPage() {
                         key={worklog.id}
                         worklog={worklog}
                         className={teamCardClassName}
+                        onClick={() =>
+                          worklog.teamId
+                            ? router.push(getTeamPath(worklog.teamId))
+                            : undefined
+                        }
                       />
                     ))}
                   </div>
@@ -790,7 +854,12 @@ export default function DashboardPage() {
 
                 {/* Table View */}
                 {worklogViewMode === "table" && (
-                  <WorklogTable worklogs={filteredWorklogs} />
+                  <WorklogTable
+                    worklogs={filteredWorklogs}
+                    onRowClick={(w) =>
+                      w.teamId ? router.push(getTeamPath(w.teamId)) : undefined
+                    }
+                  />
                 )}
 
                 {/* Pagination */}

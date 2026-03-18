@@ -18,6 +18,16 @@ import {
 } from "lucide-react";
 import { RatingModal } from "@/components/rating-modal";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   TeamFilters,
   type TeamFilterState,
   type TeamSortBy,
@@ -34,6 +44,7 @@ import { EmptyState } from "@/components/states/empty-state";
 import { ErrorState } from "@/components/states/error-state";
 import { TeamCreationWizard } from "@/components/teams/team-creation-wizard";
 import { useDeleteWorklog, useTeamSearch } from "@/lib/hooks";
+import { useSharedSession } from "@/components/providers";
 import {
   useOrganization as useOrgHook,
   type OrganizationTeam,
@@ -117,6 +128,7 @@ export default function OrganizationDashboardPage({
   // Standard hooks
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { data: session } = useSharedSession();
 
   // 1. Page State
   const [showCreateTeam, setShowCreateTeam] = useState(false);
@@ -132,6 +144,10 @@ export default function OrganizationDashboardPage({
     } | null;
   } | null>(null);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+  const [worklogToDelete, setWorklogToDelete] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
 
   // 2. Worklog List State
   const [worklogs, setWorklogs] = useState<WorklogListItem[]>([]);
@@ -269,21 +285,31 @@ export default function OrganizationDashboardPage({
     worklogId: string,
     worklogTitle: string,
   ) => {
-    // The hook internally confirms, then deletes and invalidates cache
-    toast.promise(
-      deleteWorklogMutation.mutateAsync({ worklogId, title: worklogTitle }),
-      {
-        loading: `Deleting "${worklogTitle}"...`,
-        success: () => {
-          // Refresh local worklog list after hook invalidates global cache
-          fetchWorklogs();
-          return `Successfully deleted "${worklogTitle}"`;
-        },
-        error: (err: unknown) =>
-          err instanceof Error ? err.message : "Failed to delete worklog",
-      },
-    );
+    setWorklogToDelete({ id: worklogId, title: worklogTitle });
   };
+
+  const confirmDeleteWorklog = async () => {
+    if (!worklogToDelete) return;
+
+    const { id, title } = worklogToDelete;
+    setWorklogToDelete(null);
+
+    toast.promise(deleteWorklogMutation.mutateAsync({ worklogId: id, title }), {
+      loading: `Deleting "${title}"...`,
+      success: () => {
+        // Refresh local worklog list after hook invalidates global cache
+        fetchWorklogs();
+        return `Successfully deleted "${title}"`;
+      },
+      error: (err: unknown) =>
+        err instanceof Error ? err.message : "Failed to delete worklog",
+    });
+  };
+
+  const handleRatingSuccess = useCallback(() => {
+    fetchOrganization();
+    fetchWorklogs();
+  }, [fetchOrganization, fetchWorklogs]);
 
   const handleWorklogFiltersChange = useCallback((next: WorklogFilterState) => {
     setWorklogFilters(next);
@@ -645,6 +671,7 @@ export default function OrganizationDashboardPage({
                     totalPages={totalWorklogPages}
                     totalCount={worklogTotal}
                     onPageChange={setWorklogPage}
+                    currentUserId={session?.user?.id}
                   />
                 )}
               </CardContent>
@@ -674,7 +701,7 @@ export default function OrganizationDashboardPage({
             worklogTitle={selectedWorklog.title}
             worklogStatus={selectedWorklog.progressStatus}
             existingRating={selectedWorklog.existingRating}
-            onSuccess={fetchOrganization}
+            onSuccess={handleRatingSuccess}
           />
         )}
 
@@ -686,6 +713,31 @@ export default function OrganizationDashboardPage({
             onSuccess={fetchOrganization}
           />
         )}
+
+        <AlertDialog
+          open={!!worklogToDelete}
+          onOpenChange={(open) => !open && setWorklogToDelete(null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Worklog</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to permanently delete{" "}
+                <strong>&quot;{worklogToDelete?.title}&quot;</strong>? This
+                action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-red-600 hover:bg-red-700 text-white"
+                onClick={confirmDeleteWorklog}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

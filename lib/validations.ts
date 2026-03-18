@@ -1,5 +1,20 @@
 import { z } from "zod";
 
+const githubTokenRegex = /^https:\/\/(www\.)?github\.com\/.+/;
+
+function parseGithubLinks(value: string) {
+  return value
+    .split(/[\n,\s]+/)
+    .map((v) => v.trim())
+    .filter(Boolean);
+}
+
+function hasValidGithubLinks(value?: string) {
+  if (!value) return true;
+  const links = parseGithubLinks(value);
+  return links.length > 0 && links.every((link) => githubTokenRegex.test(link));
+}
+
 /**
  * Credits Management Schemas
  */
@@ -133,19 +148,13 @@ export const worklogCreateSchema = z.object({
     .string()
     .min(1, "Title must not be empty")
     .max(200, "Title must be at most 200 characters"),
-  description: z
-    .string()
-    .min(1, "Description must not be empty")
-    .refine(
-      (value) => value.replace(/<[^>]*>/g, "").trim().length > 0,
-      "Description must not be empty",
-    ),
+  description: z.string().optional(),
   githubLink: z
     .string()
     .optional()
     .refine(
-      (value) => !value || /^https:\/\/(www\.)?github\.com\/.+/.test(value),
-      "Must be a valid GitHub URL",
+      (value) => hasValidGithubLinks(value),
+      "Must contain valid GitHub URL(s), separated by commas/new lines",
     ),
   deadline: z
     .string()
@@ -172,19 +181,40 @@ export const worklogUpdateSchema = z.object({
     .min(1, "Title must not be empty")
     .max(200, "Title must be at most 200 characters")
     .optional(),
-  description: z.string().min(1, "Description must not be empty").optional(),
+  description: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().optional(),
+  ),
   githubLink: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z
       .string()
-      .url("Invalid GitHub link URL")
-      .regex(/^https:\/\/(www\.)?github\.com\/.+/, "Must be a valid GitHub URL")
+      .refine(
+        (value) => hasValidGithubLinks(value),
+        "Must contain valid GitHub URL(s), separated by commas/new lines",
+      )
       .optional()
       .nullable(),
   ),
+  attachments: z
+    .array(
+      z.object({
+        url: z.string().min(1, "Attachment URL is required"),
+        name: z.string().min(1, "Attachment name is required"),
+        size: z.number().int().nonnegative(),
+        type: z.string().min(1, "Attachment type is required"),
+      }),
+    )
+    .optional(),
   deadline: z
     .string()
-    .datetime("Invalid deadline format")
+    .refine(
+      (value) => {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return true;
+        return !Number.isNaN(new Date(value).getTime());
+      },
+      { message: "Invalid deadline format" },
+    )
     .or(z.date())
     .optional()
     .nullable(),

@@ -69,20 +69,50 @@ export async function GET() {
         name: true,
         owner: {
           select: {
+            id: true,
             name: true,
           },
         },
+        organizationId: true,
       },
     });
+
+    const orgIds = [
+      ...new Set(teamsData.map((t) => t.organizationId).filter(Boolean)),
+    ] as string[];
+    const ownedOrgIds = new Set(
+      orgIds.length > 0
+        ? (
+            await prisma.organization.findMany({
+              where: { id: { in: orgIds }, ownerId: user.id },
+              select: { id: true },
+            })
+          ).map((o) => o.id)
+        : [],
+    );
 
     // Create lookup map for O(1) access
     const teamsMap = new Map(teamsData.map((team) => [team.id, team]));
 
     // Combine data efficiently
-    const worklogsWithDetails = worklogs.map((worklog) => ({
-      ...worklog,
-      team: teamsMap.get(worklog.teamId),
-    }));
+    const worklogsWithDetails = worklogs.map((worklog) => {
+      const team = teamsMap.get(worklog.teamId);
+      const isTeamOwnr = team?.owner?.id === user.id;
+      const isOrgOwnr =
+        !!team?.organizationId && ownedOrgIds.has(team.organizationId);
+      const canSeeAdvanced = isTeamOwnr || isOrgOwnr;
+
+      return {
+        ...worklog,
+        progressStatus:
+          !canSeeAdvanced &&
+          (worklog.progressStatus === "REVIEWED" ||
+            worklog.progressStatus === "GRADED")
+            ? "COMPLETED"
+            : worklog.progressStatus,
+        team,
+      };
+    });
 
     return apiResponse(worklogsWithDetails);
   } catch (error) {
@@ -199,7 +229,7 @@ export async function POST(request: NextRequest) {
 
     const worklogData = {
       title,
-      description,
+      description: description || "",
       githubLink: githubLink || undefined,
       deadline: deadline ? new Date(deadline) : undefined,
       progressStatus: progressStatus || undefined,

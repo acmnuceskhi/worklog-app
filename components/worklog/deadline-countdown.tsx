@@ -35,7 +35,8 @@ export function DeadlineCountdown({
   // Don't show countdown for completed worklogs - status badge already shows completion info
   const isCompleted =
     status?.toLowerCase().includes("completed") ||
-    status?.toLowerCase() === "graded";
+    status?.toLowerCase() === "graded" ||
+    status?.toLowerCase() === "reviewed";
   if (isCompleted) {
     return null;
   }

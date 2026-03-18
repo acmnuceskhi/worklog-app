@@ -19,10 +19,15 @@ import { TableColumnHeader } from "@/components/kibo-ui/table";
 import { Button } from "@/components/ui/button";
 import { BaseDataTable, TablePagination } from "./base-data-table";
 import { StatusBadge, STATUS_STYLES } from "@/lib/tables/column-patterns";
-import { formatTableDate, canRateWorklog } from "@/lib/tables/table-utils";
+import {
+  formatTableDate,
+  formatTableDateTime,
+  canRateWorklog,
+} from "@/lib/tables/table-utils";
 import { Star, Trash2, Pencil, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { OrganizationWorklogRow, ProgressStatus } from "./types";
+import { AppTooltip, TooltipProvider } from "@/components/ui/tooltip";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -45,6 +50,8 @@ export interface OrganizationWorklogTableProps {
   totalCount: number;
   /** Page change handler */
   onPageChange: (page: number) => void;
+  /** Current user id for delete permission checks */
+  currentUserId?: string;
 }
 
 // ── Rating Display ────────────────────────────────────────────────────────────
@@ -65,24 +72,68 @@ function getRatingStarFill(avg: number): string {
 
 function RatingCell({
   ratings,
+  status,
 }: {
   ratings: OrganizationWorklogRow["ratings"];
+  status: ProgressStatus;
 }) {
   if (!ratings || ratings.length === 0) {
-    return <span className="text-white/30 text-sm">Not rated</span>;
+    if (!canRateWorklog(status)) {
+      return (
+        <AppTooltip content="Worklog must be reviewed by the team owner before it can be rated">
+          <span className="cursor-help dark:text-white/30 text-gray-400 text-sm italic">
+            Awaiting review
+          </span>
+        </AppTooltip>
+      );
+    }
+    return (
+      <span className="dark:text-white/30 text-gray-400 text-sm">
+        Not rated
+      </span>
+    );
   }
 
   const avgRating =
     ratings.reduce((sum, r) => sum + r.value, 0) / ratings.length;
+  const latestComment =
+    ratings.find((r) => (r.comment || "").trim().length > 0)?.comment ?? null;
+  const latestRating = ratings[0];
 
   return (
-    <div
-      className={cn("flex items-center gap-1.5", getRatingColor(avgRating))}
-      aria-label={`Rating: ${avgRating.toFixed(1)} out of 10`}
-    >
-      <Star className={cn("h-4 w-4", getRatingStarFill(avgRating))} />
-      <span className="font-semibold tabular-nums">{avgRating.toFixed(1)}</span>
-      <span className="text-white/40 text-xs">/10</span>
+    <div className="flex flex-col">
+      <div
+        className={cn("flex items-center gap-1.5", getRatingColor(avgRating))}
+        aria-label={`Rating: ${avgRating.toFixed(1)} out of 10`}
+      >
+        <Star className={cn("h-4 w-4", getRatingStarFill(avgRating))} />
+        <span className="font-semibold tabular-nums">
+          {avgRating.toFixed(1)}
+        </span>
+        <span className="text-white/40 text-xs">/10</span>
+      </div>
+      {latestComment && (
+        <AppTooltip
+          content={
+            <span>
+              Feedback: {latestComment}
+              {latestRating?.updatedAt
+                ? ` • Last updated ${formatTableDateTime(latestRating.updatedAt)}`
+                : ""}
+            </span>
+          }
+        >
+          <span className="cursor-help text-xs dark:text-white/45 text-gray-500 line-clamp-1 max-w-[200px]">
+            {latestComment}
+          </span>
+        </AppTooltip>
+      )}
+      {latestRating?.updatedAt &&
+        latestRating.updatedAt !== latestRating.createdAt && (
+          <span className="text-[10px] dark:text-white/35 text-gray-500">
+            Last updated {formatTableDateTime(latestRating.updatedAt)}
+          </span>
+        )}
     </div>
   );
 }
@@ -99,6 +150,7 @@ export function OrganizationWorklogTable({
   totalPages,
   totalCount,
   onPageChange,
+  currentUserId,
 }: OrganizationWorklogTableProps) {
   const columns = useMemo<ColumnDef<OrganizationWorklogRow>[]>(
     () => [
@@ -168,7 +220,12 @@ export function OrganizationWorklogTable({
         header: ({ column }) => (
           <TableColumnHeader column={column} title="Rating" />
         ),
-        cell: ({ row }) => <RatingCell ratings={row.original.ratings} />,
+        cell: ({ row }) => (
+          <RatingCell
+            ratings={row.original.ratings}
+            status={row.original.progressStatus}
+          />
+        ),
       },
       {
         id: "actions",
@@ -179,6 +236,11 @@ export function OrganizationWorklogTable({
           const status = worklog.progressStatus as ProgressStatus;
           const hasRating = worklog.ratings && worklog.ratings.length > 0;
           const showRateButton = canRateWorklog(status);
+          const canDeleteWorklog =
+            !!currentUserId &&
+            worklog.user.id === currentUserId &&
+            worklog.progressStatus !== "REVIEWED" &&
+            worklog.progressStatus !== "GRADED";
 
           return (
             <div className="flex items-center gap-2">
@@ -210,42 +272,46 @@ export function OrganizationWorklogTable({
                   )}
                 </Button>
               )}
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-8 px-2 text-white/40 hover:text-red-400 hover:bg-red-500/10"
-                onClick={() => onDelete(worklog.id, worklog.title)}
-                disabled={isDeleting}
-                aria-label={`Delete ${worklog.title}`}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              {canDeleteWorklog && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 px-2 text-white/40 hover:text-red-400 hover:bg-red-500/10"
+                  onClick={() => onDelete(worklog.id, worklog.title)}
+                  disabled={isDeleting}
+                  aria-label={`Delete ${worklog.title}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           );
         },
       },
     ],
-    [onRate, onDelete, isDeleting],
+    [onRate, onDelete, isDeleting, currentUserId],
   );
 
   return (
-    <div className="space-y-4">
-      <BaseDataTable
-        data={worklogs}
-        columns={columns}
-        isLoading={isLoading}
-        emptyMessage="No worklogs match filters"
-        emptyIcon={<ClipboardList className="h-12 w-12" />}
-      />
-
-      {!isLoading && worklogs.length > 0 && (
-        <TablePagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalCount={totalCount}
-          onPageChange={onPageChange}
+    <TooltipProvider>
+      <div className="space-y-4">
+        <BaseDataTable
+          data={worklogs}
+          columns={columns}
+          isLoading={isLoading}
+          emptyMessage="No worklogs match filters"
+          emptyIcon={<ClipboardList className="h-12 w-12" />}
         />
-      )}
-    </div>
+
+        {!isLoading && worklogs.length > 0 && (
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            onPageChange={onPageChange}
+          />
+        )}
+      </div>
+    </TooltipProvider>
   );
 }

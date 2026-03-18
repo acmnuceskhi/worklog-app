@@ -101,7 +101,7 @@ export default function LeadTeamsPage() {
   }
 
   const totalMembers = teams.reduce(
-    (sum, team) => sum + (team._count?.members || 0),
+    (sum, team) => sum + (team._count?.members || 0) + 1,
     0,
   );
   const totalWorklogs = teams.reduce(
@@ -187,7 +187,7 @@ export default function LeadTeamsPage() {
               subtitle={team.project ? `Project: ${team.project}` : undefined}
               avatar={<Users className="text-blue-400" />}
               stats={[
-                { label: "Members", value: team._count?.members || 0 },
+                { label: "Members", value: (team._count?.members || 0) + 1 },
                 { label: "Worklogs", value: team._count?.worklogs || 0 },
               ]}
               onClick={() => router.push(`/teams/lead/${team.id}`)}

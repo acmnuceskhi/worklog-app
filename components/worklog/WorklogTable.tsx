@@ -9,6 +9,7 @@ import {
   daysUntilDeadline,
 } from "@/lib/homepage-utils";
 import { formatLocalDate } from "@/lib/deadline-utils";
+import { parseDeadline } from "@/lib/dates/parsing";
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -60,9 +61,17 @@ export function WorklogTable({
             const statusClasses = getStatusColor(w.progressStatus);
             const statusLabel = getStatusLabel(w.progressStatus);
             const hasDeadline = !!w.deadline;
-            const days = hasDeadline
-              ? daysUntilDeadline(w.deadline as string | Date)
-              : null;
+            const isTerminalStatus = [
+              "COMPLETED",
+              "REVIEWED",
+              "GRADED",
+            ].includes((w.progressStatus || "").toUpperCase());
+            const parsedDeadline = parseDeadline(w.deadline ?? null);
+            const parsedCreatedAt = parseDeadline(w.createdAt ?? null);
+            const days =
+              hasDeadline && !isTerminalStatus
+                ? daysUntilDeadline(w.deadline as string | Date)
+                : null;
 
             return (
               <tr
@@ -109,36 +118,46 @@ export function WorklogTable({
                       <Clock
                         className={cn(
                           "h-3 w-3 shrink-0",
-                          days !== null && days < 0
-                            ? "text-red-400"
-                            : days !== null && days <= 3
-                              ? "text-orange-400"
-                              : "dark:text-white/40 text-gray-400",
+                          isTerminalStatus
+                            ? "text-emerald-400"
+                            : days !== null && days < 0
+                              ? "text-red-400"
+                              : days !== null && days <= 3
+                                ? "text-orange-400"
+                                : "dark:text-white/40 text-gray-400",
                         )}
                         aria-hidden
                       />
                       <span className="dark:text-white/60 text-gray-500">
-                        {formatLocalDate(new Date(w.deadline as string))}
+                        {parsedDeadline
+                          ? formatLocalDate(parsedDeadline)
+                          : "Invalid date"}
                       </span>
-                      {days !== null && (
-                        <span
-                          className={cn(
-                            "text-[10px] tabular-nums font-medium",
-                            days < 0
-                              ? "text-red-400"
-                              : days <= 3
-                                ? "text-orange-400"
-                                : "dark:text-white/40 text-gray-400",
-                          )}
-                        >
-                          (
-                          {days < 0
-                            ? `${Math.abs(days)}d ago`
-                            : days === 0
-                              ? "today"
-                              : `${days}d`}
-                          )
+                      {isTerminalStatus ? (
+                        <span className="text-[10px] tabular-nums font-medium text-emerald-400">
+                          (completed)
                         </span>
+                      ) : (
+                        days !== null && (
+                          <span
+                            className={cn(
+                              "text-[10px] tabular-nums font-medium",
+                              days < 0
+                                ? "text-red-400"
+                                : days <= 3
+                                  ? "text-orange-400"
+                                  : "dark:text-white/40 text-gray-400",
+                            )}
+                          >
+                            (
+                            {days < 0
+                              ? `${Math.abs(days)}d ago`
+                              : days === 0
+                                ? "today"
+                                : `${days}d`}
+                            )
+                          </span>
+                        )
                       )}
                     </div>
                   ) : (
@@ -150,7 +169,9 @@ export function WorklogTable({
                 <td className="py-2.5 px-3 hidden sm:table-cell">
                   {w.createdAt ? (
                     <span className="text-xs dark:text-white/40 text-gray-400">
-                      {formatLocalDate(new Date(w.createdAt as string))}
+                      {parsedCreatedAt
+                        ? formatLocalDate(parsedCreatedAt)
+                        : "Invalid date"}
                     </span>
                   ) : (
                     <span className="dark:text-white/30 text-gray-300">—</span>

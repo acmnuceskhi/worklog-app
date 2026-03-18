@@ -130,11 +130,19 @@ export const useOrganization = (id: string) => {
         }
         // Handle 403 (Forbidden) - show permission error
         if (response.status === 403) {
-          throw new Error("You don't have permission to access this resource");
+          const error = new Error(
+            "You don't have permission to access this resource",
+          ) as Error & { status?: number };
+          error.status = 403;
+          throw error;
         }
         // Handle 404 (Not Found)
         if (response.status === 404) {
-          throw new Error("Organization not found");
+          const error = new Error("Organization not found") as Error & {
+            status?: number;
+          };
+          error.status = 404;
+          throw error;
         }
         throw new Error("Failed to fetch organization");
       }
@@ -142,6 +150,11 @@ export const useOrganization = (id: string) => {
       return payload.data || payload;
     },
     enabled: !!id,
+    retry: (failureCount, error) => {
+      const status = (error as Error & { status?: number })?.status;
+      if (status === 403 || status === 404) return false;
+      return failureCount < 2;
+    },
     staleTime: 30 * 1000,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
@@ -491,11 +504,21 @@ export const useOrganizationInvitations = (
 
       const response = await fetch(url);
       if (!response.ok) {
-        throw new Error("Failed to fetch organization invitations");
+        const error = new Error(
+          "Failed to fetch organization invitations",
+        ) as Error & { status?: number };
+        error.status = response.status;
+        throw error;
       }
-      return (await response.json()) as OrganizationInvitationsResponse;
+      const payload = await response.json();
+      return (payload.data || payload) as OrganizationInvitationsResponse;
     },
     enabled: !!organizationId,
+    retry: (failureCount, error) => {
+      const status = (error as Error & { status?: number })?.status;
+      if (status === 403 || status === 404) return false;
+      return failureCount < 2;
+    },
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 };

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DeadlineStatusBadge } from "@/components/worklog/deadline-status-badge";
@@ -16,7 +17,14 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ProgressStatus } from "@/lib/hooks/use-worklogs";
-import { formatTableDate } from "@/lib/tables/table-utils";
+import { formatTableDate, formatTableDateTime } from "@/lib/tables/table-utils";
+
+function stripHtml(value: string) {
+  return value
+    .replace(/<[^>]*>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -32,10 +40,12 @@ export interface WorklogRow {
   progress: number;
   deadline: string | null;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface TeamWorklogTableProps {
   worklogs: WorklogRow[];
+  teamId: string;
   isLoading?: boolean;
   onDelete?: (id: string, title: string) => void;
   isDeleting?: boolean;
@@ -99,12 +109,14 @@ function ProgressBar({ value }: { value: number }) {
 
 function WorklogDetailPanel({
   worklog,
+  teamId,
   currentUserId,
   onStatusChange,
   isStatusPending,
   isReadOnly,
 }: {
   worklog: WorklogRow;
+  teamId: string;
   currentUserId?: string;
   onStatusChange?: (id: string, newStatus: ProgressStatus) => void;
   isStatusPending?: boolean;
@@ -119,6 +131,19 @@ function WorklogDetailPanel({
 
   return (
     <div className="border-t dark:border-white/5 border-gray-100 dark:bg-white/[0.02] bg-gray-50/50 px-6 py-4 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
+      {/* Full title */}
+      <div className="flex gap-3">
+        <FileText className="h-4 w-4 dark:text-white/40 text-gray-400 mt-0.5 shrink-0" />
+        <div className="space-y-1 min-w-0">
+          <p className="text-xs font-medium dark:text-white/50 text-gray-400 uppercase tracking-wider">
+            Title
+          </p>
+          <p className="text-sm dark:text-white/90 text-gray-800 leading-relaxed break-words">
+            {worklog.title}
+          </p>
+        </div>
+      </div>
+
       {/* Description */}
       <div className="flex gap-3">
         <FileText className="h-4 w-4 dark:text-white/40 text-gray-400 mt-0.5 shrink-0" />
@@ -127,7 +152,7 @@ function WorklogDetailPanel({
             Description
           </p>
           <p className="text-sm dark:text-white/80 text-gray-700 leading-relaxed whitespace-pre-wrap">
-            {worklog.description || "No description provided."}
+            {stripHtml(worklog.description) || "No description provided."}
           </p>
         </div>
       </div>
@@ -157,8 +182,16 @@ function WorklogDetailPanel({
         {/* Created date */}
         <div className="inline-flex items-center gap-1.5 text-xs dark:text-white/50 text-gray-400">
           <Calendar className="h-3.5 w-3.5" />
-          <span>Created {formatTableDate(worklog.createdAt)}</span>
+          <span>Created {formatTableDateTime(worklog.createdAt)}</span>
         </div>
+
+        {/* Last updated date */}
+        {worklog.updatedAt !== worklog.createdAt && (
+          <div className="inline-flex items-center gap-1.5 text-xs dark:text-white/50 text-gray-400">
+            <Calendar className="h-3.5 w-3.5" />
+            <span>Last updated {formatTableDateTime(worklog.updatedAt)}</span>
+          </div>
+        )}
 
         {/* Deadline detail */}
         {worklog.deadline && (
@@ -207,6 +240,15 @@ function WorklogDetailPanel({
           )}
         </div>
       )}
+
+      {/* Explicit edit path for self-assigned worklogs */}
+      {!isReadOnly && isOwnWorklog && (
+        <div className="pt-2">
+          <Button asChild size="sm" variant="ghost" className="text-xs">
+            <Link href={`/teams/member/${teamId}`}>Open Editable View</Link>
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -215,6 +257,7 @@ function WorklogDetailPanel({
 
 export function TeamWorklogTable({
   worklogs,
+  teamId,
   isLoading,
   onDelete,
   isDeleting,
@@ -332,7 +375,8 @@ export function TeamWorklogTable({
                 <div className="pl-6 mt-1.5">
                   <DeadlineStatusBadge
                     deadline={worklog.deadline}
-                    status={worklog.statusLabel}
+                    status={worklog.status}
+                    completedAt={worklog.updatedAt}
                   />
                 </div>
               )}
@@ -395,7 +439,7 @@ export function TeamWorklogTable({
                 </div>
                 {!isExpanded && worklog.description && (
                   <p className="text-xs dark:text-white/40 text-gray-400 mt-0.5 truncate">
-                    {worklog.description}
+                    {stripHtml(worklog.description)}
                   </p>
                 )}
               </div>
@@ -420,11 +464,13 @@ export function TeamWorklogTable({
                   <div className="flex flex-col gap-0.5">
                     <DeadlineStatusBadge
                       deadline={worklog.deadline}
-                      status={worklog.statusLabel}
+                      status={worklog.status}
+                      completedAt={worklog.updatedAt}
                     />
                     <DeadlineCountdown
                       deadline={worklog.deadline}
-                      status={worklog.statusLabel}
+                      status={worklog.status}
+                      completedAt={worklog.updatedAt}
                     />
                   </div>
                 ) : (
@@ -456,6 +502,7 @@ export function TeamWorklogTable({
             {isExpanded && (
               <WorklogDetailPanel
                 worklog={worklog}
+                teamId={teamId}
                 currentUserId={currentUserId}
                 onStatusChange={onStatusChange}
                 isStatusPending={isStatusPending}

@@ -47,7 +47,10 @@ export function RatingModal({
   const [ratingValue, setRatingValue] = React.useState(
     existingRating?.value || 0,
   );
-  const [comment, setComment] = React.useState(existingRating?.comment || "");
+  const commentRef = React.useRef(existingRating?.comment || "");
+  const [commentLength, setCommentLength] = React.useState(
+    (existingRating?.comment || "").length,
+  );
   const [error, setError] = React.useState<string | null>(null);
   const [markAsGraded, setMarkAsGraded] = React.useState(false);
 
@@ -65,7 +68,8 @@ export function RatingModal({
   React.useEffect(() => {
     if (open) {
       setRatingValue(existingRating?.value || 0);
-      setComment(existingRating?.comment || "");
+      commentRef.current = existingRating?.comment || "";
+      setCommentLength(commentRef.current.length);
       setError(null);
       setMarkAsGraded(false);
     }
@@ -86,13 +90,13 @@ export function RatingModal({
       if (isEditing) {
         await updateRating({
           value: ratingValue,
-          comment: comment || undefined,
+          comment: commentRef.current || undefined,
         });
       } else {
         await createRating({
           worklogId,
           value: ratingValue,
-          comment: comment || undefined,
+          comment: commentRef.current || undefined,
         });
       }
 
@@ -125,7 +129,7 @@ export function RatingModal({
     });
   };
 
-  const remainingChars = MAX_COMMENT_LENGTH - comment.length;
+  const remainingChars = MAX_COMMENT_LENGTH - commentLength;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -165,11 +169,17 @@ export function RatingModal({
             helpText={`${remainingChars} characters remaining`}
           >
             <Textarea
+              key={`${existingRating?.id ?? "new"}-${open ? "open" : "closed"}`}
               id="rating-comment"
-              value={comment}
-              onChange={(e) =>
-                setComment(e.target.value.slice(0, MAX_COMMENT_LENGTH))
-              }
+              defaultValue={existingRating?.comment || ""}
+              onChange={(e) => {
+                const nextValue = e.target.value.slice(0, MAX_COMMENT_LENGTH);
+                if (nextValue !== e.target.value) {
+                  e.target.value = nextValue;
+                }
+                commentRef.current = nextValue;
+                setCommentLength(nextValue.length);
+              }}
               placeholder="Add feedback or comments about this worklog..."
               className="bg-white/5 border-white/10 text-white placeholder:text-white/30 resize-none focus:border-blue-500/50 focus:ring-blue-500/30"
               rows={4}

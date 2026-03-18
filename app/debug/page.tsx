@@ -90,7 +90,7 @@ export default function DebugPage() {
                   <code className="bg-black/20 px-1 rounded">{team.id}</code>
                 </p>
                 <p className="text-sm text-muted mb-2">
-                  Members: {team._count?.members || 0}
+                  Members: {(team._count?.members || 0) + 1}
                 </p>
                 <p className="text-sm text-muted mb-4">
                   Worklogs: {team._count?.worklogs || 0}

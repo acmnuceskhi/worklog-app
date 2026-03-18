@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,7 +37,11 @@ import {
   useCreateWorklog,
   useUpdateWorklogStatus,
 } from "@/lib/hooks";
-import { formatLocalDate, getDeadlineStatus } from "@/lib/deadline-utils";
+import {
+  formatLocalDate,
+  getDeadlineStatus,
+  parseDeadline,
+} from "@/lib/deadline-utils";
 import type { ProgressStatus } from "@/lib/hooks/use-worklogs";
 import { Pagination } from "@/components/ui/pagination";
 
@@ -180,6 +185,10 @@ function TeamDetailsContent({
     memberId: string;
     memberName: string;
   } | null>(null);
+  const [worklogToDelete, setWorklogToDelete] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
 
   /* ── Derived: worklog rows ───────────────────────────────────────────── */
   const worklogRows = useMemo<WorklogRow[]>(
@@ -197,6 +206,7 @@ function TeamDetailsContent({
         progress: PROGRESS_MAP[w.progressStatus as ProgressStatus] ?? 0,
         deadline: w.deadline ?? null,
         createdAt: w.createdAt,
+        updatedAt: w.updatedAt,
       })),
     [worklogs],
   );
@@ -204,34 +214,80 @@ function TeamDetailsContent({
   /* ── Derived: stats ──────────────────────────────────────────────────── */
   const stats = useMemo(() => {
     const total = worklogRows.length;
-    const completed = worklogRows.filter((r) => r.status === "GRADED").length;
+    const completed = worklogRows.filter((r) =>
+      ["COMPLETED", "REVIEWED", "GRADED"].includes(r.status),
+    ).length;
+    const reviewPending = worklogRows.filter(
+      (r) => r.status === "COMPLETED",
+    ).length;
     const avg =
       total > 0
         ? Math.round(worklogRows.reduce((s, r) => s + r.progress, 0) / total)
         : 0;
 
     const now = new Date();
-    now.setHours(0, 0, 0, 0);
 
     let overdue = 0;
     let dueSoon = 0;
     for (const r of worklogRows) {
-      if (!r.deadline || r.status === "GRADED") continue;
-      const d = new Date(r.deadline);
-      const diff = Math.ceil(
-        (d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
-      );
-      if (diff < 0) overdue++;
-      else if (diff <= 3) dueSoon++;
+      if (
+        !r.deadline ||
+        ["COMPLETED", "REVIEWED", "GRADED"].includes(r.status)
+      ) {
+        continue;
+      }
+      const d = parseDeadline(r.deadline);
+      if (!d) continue;
+      // Use end-of-day for deadline comparison to match getDeadlineStatus logic
+      const dEnd = new Date(d);
+      dEnd.setHours(23, 59, 59, 999);
+      if (now > dEnd) {
+        overdue++;
+      } else {
+        const diffDays = Math.ceil(
+          (dEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+        );
+        if (diffDays <= 3) dueSoon++;
+      }
     }
 
-    return { avg, completed, total, overdue, dueSoon };
+    return { avg, completed, total, overdue, dueSoon, reviewPending };
   }, [worklogRows]);
 
   /* ── Derived: member rows ────────────────────────────────────────────── */
   const memberRows = useMemo<MemberRow[]>(() => {
     if (!team) return [];
-    return (team as TeamData).members.map((m) => {
+    const teamData = team as TeamData;
+
+    const ownerWorklogs = worklogs.filter((w) => w.userId === teamData.ownerId);
+    const ownerRated = ownerWorklogs.filter(
+      (w) => w.ratings && w.ratings.length > 0,
+    );
+    const ownerAvg =
+      ownerRated.length > 0
+        ? Number(
+            (
+              ownerRated.reduce((sum, w) => {
+                const wAvg =
+                  w.ratings!.reduce((s, r) => s + r.value, 0) /
+                  w.ratings!.length;
+                return sum + wAvg;
+              }, 0) / ownerRated.length
+            ).toFixed(1),
+          )
+        : 0;
+
+    const ownerRow: MemberRow = {
+      id: `owner-${teamData.ownerId}`,
+      name: teamData.owner?.name || teamData.owner?.email || "Team Owner",
+      email: teamData.owner?.email || "",
+      contribution: `${ownerWorklogs.length} Worklogs`,
+      rating: ownerAvg,
+      taskCount: ownerWorklogs.length,
+      canRemove: false,
+    };
+
+    const acceptedMemberRows = teamData.members.map((m) => {
       const userId = m.user?.id;
       const memberWorklogs = userId
         ? worklogs.filter((w) => w.userId === userId)
@@ -260,8 +316,11 @@ function TeamDetailsContent({
         contribution: `${memberWorklogs.length} Worklogs`,
         rating: avgRating,
         taskCount: memberWorklogs.length,
+        canRemove: true,
       };
     });
+
+    return [ownerRow, ...acceptedMemberRows];
   }, [team, worklogs]);
 
   /* ── Derived: modal member options ───────────────────────────────────── */
@@ -294,7 +353,8 @@ function TeamDetailsContent({
         .map((row) => {
           const info = getDeadlineStatus({
             deadline: row.deadline,
-            status: row.statusLabel,
+            status: row.status,
+            completedAt: row.updatedAt,
           });
           return { row, info };
         })
@@ -354,15 +414,19 @@ function TeamDetailsContent({
   };
 
   const handleDeleteWorklog = (worklogId: string, worklogTitle: string) => {
-    toast.promise(
-      deleteWorklogMutation.mutateAsync({ worklogId, title: worklogTitle }),
-      {
-        loading: `Deleting ${worklogTitle}…`,
-        success: "Worklog deleted successfully",
-        error: (err) =>
-          err instanceof Error ? err.message : "Failed to delete worklog",
-      },
-    );
+    setWorklogToDelete({ id: worklogId, title: worklogTitle });
+  };
+
+  const confirmDeleteWorklog = () => {
+    if (!worklogToDelete) return;
+    const { id, title } = worklogToDelete;
+    setWorklogToDelete(null);
+    toast.promise(deleteWorklogMutation.mutateAsync({ worklogId: id, title }), {
+      loading: `Deleting "${title}"…`,
+      success: "Worklog deleted successfully",
+      error: (err) =>
+        err instanceof Error ? err.message : "Failed to delete worklog",
+    });
   };
 
   const handleRemoveMember = (memberId: string, memberName: string) => {
@@ -436,16 +500,29 @@ function TeamDetailsContent({
       <PageHeader
         title={typedTeam.name}
         description={
-          `Led by ${typedTeam.owner.name || typedTeam.owner.email}` +
-          (typedTeam.organization ? ` · ${typedTeam.organization.name}` : "")
+          <span>
+            Led by {typedTeam.owner?.name || typedTeam.owner?.email}
+            {typedTeam.organization && (
+              <>
+                {" · "}
+                <Link
+                  href={`/organizations/${typedTeam.organization.id}`}
+                  className="hover:underline dark:text-blue-300 text-blue-600"
+                >
+                  {typedTeam.organization.name}
+                </Link>
+              </>
+            )}
+          </span>
         }
         rightAction={
           <div className="flex items-center gap-2">
             <span className="rounded-full border dark:border-white/10 border-gray-200 dark:bg-white/5 bg-gray-50 px-3 py-1 text-xs dark:text-white/70 text-gray-600">
-              {typedTeam.members.length} members
+              {typedTeam.members.length + 1} members
             </span>
             <span className="rounded-full border dark:border-white/10 border-gray-200 dark:bg-white/5 bg-gray-50 px-3 py-1 text-xs dark:text-white/70 text-gray-600">
-              {typedTeam._count?.worklogs ?? 0} worklogs
+              {paginatedWorklogs?.meta.total ?? typedTeam._count?.worklogs ?? 0}{" "}
+              worklogs
             </span>
             {deadlineWarnings.length > 0 && (
               <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-xs text-amber-200">
@@ -468,6 +545,21 @@ function TeamDetailsContent({
               This team&apos;s organization was deleted. New worklogs,
               invitations, and credits updates are disabled. Open Team Settings
               to re-link this team to an organization and restore full access.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {stats.reviewPending > 0 && (
+        <div className="flex items-start gap-3 rounded-lg border border-blue-500/30 bg-blue-500/10 p-4">
+          <ClipboardList className="h-5 w-5 text-blue-400 mt-0.5 shrink-0" />
+          <div>
+            <p className="font-medium text-blue-600 dark:text-blue-300">
+              Review queue
+            </p>
+            <p className="text-sm text-blue-700/90 dark:text-blue-200/80 mt-0.5">
+              {stats.reviewPending} completed worklog
+              {stats.reviewPending !== 1 ? "s" : ""} awaiting your review.
             </p>
           </div>
         </div>
@@ -510,6 +602,7 @@ function TeamDetailsContent({
         <CardContent>
           <TeamWorklogTable
             worklogs={worklogRows}
+            teamId={teamId}
             isLoading={worklogsLoading}
             onDelete={handleDeleteWorklog}
             isDeleting={deleteWorklogMutation.isPending}
@@ -614,6 +707,32 @@ function TeamDetailsContent({
               onClick={confirmRemoveMember}
             >
               Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Worklog Confirmation */}
+      <AlertDialog
+        open={!!worklogToDelete}
+        onOpenChange={(open) => !open && setWorklogToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Worklog</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete{" "}
+              <strong>&quot;{worklogToDelete?.title}&quot;</strong>? This action
+              cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={confirmDeleteWorklog}
+            >
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

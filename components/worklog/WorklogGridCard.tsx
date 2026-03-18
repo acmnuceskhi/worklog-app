@@ -9,6 +9,7 @@ import {
   daysUntilDeadline,
 } from "@/lib/homepage-utils";
 import { formatLocalDate } from "@/lib/deadline-utils";
+import { parseDeadline } from "@/lib/dates/parsing";
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -36,9 +37,15 @@ export function WorklogGridCard({
   const statusLabel = getStatusLabel(worklog.progressStatus);
   const statusClasses = getStatusColor(worklog.progressStatus);
   const hasDeadline = !!worklog.deadline;
-  const deadlineDays = hasDeadline
-    ? daysUntilDeadline(worklog.deadline as string | Date)
-    : null;
+  const isTerminalStatus = ["COMPLETED", "REVIEWED", "GRADED"].includes(
+    (worklog.progressStatus || "").toUpperCase(),
+  );
+  const parsedDeadline = parseDeadline(worklog.deadline ?? null);
+  const parsedCreatedAt = parseDeadline(worklog.createdAt ?? null);
+  const deadlineDays =
+    hasDeadline && !isTerminalStatus
+      ? daysUntilDeadline(worklog.deadline as string | Date)
+      : null;
 
   return (
     <div
@@ -75,7 +82,7 @@ export function WorklogGridCard({
       {/* Meta: Created date */}
       {worklog.createdAt && (
         <p className="text-xs dark:text-white/40 text-gray-400 mb-2">
-          {formatLocalDate(new Date(worklog.createdAt))}
+          {parsedCreatedAt ? formatLocalDate(parsedCreatedAt) : "Invalid date"}
         </p>
       )}
 
@@ -84,23 +91,33 @@ export function WorklogGridCard({
         <div
           className={cn(
             "flex items-center gap-1.5 text-xs rounded-lg p-2 mt-1",
-            deadlineDays !== null && deadlineDays < 0
-              ? "bg-red-500/10 dark:text-red-300 text-red-700"
-              : deadlineDays !== null && deadlineDays <= 3
-                ? "bg-orange-500/10 text-orange-300"
-                : "dark:bg-white/5 bg-gray-50 dark:text-white/60 text-gray-500",
+            isTerminalStatus
+              ? "bg-emerald-500/10 dark:text-emerald-300 text-emerald-700"
+              : deadlineDays !== null && deadlineDays < 0
+                ? "bg-red-500/10 dark:text-red-300 text-red-700"
+                : deadlineDays !== null && deadlineDays <= 3
+                  ? "bg-orange-500/10 text-orange-300"
+                  : "dark:bg-white/5 bg-gray-50 dark:text-white/60 text-gray-500",
           )}
         >
           <Clock className="h-3 w-3 shrink-0" aria-hidden />
-          <span>{formatLocalDate(new Date(worklog.deadline as string))}</span>
-          {deadlineDays !== null && (
+          <span>
+            {parsedDeadline ? formatLocalDate(parsedDeadline) : "Invalid date"}
+          </span>
+          {isTerminalStatus ? (
             <span className="ml-auto text-[10px] tabular-nums font-medium">
-              {deadlineDays < 0
-                ? `${Math.abs(deadlineDays)}d overdue`
-                : deadlineDays === 0
-                  ? "Due today"
-                  : `${deadlineDays}d left`}
+              Completed
             </span>
+          ) : (
+            deadlineDays !== null && (
+              <span className="ml-auto text-[10px] tabular-nums font-medium">
+                {deadlineDays < 0
+                  ? `${Math.abs(deadlineDays)}d overdue`
+                  : deadlineDays === 0
+                    ? "Due today"
+                    : `${deadlineDays}d left`}
+              </span>
+            )
           )}
         </div>
       )}

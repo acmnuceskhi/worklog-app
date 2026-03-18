@@ -10,6 +10,7 @@ import {
   success,
   badRequest,
 } from "@/lib/auth-utils";
+import { handleApiError } from "@/lib/api-utils";
 import { validateRequest, organizationUpdateSchema } from "@/lib/validations";
 
 /**
@@ -207,7 +208,7 @@ export async function GET(
     // Calculate statistics
     const stats = {
       totalTeams: teams.length,
-      totalMembers: members.length,
+      totalMembers: members.length + 1,
       totalWorklogs: worklogs.length,
     };
 
@@ -222,11 +223,7 @@ export async function GET(
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
-    console.error("Get organization detail error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleApiError(error);
   }
 }
 
@@ -267,11 +264,7 @@ export async function PATCH(
 
     return success({ organization: updatedOrganization });
   } catch (error) {
-    console.error(`Error updating organization ${organizationId}:`, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleApiError(error);
   }
 }
 
@@ -312,10 +305,6 @@ export async function DELETE(
         "Organization deleted successfully. Associated teams are now read-only.",
     });
   } catch (error) {
-    console.error(`Error deleting organization ${organizationId}:`, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return handleApiError(error);
   }
 }

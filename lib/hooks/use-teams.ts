@@ -489,11 +489,9 @@ export const useUpdateTeam = (teamId: string) => {
         orgRefetches.push(
           queryClient.refetchQueries({
             queryKey: queryKeys.organizations.detail(newOrgId),
-            type: "all",
           }),
           queryClient.refetchQueries({
             queryKey: queryKeys.organizations.list(),
-            type: "all",
           }),
         );
       }
@@ -501,14 +499,12 @@ export const useUpdateTeam = (teamId: string) => {
         orgRefetches.push(
           queryClient.refetchQueries({
             queryKey: queryKeys.organizations.detail(prevOrgId),
-            type: "all",
           }),
         );
         if (!newOrgId) {
           orgRefetches.push(
             queryClient.refetchQueries({
               queryKey: queryKeys.organizations.list(),
-              type: "all",
             }),
           );
         }

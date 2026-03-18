@@ -154,6 +154,51 @@ export async function GET(request: NextRequest) {
         }),
       ]);
 
+    // Hide REVIEWED/GRADED from non-owner member views.
+    // Team owners and organization owners can see full status progression.
+    const teamIds = [...new Set(worklogs.map((w) => w.teamId))];
+    const teamsForVisibility = await prisma.team.findMany({
+      where: { id: { in: teamIds } },
+      select: {
+        id: true,
+        ownerId: true,
+        organizationId: true,
+      },
+    });
+    const teamById = new Map(teamsForVisibility.map((t) => [t.id, t]));
+
+    const orgIds = [
+      ...new Set(
+        teamsForVisibility.map((t) => t.organizationId).filter(Boolean),
+      ),
+    ] as string[];
+    const ownedOrgIds = new Set(
+      orgIds.length > 0
+        ? (
+            await prisma.organization.findMany({
+              where: { id: { in: orgIds }, ownerId: user.id },
+              select: { id: true },
+            })
+          ).map((o) => o.id)
+        : [],
+    );
+
+    const visibilityAdjustedWorklogs = worklogs.map((w) => {
+      const teamMeta = teamById.get(w.teamId);
+      const isTeamOwnr = teamMeta?.ownerId === user.id;
+      const isOrgOwner =
+        !!teamMeta?.organizationId && ownedOrgIds.has(teamMeta.organizationId);
+      const canSeeAdvanced = isTeamOwnr || isOrgOwner;
+
+      if (
+        !canSeeAdvanced &&
+        (w.progressStatus === "REVIEWED" || w.progressStatus === "GRADED")
+      ) {
+        return { ...w, progressStatus: "COMPLETED" as const };
+      }
+      return w;
+    });
+
     const [
       memberTeamsCount,
       leadTeamsCount,
@@ -183,7 +228,7 @@ export async function GET(request: NextRequest) {
         worklogsCount,
         pendingReviewsCount,
       },
-      worklogs: worklogs.map((w) => ({
+      worklogs: visibilityAdjustedWorklogs.map((w) => ({
         ...w,
         teamId: w.teamId,
       })),
