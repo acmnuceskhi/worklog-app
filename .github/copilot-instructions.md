@@ -543,7 +543,7 @@ Use Resend Node.js SDK for team and organization invitations. Follow [Resend Nex
 - **Client Generation**: Prisma client auto-generates to `app/generated/prisma/` on build/migrate
 - **Environment**: Requires `DATABASE_URL` in `.env` file
 - **Email Setup**: Configure email service for team invitations
-- **Mock Data Development**: All data-fetching hooks include `process.env.NODE_ENV === "development"` guards that return mock data instantly without network calls (see lib/mock-data.ts for mock data structure)
+- **Manual Data Development**: Mock data in `lib/mock-data.ts` is available for seeding the database via `npm run db:seed` to quickly populate a local environment.
 - **Linting and Formatting**: Use `npm run lint` for ESLint (with Next.js config) and `npx prettier --write .` for code formatting (Prettier integrated to avoid conflicts)
 
 ## UI/UX Best Practices
@@ -588,7 +588,7 @@ Use Resend Node.js SDK for team and organization invitations. Follow [Resend Nex
 - ✅ **Deadline System**: Full CRUD operations with visual indicators in GanttChart and deadline components
 - ✅ **Multi-Role UI**: Sidebar navigation with dynamic behavior for users with multiple roles
 - ✅ **Organization Management**: Complete org CRUD, team assignment, org-level worklog/rating management
-- ✅ **Client-Side Dev Mocks**: Comprehensive mock data for all data-fetching hooks with NODE_ENV guards
+- ✅ **Seeding Utility**: Comprehensive mock data in `lib/mock-data.ts` used for database seeding via `npm run db:seed`
 - ✅ **Pagination Implementation**: 100% implemented across 8 paginated endpoints (teams/owned, teams/member, organizations, team members, team worklogs, org worklogs, worklog ratings, dashboard)
 - ✅ **Idempotency for Duplicate Prevention**: Atomic transaction pattern with per-hook token generation; covers team, org, and worklog creation; 24-hour TTL with Vercel cron cleanup
 - ✅ **Org-Deleted Teams Read-Only State**: Atomic `organizationWasDeleted` flag with API and UI enforcement; supports re-linking migration path
@@ -596,6 +596,7 @@ Use Resend Node.js SDK for team and organization invitations. Follow [Resend Nex
 - ✅ **Security Hardening**: Unauthenticated test endpoint removed, cron auth fail-closed, rating data leaks fixed, DB version disclosure removed, Zod validation on all mutation endpoints, `handleApiError()` standardized, Dependabot configured
 
 **Deployment**
+
 - ✅ `vercel.json` created — registers 2 cron jobs (Hobby Plan compatible: both run daily)
 - ✅ `AUTH_TRUST_HOST=true` required in `.env` for `npm run start` local production testing (NOT on Vercel)
 - Generate secrets: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
@@ -711,12 +712,6 @@ Use Resend Node.js SDK for team and organization invitations. Follow [Resend Nex
 - ✅ Hooks accept `page` and `limit` parameters; default to page=1, limit=25
 - ✅ UI components pass `currentPage`, `totalPages`, `onPageChange` to `<Pagination />`
 - ✅ TanStack Query caching handles pagination automatically per (page, limit) combination
-
-### Mock Data Development
-
-- ✅ All data-fetching hooks include `process.env.NODE_ENV === "development"` guards that return mock data instantly without database calls
-- ✅ Never modify mock data guards or structure without understanding the full client-side mock system
-- ✅ Frontend dev can proceed 100% independently of database
 
 ### Stale `.next` Cache Error
 

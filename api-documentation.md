@@ -6,12 +6,11 @@ This document provides comprehensive documentation for the Worklog App backend A
 
 ## Authentication
 
-All endpoints require authentication via Auth.js session. Include session cookies in requests. In development mode, the system provides mock data for testing without requiring authentication.
+All endpoints require authentication via Auth.js session. Include session cookies in requests. Ensure your local environment has a PostgreSQL database running and seeded (`npm run db:seed`) for development.
 
 ## API Endpoints
 
 ### Organizations
-
 
 #### GET /api/organizations
 
@@ -71,8 +70,6 @@ Create a new organization.
 Get a specific organization by ID.
 
 **Authorization**: Organization owner only
-
-**Development Mode**: Returns mock organization data
 
 **Response**: Organization object with teams
 
@@ -168,8 +165,6 @@ Get all teams owned by the current user.
 
 **Authorization**: Authenticated user
 
-**Development Mode**: Returns mock teams for user "mock-org-owner-1"
-
 **Response**:
 
 ```json
@@ -262,8 +257,6 @@ Get pending team invitations for the current user.
 
 **Authorization**: Authenticated user
 
-**Development Mode**: Returns mock pending invitations
-
 **Response**: Array of invitation objects
 
 ---
@@ -273,8 +266,6 @@ Get pending team invitations for the current user.
 Get a specific team by ID.
 
 **Authorization**: Team owner or member
-
-**Development Mode**: Returns mock team with members and owner data
 
 **Response**: Complete team object with owner, organization, and members
 
@@ -359,8 +350,6 @@ Get team members.
 
 **Authorization**: Team owner or member
 
-**Development Mode**: Returns mock team members
-
 **Response**: Array of team member objects
 
 #### POST /api/teams/[teamId]/members
@@ -391,8 +380,6 @@ Get worklogs for a specific team.
 
 **Authorization**: Team owner or member
 
-**Development Mode**: Returns mock worklogs for the team
-
 **Response**: Array of worklog objects
 
 ---
@@ -404,8 +391,6 @@ Get worklogs for a specific team.
 Get all worklogs for the current user.
 
 **Authorization**: Authenticated user
-
-**Development Mode**: Returns mock worklogs for user "mock-org-owner-1"
 
 **Response**: Array of worklog objects with user data
 
@@ -571,8 +556,6 @@ Reject an invitation.
 Get dashboard data for the current user.
 
 **Authorization**: Authenticated user
-
-**Development Mode**: Returns comprehensive mock dashboard data
 
 **Response**:
 
@@ -815,7 +798,6 @@ Delete expired idempotency keys (24-hour TTL). Runs daily at 03:00 UTC via Verce
 }
 ```
 
-
 ## Error Responses
 
 All endpoints return standardized error responses:
@@ -839,13 +821,3 @@ Common HTTP status codes:
 ## Cache Control
 
 All API endpoints return `Cache-Control: no-store` to prevent browser caching conflicts with TanStack Query's client-side invalidation logic.
-
-## Development Mode
-
-In development environment (`NODE_ENV === "development"`), all data-fetching hooks return mock data without requiring authentication or database connectivity. This enables full frontend development without backend dependencies.
-
-Mock data includes:
-
-- Default user: "mock-org-owner-1" (Alice Johnson)
-- Sample organizations, teams, members, worklogs, and ratings
-- Realistic data relationships and permissions

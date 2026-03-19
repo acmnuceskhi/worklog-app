@@ -34,13 +34,14 @@ A hierarchical worklog tracking system for organizations, teams, and members wit
 
    ```bash
    cp .env.example .env
-   # Configure DATABASE_URL, AUTH_SECRET, and OAuth credentials
+   # Configure DATABASE_URL, AUTH_SECRET (Google OAuth), and AUTH_TRUST_HOST=true (for local prod testing)
    ```
 
-3. **Run database migrations**:
+3. **Run database migrations & seed**:
 
    ```bash
    npx prisma migrate dev
+   npm run db:seed
    ```
 
 4. **Start development server**:
