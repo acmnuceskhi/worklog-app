@@ -256,6 +256,7 @@ enum MemberStatus {
   PENDING
   ACCEPTED
   REJECTED
+  EXPIRED  // Set by daily cron cleanup job on overdue invitations
 }
 
 enum ProgressStatus {
@@ -396,7 +397,10 @@ Vercel cron job (`app/api/cron/cleanup-idempotency-keys/route.ts`) runs daily at
 - `app/api/ratings/[ratingId]/route.ts`: Individual rating management (GET/PATCH/DELETE)
 - `app/api/invitations/[token]/accept/route.tsx`: Invitation acceptance endpoint
 - `app/api/invitations/[token]/reject/route.tsx`: Invitation rejection endpoint
+- `app/api/cron/cleanup-expired-invitations/route.ts`: Vercel cron job (daily at 02:00 UTC) to expire stale pending invitations
 - `app/api/cron/cleanup-idempotency-keys/route.ts`: Vercel cron job (daily at 03:00 UTC) to clean expired idempotency keys
+- `app/api/webhooks/resend/route.ts`: Resend webhook handler — updates `EmailLog` on delivery/bounce/complaint; adds bouncers to `EmailSuppression`. Requires `RESEND_WEBHOOK_SECRET` (optional; gracefully disabled if unset)
+- `vercel.json`: Registers both cron jobs with Vercel's scheduler (Hobby Plan compatible — both run once daily)
 - `lib/auth-utils.ts`: Comprehensive RBAC helper functions (isOrganizationOwner, isTeamOwner, etc.)
 - `lib/validations.ts`: Zod validation schemas for all API requests
 - `lib/mock-data.ts`: Complete mock data for development (users, teams, organizations, worklogs, ratings)
@@ -590,6 +594,12 @@ Use Resend Node.js SDK for team and organization invitations. Follow [Resend Nex
 - ✅ **Org-Deleted Teams Read-Only State**: Atomic `organizationWasDeleted` flag with API and UI enforcement; supports re-linking migration path
 - ✅ **HTTP Cache Collision Fix**: `Cache-Control: no-store` enforced globally on all API routes; TanStack Query now receives fresh data after mutations
 - ✅ **Security Hardening**: Unauthenticated test endpoint removed, cron auth fail-closed, rating data leaks fixed, DB version disclosure removed, Zod validation on all mutation endpoints, `handleApiError()` standardized, Dependabot configured
+
+**Deployment**
+- ✅ `vercel.json` created — registers 2 cron jobs (Hobby Plan compatible: both run daily)
+- ✅ `AUTH_TRUST_HOST=true` required in `.env` for `npm run start` local production testing (NOT on Vercel)
+- Generate secrets: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
+- Vercel Analytics/Speed Insights `ERR_BLOCKED_BY_CLIENT` errors during local `npm run start` are expected — only resolve on Vercel infrastructure
 
 **🎉 APPLICATION STATUS: FULLY INTEGRATED AND PRODUCTION READY**
 

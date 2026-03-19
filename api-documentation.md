@@ -12,19 +12,20 @@ All endpoints require authentication via Auth.js session. Include session cookie
 
 ### Organizations
 
+
 #### GET /api/organizations
 
-Get all organizations owned by the current user.
+Get all organizations the current user owns or is a member of (paginated).
 
-**Authorization**: Authenticated user (returns organizations they own)
+**Authorization**: Authenticated user
 
-**Development Mode**: Returns mock organizations for user "mock-org-owner-1"
+**Query Params**: `page` (default: 1), `limit` (default: 25)
 
 **Response**:
 
 ```json
 {
-  "data": [
+  "items": [
     {
       "id": "string",
       "name": "string",
@@ -33,17 +34,16 @@ Get all organizations owned by the current user.
       "ownerId": "string",
       "createdAt": "string",
       "updatedAt": "string",
-      "teams": [
-        {
-          "id": "string",
-          "name": "string"
-        }
-      ],
-      "_count": {
-        "teams": "number"
-      }
+      "_count": { "teams": "number" }
     }
-  ]
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 25,
+    "total": "number",
+    "totalPages": "number",
+    "hasNextPage": "boolean"
+  }
 }
 ```
 
@@ -217,56 +217,36 @@ Create a new team.
 
 #### GET /api/teams/owned
 
-Get teams owned by the current user.
+Get teams owned by the current user (paginated).
 
 **Authorization**: Authenticated user
 
-**Development Mode**: Returns mock owned teams
+**Query Params**: `page` (default: 1), `limit` (default: 25)
 
 **Response**:
 
 ```json
 {
-  "data": [
-    {
-      "id": "string",
-      "name": "string"
-    }
-  ]
+  "items": [ { "id": "string", "name": "string", "..." } ],
+  "meta": {
+    "page": 1,
+    "limit": 25,
+    "total": "number",
+    "totalPages": "number",
+    "hasNextPage": "boolean"
+  }
 }
 ```
 
 #### GET /api/teams/member
 
-Get teams where the current user is a member.
+Get teams where the current user is a member (paginated).
 
 **Authorization**: Authenticated user
 
-**Development Mode**: Returns mock member teams
+**Query Params**: `page` (default: 1), `limit` (default: 25)
 
-**Response**:
-
-```json
-{
-  "data": [
-    {
-      "id": "string",
-      "name": "string",
-      "description": "string | null",
-      "project": "string | null",
-      "credits": "number",
-      "organizationId": "string | null",
-      "ownerId": "string",
-      "createdAt": "string",
-      "updatedAt": "string",
-      "_count": {
-        "members": "number",
-        "worklogs": "number"
-      }
-    }
-  ]
-}
-```
+**Response**: Same paginated shape as `/api/teams/owned`
 
 #### GET /api/teams/accessible
 
@@ -612,20 +592,19 @@ Get dashboard data for the current user.
 
 #### GET /api/sidebar/stats
 
-Get sidebar statistics.
+Get sidebar statistics for the current user.
 
 **Authorization**: Authenticated user
-
-**Development Mode**: Returns mock sidebar statistics
 
 **Response**:
 
 ```json
 {
-  "totalWorklogs": "number",
-  "completedWorklogs": "number",
-  "pendingReviews": "number",
-  "overdueWorklogs": "number"
+  "memberTeamsCount": "number",
+  "leadTeamsCount": "number",
+  "organizationsCount": "number",
+  "worklogsCount": "number",
+  "pendingReviewsCount": "number"
 }
 ```
 
@@ -744,9 +723,11 @@ Delete expired idempotency keys (24-hour TTL). Runs daily at 03:00 UTC via Verce
   teamId: string;
   userId?: string;
   email: string;
-  status: "PENDING" | "ACCEPTED" | "REJECTED";
+  token?: string;
+  status: "PENDING" | "ACCEPTED" | "REJECTED" | "EXPIRED";
   invitedAt: string;
   joinedAt?: string;
+  expiresAt?: string; // null = no expiry
   user?: User;
 }
 ```
@@ -799,6 +780,42 @@ Delete expired idempotency keys (24-hour TTL). Runs daily at 03:00 UTC via Verce
 }
 ```
 
+### EmailLog
+
+```typescript
+{
+  id: string;
+  recipientEmail: string;
+  subject: string;
+  emailType: string;        // "TEAM_INVITE" | "ORG_INVITE" | etc.
+  templateName: string;
+  resendMessageId?: string; // Resend delivery ID
+  status: string;           // "QUEUED" | "SENT" | "DELIVERED" | "BOUNCED" | "COMPLAINED" | "FAILED"
+  requestId: string;
+  sentAt?: string;
+  deliveredAt?: string;
+  failureReason?: string;
+  retryCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+### EmailSuppression
+
+```typescript
+{
+  id: string;
+  email: string;          // unique — email is on suppression list
+  reason: string;         // "HARD_BOUNCE" | "SOFT_BOUNCE" | "COMPLAINED" | "UNSUBSCRIBED"
+  bounceType?: string;    // "permanent" | "transient" | "undetermined"
+  suppressedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+
 ## Error Responses
 
 All endpoints return standardized error responses:
@@ -816,6 +833,7 @@ Common HTTP status codes:
 - `401` - Unauthorized (authentication required)
 - `403` - Forbidden (insufficient permissions)
 - `404` - Not Found
+- `409` - Conflict (duplicate invitation, already accepted)
 - `500` - Internal Server Error
 
 ## Cache Control
